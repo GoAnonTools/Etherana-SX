@@ -9,28 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
     display: 'standalone',
     background_color: '#0a0a0a',
     theme_color: '#0a0a0a',
-    screenshots: [
-      {
-        src: '/screenshots/p1.png',
-        form_factor: 'wide',
-        sizes: '2560x1600',
-      },
-      {
-        src: '/screenshots/p2.png',
-        form_factor: 'wide',
-        sizes: '2560x1600',
-      },
-      {
-        src: '/screenshots/p1_small.png',
-        form_factor: 'narrow',
-        sizes: '828x1792',
-      },
-      {
-        src: '/screenshots/p2_small.png',
-        form_factor: 'narrow',
-        sizes: '828x1792',
-      },
-    ],
+    screenshots: [],
     icons: [
       {
         src: '/Etherana_SX_logo.png',

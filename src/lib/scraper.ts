@@ -14,12 +14,20 @@ class Scraper {
     await this.browserMutex.runExclusive(async () => {
       if (!this.browser) {
         const { chromium } = await import('playwright');
+
+        // Running as non-root (etherana user) means the Chromium sandbox works
+        // correctly and --no-sandbox is not needed. The sandbox provides an extra
+        // layer of isolation if a malicious page tries to escape the renderer.
+        const isRoot = process.getuid?.() === 0;
+        const sandboxArgs = isRoot
+          ? ['--no-sandbox', '--disable-setuid-sandbox']
+          : [];
+
         this.browser = await chromium.launch({
           headless: true,
           channel: 'chromium-headless-shell',
           args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
+            ...sandboxArgs,
             '--disable-dev-shm-usage',
             '--disable-gpu',
             '--disable-blink-features=AutomationControlled',

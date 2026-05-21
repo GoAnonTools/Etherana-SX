@@ -5,6 +5,23 @@ import SessionManager from '@/lib/session';
 import { Message, ReasoningResearchBlock } from '@/lib/types';
 import formatChatHistoryAsString from '@/lib/utils/formatHistory';
 import { ToolCall } from '@/lib/models/types';
+import configManager from '@/lib/config';
+
+const ITERATION_DEFAULTS = { speed: 2, balanced: 6, quality: 10 } as const;
+const ITERATION_HARD_CAPS = { speed: 3, balanced: 8, quality: 15 } as const;
+
+const getMaxIterations = (mode: 'speed' | 'balanced' | 'quality'): number => {
+  const keyMap = {
+    speed: 'maxIterationsSpeed',
+    balanced: 'maxIterationsBalanced',
+    quality: 'maxIterationsQuality',
+  } as const;
+
+  const raw = configManager.getConfig(`preferences.${keyMap[mode]}`);
+  const parsed = parseInt(raw, 10);
+  const value = Number.isFinite(parsed) ? parsed : ITERATION_DEFAULTS[mode];
+  return Math.min(value, ITERATION_HARD_CAPS[mode]);
+};
 
 class Researcher {
   async research(
@@ -12,12 +29,7 @@ class Researcher {
     input: ResearcherInput,
   ): Promise<ResearcherOutput> {
     let actionOutput: ActionOutput[] = [];
-    let maxIteration =
-      input.config.mode === 'speed'
-        ? 2
-        : input.config.mode === 'balanced'
-          ? 6
-          : 25;
+    const maxIteration = getMaxIterations(input.config.mode);
 
     const availableTools = ActionRegistry.getAvailableActionTools({
       classification: input.classification,

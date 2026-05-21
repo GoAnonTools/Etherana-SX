@@ -3,6 +3,7 @@ import { ResearchAction } from '../../types';
 import { Chunk, ReadingResearchBlock } from '@/lib/types';
 import Scraper from '@/lib/scraper';
 import { splitText } from '@/lib/utils/splitText';
+import { validateUrl } from '@/lib/utils/validateUrl';
 
 const extractorPrompt = `
                   Assistant is an AI information extractor. Assistant will be shared with scraped information from a website along with the queries used to retrieve that information. Assistant's task is to extract relevant facts from the scraped data to answer the queries.
@@ -77,6 +78,14 @@ const scrapeURLAction: ResearchAction<typeof schema> = {
     const results = await Promise.all(
       params.urls.map(async (url) => {
         try {
+          const validation = validateUrl(url);
+          if (!validation.valid) {
+            return {
+              content: `Refused to scrape ${url}: ${validation.reason}`,
+              metadata: { url, title: 'Blocked' },
+            };
+          }
+
           const scraped = await Scraper.scrape(url);
 
           if (

@@ -8,6 +8,17 @@ type SaveConfigBody = {
   value: string;
 };
 
+const redactProviderConfig = (config: Record<string, string>): Record<string, string> => {
+  return Object.fromEntries(
+    Object.entries(config).map(([k, v]) => [k, v ? '**redacted**' : v]),
+  );
+};
+
+const ALLOWED_CONFIG_KEY_PREFIXES = ['preferences.', 'personalization.', 'search.'];
+
+const isAllowedConfigKey = (key: string): boolean =>
+  ALLOWED_CONFIG_KEY_PREFIXES.some((prefix) => key.startsWith(prefix));
+
 export const GET = async (req: NextRequest) => {
   try {
     const values = configManager.getCurrentConfig();
@@ -22,6 +33,7 @@ export const GET = async (req: NextRequest) => {
 
         return {
           ...mp,
+          config: redactProviderConfig(mp.config),
           chatModels: activeProvider?.chatModels ?? mp.chatModels,
           embeddingModels:
             activeProvider?.embeddingModels ?? mp.embeddingModels,
@@ -46,29 +58,28 @@ export const POST = async (req: NextRequest) => {
   try {
     const body: SaveConfigBody = await req.json();
 
-    if (!body.key || !body.value) {
+    if (!body.key || body.value === undefined) {
       return Response.json(
-        {
-          message: 'Key and value are required.',
-        },
-        {
-          status: 400,
-        },
+        { message: 'Key and value are required.' },
+        { status: 400 },
+      );
+    }
+
+    if (!isAllowedConfigKey(body.key)) {
+      return Response.json(
+        { message: `Config key "${body.key}" is not writable.` },
+        { status: 403 },
       );
     }
 
     configManager.updateConfig(body.key, body.value);
 
     return Response.json(
-      {
-        message: 'Config updated successfully.',
-      },
-      {
-        status: 200,
-      },
+      { message: 'Config updated successfully.' },
+      { status: 200 },
     );
   } catch (err) {
-    console.error('Error in getting config: ', err);
+    console.error('Error in updating config: ', err);
     return Response.json(
       { message: 'An error has occurred.' },
       { status: 500 },

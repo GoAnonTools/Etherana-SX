@@ -37,6 +37,10 @@ RUN mkdir /home/etherana/uploads
 RUN npm install playwright
 RUN npx playwright install --with-deps --only-shell chromium
 
+# App user — runs the Next.js server as non-root so Chromium's sandbox works
+RUN useradd --shell /bin/bash --create-home --home-dir /home/etherana-user etherana
+
+# SearXNG user
 RUN useradd --shell /bin/bash --system \
     --home-dir "/usr/local/searxng" \
     --comment 'Privacy-respecting metasearch engine' \
@@ -70,8 +74,14 @@ RUN sed -i 's/\r$//' ./entrypoint.sh || true
 
 RUN echo "searxng ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
+# Give the app user ownership of the data and app directories
+RUN chown -R etherana:etherana /home/etherana
+
 EXPOSE 3000 8080
 
 ENV SEARXNG_API_URL=http://localhost:8080
+
+# entrypoint.sh starts SearXNG via sudo then drops to etherana for the Node process
+USER etherana
 
 CMD ["/home/etherana/entrypoint.sh"]
