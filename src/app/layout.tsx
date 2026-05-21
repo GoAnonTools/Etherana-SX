@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   title: 'Etherana SX',
   description: 'Etherana SX is an AI powered answering engine for solo entrepreneurs.',
   icons: {
-    icon: '/favicon.png',
+    icon: '/Etherana_SX_logo.png',
   },
 };
 

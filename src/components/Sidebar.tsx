@@ -79,7 +79,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             className="p-1 rounded-full hover:opacity-80 hover:scale-105 transition duration-200"
             href="/"
           >
-            <img src="/favicon.png" alt="Etherana SX" className="w-10 h-10 object-contain" />
+            <img src="/Etherana_SX_logo.png" alt="Etherana SX" className="w-10 h-10 object-contain" />
           </a>
           <VerticalIconContainer>
             {navLinks.map((link, i) => {
