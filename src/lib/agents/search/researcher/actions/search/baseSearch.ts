@@ -8,6 +8,7 @@ import computeSimilarity from '@/lib/utils/computeSimilarity';
 import z from 'zod';
 import Scraper from '@/lib/scraper';
 import { splitText } from '@/lib/utils/splitText';
+import { validateUrl } from '@/lib/utils/validateUrl';
 
 export const executeSearch = async (input: {
   queries: string[];
@@ -346,7 +347,7 @@ export const executeSearch = async (input: {
       </example_output>
       `;
 
-    const extractorSchema = z.object({
+const extractorSchema = z.object({
       extracted_facts: z
         .string()
         .describe(
@@ -357,6 +358,9 @@ export const executeSearch = async (input: {
     const extractedFacts = await Promise.all(
       filteredResults.map(async (result) => {
         try {
+          const validation = validateUrl(result.metadata.url);
+          if (!validation.valid) return { ...result, content: '' };
+
           const scrapedData = await Scraper.scrape(result.metadata.url).catch(
             (err) => {
               console.log('Error scraping data from', result.metadata.url, err);
@@ -370,9 +374,7 @@ export const executeSearch = async (input: {
           const extractedFactsFromChunks = await Promise.all(
             chunks.map(async (chunk) => {
               try {
-                const extractorOutput = await input.llm.generateObject<
-                  typeof extractorSchema
-                >({
+                const extractorOutput = await input.llm.generateObject<typeof extractorSchema>({
                   schema: extractorSchema,
                   messages: [
                     {
