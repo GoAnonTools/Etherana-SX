@@ -1,0 +1,14 @@
+services:
+  etherana:
+    image: etherana:latest
+    build:
+      context: .
+    ports:
+      - '1414:3000'
+    volumes:
+      - data:/home/etherana/data
+    restart: unless-stopped
+
+volumes:
+  data:
+    name: 'etherana-data'
