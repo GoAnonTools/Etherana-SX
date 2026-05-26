@@ -64,7 +64,7 @@ const Optimization = () => {
           <AnimatePresence>
             {open && (
               <PopoverPanel
-                className="absolute z-10 w-64 md:w-[250px] left-0"
+                className="absolute z-[100] w-64 md:w-[250px] left-0 bottom-full mb-2"
                 static
               >
                 <motion.div
@@ -76,7 +76,11 @@ const Optimization = () => {
                 >
                   {OptimizationModes.map((mode, i) => (
                     <PopoverButton
-                      onClick={() => setOptimizationMode(mode.key)}
+                      type="button"
+                      onClick={() => {
+                        setOptimizationMode(mode.key);
+                        localStorage.setItem('optimizationMode', mode.key);
+                      }}
                       key={i}
                       className={cn(
                         'p-2 rounded-lg flex flex-col items-start justify-start text-start space-y-1 duration-200 cursor-pointer transition focus:outline-none',

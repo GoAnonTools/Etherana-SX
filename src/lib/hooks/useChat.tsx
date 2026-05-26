@@ -47,6 +47,8 @@ type ChatContext = {
   researchEnded: boolean;
   setResearchEnded: (ended: boolean) => void;
   setOptimizationMode: (mode: string) => void;
+  searchMode: SearchMode;
+  setSearchMode: (mode: SearchMode) => void;
   setSources: (sources: string[]) => void;
   setFiles: (files: File[]) => void;
   setFileIds: (fileIds: string[]) => void;
@@ -77,6 +79,8 @@ interface EmbeddingModelProvider {
   key: string;
   providerId: string;
 }
+
+type SearchMode = 'results' | 'agent';
 
 const generateId = (bytes: number) => {
   if (
@@ -275,6 +279,7 @@ export const chatContext = createContext<ChatContext>({
   sections: [],
   notFound: false,
   optimizationMode: '',
+  searchMode: 'results',
   chatModelProvider: { key: '', providerId: '' },
   embeddingModelProvider: { key: '', providerId: '' },
   researchEnded: false,
@@ -284,6 +289,7 @@ export const chatContext = createContext<ChatContext>({
   setFiles: () => {},
   setSources: () => {},
   setOptimizationMode: () => {},
+  setSearchMode: () => {},
   setChatModelProvider: () => {},
   setEmbeddingModelProvider: () => {},
   setResearchEnded: () => {},
@@ -314,8 +320,9 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [fileIds, setFileIds] = useState<string[]>([]);
 
-  const [sources, setSources] = useState<string[]>(['web']);
+  const [sources, setSources] = useState<string[]>([]);
   const [optimizationMode, setOptimizationMode] = useState('speed');
+  const [searchMode, setSearchMode] = useState<SearchMode>('results');
 
   const [isMessagesLoaded, setIsMessagesLoaded] = useState(false);
 
@@ -770,6 +777,83 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
 
     const messageIndex = messages.findIndex((m) => m.messageId === messageId);
 
+    if (searchMode === 'results' && fileIds.length === 0 && !spaceId) {
+      try {
+        const res = await fetch('/api/results', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: message,
+            limit: 8,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || 'Could not fetch results.');
+        }
+
+        const results = data.results ?? [];
+
+        const resultText =
+          results.length > 0
+            ? [
+                `### Results for "${message}"`,
+                '',
+                ...results.map((result: any, index: number) => {
+                  const snippet = result.content
+                    ? `\n${result.content}`
+                    : '';
+                  return `${index + 1}. [${result.title}](${result.url})${snippet}`;
+                }),
+              ].join('\n\n')
+            : `No clear results found for "${message}". Try Agent mode for deeper research.`;
+
+        const resultBlock: Block = {
+          id: generateId(7),
+          type: 'text',
+          data: resultText,
+        };
+
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.messageId === messageId
+              ? {
+                  ...msg,
+                  responseBlocks: [resultBlock],
+                  status: 'completed' as const,
+                }
+              : msg,
+          ),
+        );
+
+        chatHistory.current = [
+          ...chatHistory.current,
+          ['human', message],
+          ['assistant', resultText],
+        ];
+
+        setMessageAppeared(true);
+        setResearchEnded(true);
+        setLoading(false);
+        return;
+      } catch (err: any) {
+        toast.error(err.message || 'Results search failed');
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.messageId === messageId
+              ? { ...msg, status: 'error' as const }
+              : msg,
+          ),
+        );
+        setLoading(false);
+        return;
+      }
+    }
+
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: {
@@ -851,6 +935,8 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         messageAppeared,
         notFound,
         optimizationMode,
+        searchMode,
+        setSearchMode,
         setFileIds,
         setFiles,
         setSources,

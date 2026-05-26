@@ -7,6 +7,7 @@ import Attach from './MessageInputActions/Attach';
 import { useChat } from '@/lib/hooks/useChat';
 import ModelSelector from './MessageInputActions/ChatModelSelector';
 import SpaceSelector from './MessageInputActions/SpaceSelector';
+import SearchModeToggle from './MessageInputActions/SearchModeToggle';
 
 const EmptyChatMessageInput = () => {
   const { sendMessage } = useChat();
@@ -44,6 +45,14 @@ const EmptyChatMessageInput = () => {
     <form
       onSubmit={(e) => {
         e.preventDefault();
+
+        const submitter = (e.nativeEvent as SubmitEvent)
+          .submitter as HTMLElement | null;
+
+        if (submitter?.getAttribute('data-send-button') !== 'true') {
+          return;
+        }
+
         sendMessage(message);
         setMessage('');
       }}
@@ -66,7 +75,10 @@ const EmptyChatMessageInput = () => {
           placeholder="Ask anything..."
         />
         <div className="flex flex-row items-center justify-between mt-4">
-          <Optimization />
+          <div className="flex flex-row items-center gap-2">
+            <SearchModeToggle />
+            <Optimization />
+          </div>
           <div className="flex flex-row items-center space-x-2">
             <div className="flex flex-row items-center space-x-1">
               <Sources />
@@ -75,6 +87,8 @@ const EmptyChatMessageInput = () => {
               <Attach />
             </div>
             <button
+              type="submit"
+              data-send-button="true"
               disabled={message.trim().length === 0}
               className="bg-sky-500 text-white disabled:text-black/50 dark:disabled:text-white/50 disabled:bg-[#e0e0dc] dark:disabled:bg-[#ececec21] hover:bg-opacity-85 transition duration-100 rounded-full p-2"
             >

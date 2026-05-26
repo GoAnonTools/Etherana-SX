@@ -59,7 +59,7 @@ class SearchAgent {
         );
 
       const shouldUseDirectSpeedAnswer =
-        input.config.mode === 'speed' &&
+        (input.config.mode === 'speed' || input.config.mode === 'balanced') &&
         input.config.fileIds.length === 0 &&
         !input.spaceId &&
         !explicitResearchIntent;

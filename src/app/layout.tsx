@@ -31,7 +31,7 @@ export default function RootLayout({
   const configSections = configManager.getUIConfigSections();
 
   return (
-    <html className="h-full" lang="en" suppressHydrationWarning>
+    <html className="h-full" lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <body className={cn('h-full antialiased', montserrat.className)}>
         <ThemeProvider>
           {setupComplete ? (

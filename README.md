@@ -2,7 +2,7 @@
 
 **Etherana SX** is a premium, AI-powered answering engine designed specifically for solo entrepreneurs. It reimagines web search as a structured productivity hub, transforming raw information into specialized business outputs.
 
-![Etherana SX Welcome](/Etharana_SX_Welcome.png)
+![Etherana SX Welcome](/Etherana_SX_Welcome.png)
 
 ## 🚀 The Solo Entrepreneur Suite
 

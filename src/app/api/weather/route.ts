@@ -6,7 +6,12 @@ export const POST = async (req: Request) => {
       measureUnit: 'Imperial' | 'Metric';
     } = await req.json();
 
-    if (!body.lat || !body.lng) {
+    if (
+      typeof body.lat !== 'number' ||
+      typeof body.lng !== 'number' ||
+      !Number.isFinite(body.lat) ||
+      !Number.isFinite(body.lng)
+    ) {
       return Response.json(
         {
           message: 'Invalid request.',
@@ -20,6 +25,24 @@ export const POST = async (req: Request) => {
         body.measureUnit === 'Metric' ? '' : '&temperature_unit=fahrenheit'
       }${body.measureUnit === 'Metric' ? '' : '&wind_speed_unit=mph'}`,
     );
+
+    if (!res.ok) {
+      console.error(`Open-Meteo request failed: ${res.status}`);
+      return Response.json(
+        { message: 'Weather service unavailable.' },
+        { status: 502 },
+      );
+    }
+    
+    if (!res.ok) {
+      console.error(`Open-Meteo request failed: ${res.status}`);
+      return Response.json(
+        {
+          message: 'Weather service unavailable.',
+        },
+        { status: 502 },
+      );
+    }
 
     const data = await res.json();
 

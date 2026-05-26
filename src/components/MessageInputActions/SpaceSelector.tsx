@@ -65,7 +65,7 @@ const SpaceSelector = () => {
           <AnimatePresence>
             {open && (
               <PopoverPanel
-                className="absolute z-10 w-[240px] right-0 bottom-full mb-2"
+                className="absolute z-[100] w-[240px] right-0 bottom-full mb-2 bottom-full mb-2"
                 static
               >
                 <motion.div

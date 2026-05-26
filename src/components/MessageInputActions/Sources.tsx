@@ -44,7 +44,7 @@ const Sources = () => {
             {open && (
               <PopoverPanel
                 static
-                className="absolute z-10 w-64 md:w-[225px] right-0"
+                className="absolute z-[100] w-64 md:w-[225px] right-0 bottom-full mb-2"
               >
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}

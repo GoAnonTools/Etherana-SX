@@ -86,7 +86,7 @@ const ModelSelector = () => {
           <AnimatePresence>
             {open && (
               <PopoverPanel
-                className="absolute z-10 w-[230px] sm:w-[270px] md:w-[300px] right-0"
+                className="absolute z-[100] w-[230px] sm:w-[270px] md:w-[300px] right-0 bottom-full mb-2"
                 static
               >
                 <motion.div

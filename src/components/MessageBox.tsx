@@ -91,6 +91,24 @@ const MessageBox = ({
       return next();
     },
     overrides: {
+      a: {
+        component: ({ href, children, ...props }: any) => {
+          const isExternal =
+            typeof href === 'string' &&
+            (href.startsWith('http://') || href.startsWith('https://'));
+
+          return (
+            <a
+              {...props}
+              href={href}
+              target={isExternal ? '_blank' : undefined}
+              rel={isExternal ? 'noopener noreferrer' : undefined}
+            >
+              {children}
+            </a>
+          );
+        },
+      },
       think: {
         component: ThinkTagProcessor,
         props: {

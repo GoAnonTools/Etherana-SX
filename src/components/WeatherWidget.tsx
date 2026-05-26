@@ -5,16 +5,16 @@ import { useEffect, useState } from 'react';
 import { getApproxLocation } from '@/lib/actions';
 
 const WeatherWidget = () => {
-  const [data, setData] = useState({
-    temperature: 0,
-    condition: '',
-    location: '',
-    humidity: 0,
-    windSpeed: 0,
-    icon: '',
-    temperatureUnit: 'C',
-    windSpeedUnit: 'm/s',
-  });
+  const [data, setData] = useState<{
+    temperature: number;
+    condition: string;
+    location: string;
+    humidity: number;
+    windSpeed: number;
+    icon: string;
+    temperatureUnit: 'C' | 'F';
+    windSpeedUnit: 'm/s' | 'mph';
+  } | null>(null);
 
   const [loading, setLoading] = useState(true);
 
@@ -74,8 +74,9 @@ const WeatherWidget = () => {
 
       const data = await res.json();
 
-      if (res.status !== 200) {
-        console.error('Error fetching weather data');
+      if (!res.ok) {
+        console.warn('Weather widget unavailable');
+        setData(null);
         setLoading(false);
         return;
       }
@@ -100,9 +101,13 @@ const WeatherWidget = () => {
     return () => clearInterval(intervalId);
   }, []);
 
+  if (!loading && (!data || !data.icon)) {
+    return null;
+  }
+
   return (
     <div className="bg-light-secondary dark:bg-dark-secondary rounded-2xl border border-light-200 dark:border-dark-200 shadow-sm shadow-light-200/10 dark:shadow-black/25 flex flex-row items-center w-full h-24 min-h-[96px] max-h-[96px] px-3 py-2 gap-3">
-      {loading ? (
+      {loading || !data ? (
         <>
           <div className="flex flex-col items-center justify-center w-16 min-w-16 max-w-16 h-full animate-pulse">
             <div className="h-10 w-10 rounded-full bg-light-200 dark:bg-dark-200 mb-2" />

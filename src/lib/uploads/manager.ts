@@ -20,7 +20,7 @@ const uploadedFilesSchema = z.object({
     files: z.array(recordedFileSchema),
 });
 
- = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'] as const
+const supportedMimeTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'] as const
 
 type SupportedMimeType = typeof supportedMimeTypes[number];
 

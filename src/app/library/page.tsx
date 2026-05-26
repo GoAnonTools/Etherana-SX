@@ -2,9 +2,19 @@
 
 import DeleteChat from '@/components/DeleteChat';
 import { formatTimeDifference } from '@/lib/utils';
-import { BookOpenText, ClockIcon, FileText, Globe2Icon } from 'lucide-react';
+import {
+  BookOpenText,
+  CheckSquare,
+  ClockIcon,
+  FileText,
+  Globe2Icon,
+  Square,
+  Trash2,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 export interface Chat {
   id: string;
@@ -17,6 +27,16 @@ export interface Chat {
 const Page = () => {
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const selectedCount = selectedChatIds.length;
+  const allSelected = chats.length > 0 && selectedCount === chats.length;
+
+  const selectedChatIdsSet = useMemo(
+    () => new Set(selectedChatIds),
+    [selectedChatIds],
+  );
 
   useEffect(() => {
     const fetchChats = async () => {
@@ -38,6 +58,79 @@ const Page = () => {
     fetchChats();
   }, []);
 
+  const toggleChatSelection = (chatId: string) => {
+    setSelectedChatIds((prev) =>
+      prev.includes(chatId)
+        ? prev.filter((id) => id !== chatId)
+        : [...prev, chatId],
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedChatIds([]);
+      return;
+    }
+
+    setSelectedChatIds(chats.map((chat) => chat.id));
+  };
+
+  const deleteSelectedChats = async () => {
+    if (selectedChatIds.length === 0 || bulkDeleting) return;
+
+    const confirmed = window.confirm(
+      `Delete ${selectedChatIds.length} selected ${
+        selectedChatIds.length === 1 ? 'chat' : 'chats'
+      }? This cannot be undone.`,
+    );
+
+    if (!confirmed) return;
+
+    setBulkDeleting(true);
+
+    try {
+      const results = await Promise.allSettled(
+        selectedChatIds.map((chatId) =>
+          fetch(`/api/chats/${chatId}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }),
+        ),
+      );
+
+      const failed = results.filter(
+        (result) =>
+          result.status === 'rejected' ||
+          (result.status === 'fulfilled' && result.value.status !== 200),
+      );
+
+      if (failed.length > 0) {
+        throw new Error(
+          `Failed to delete ${failed.length} ${
+            failed.length === 1 ? 'chat' : 'chats'
+          }.`,
+        );
+      }
+
+      setChats((prev) =>
+        prev.filter((chat) => !selectedChatIds.includes(chat.id)),
+      );
+      setSelectedChatIds([]);
+
+      toast.success(
+        `${selectedChatIds.length} ${
+          selectedChatIds.length === 1 ? 'chat' : 'chats'
+        } deleted.`,
+      );
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete selected chats.');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   return (
     <div>
       <div className="flex flex-col pt-10 border-b border-light-200/20 dark:border-dark-200/20 pb-6 px-2">
@@ -57,16 +150,57 @@ const Page = () => {
             </div>
           </div>
 
-          <div className="flex items-center justify-center lg:justify-end gap-2 text-xs text-black/60 dark:text-white/60">
+          <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2 text-xs text-black/60 dark:text-white/60">
             <span className="inline-flex items-center gap-1 rounded-full border border-black/20 dark:border-white/20 px-2 py-0.5">
               <BookOpenText size={14} />
               {loading
                 ? 'Loading…'
                 : `${chats.length} ${chats.length === 1 ? 'chat' : 'chats'}`}
             </span>
+
+            {!loading && chats.length > 0 && (
+              <button
+                type="button"
+                onClick={toggleSelectAll}
+                className="inline-flex items-center gap-1 rounded-full border border-black/20 dark:border-white/20 px-2 py-0.5 hover:text-black dark:hover:text-white transition"
+              >
+                {allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
+                {allSelected ? 'Unselect all' : 'Select all'}
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      {selectedCount > 0 && (
+        <div className="sticky top-0 z-30 mt-4 mx-2 rounded-2xl border border-red-400/30 bg-red-50/95 dark:bg-red-950/30 backdrop-blur px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="text-sm text-red-700 dark:text-red-200">
+            {selectedCount} {selectedCount === 1 ? 'chat selected' : 'chats selected'}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedChatIds([])}
+              disabled={bulkDeleting}
+              className="inline-flex items-center gap-1 rounded-full border border-red-300/50 px-3 py-1.5 text-xs text-red-700 dark:text-red-200 hover:bg-red-100 dark:hover:bg-red-900/40 disabled:opacity-60"
+            >
+              <X size={14} />
+              Clear
+            </button>
+
+            <button
+              type="button"
+              onClick={deleteSelectedChats}
+              disabled={bulkDeleting}
+              className="inline-flex items-center gap-1 rounded-full bg-red-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-60"
+            >
+              <Trash2 size={14} />
+              {bulkDeleting ? 'Deleting…' : 'Delete selected'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex flex-row items-center justify-center min-h-[60vh]">
@@ -106,6 +240,8 @@ const Page = () => {
         <div className="pt-6 pb-28 px-2">
           <div className="rounded-2xl border border-light-200 dark:border-dark-200 overflow-hidden bg-light-primary dark:bg-dark-primary">
             {chats.map((chat, index) => {
+              const isSelected = selectedChatIdsSet.has(chat.id);
+
               const sourcesLabel =
                 chat.sources.length === 0
                   ? null
@@ -122,13 +258,31 @@ const Page = () => {
                 <div
                   key={chat.id}
                   className={
-                    'group flex flex-col gap-2 p-4 hover:bg-light-secondary dark:hover:bg-dark-secondary transition-colors duration-200 ' +
+                    'group flex flex-col gap-2 p-4 transition-colors duration-200 ' +
+                    (isSelected
+                      ? 'bg-sky-500/10 dark:bg-sky-500/10'
+                      : 'hover:bg-light-secondary dark:hover:bg-dark-secondary') +
                     (index !== chats.length - 1
-                      ? 'border-b border-light-200 dark:border-dark-200'
+                      ? ' border-b border-light-200 dark:border-dark-200'
                       : '')
                   }
                 >
                   <div className="flex items-start justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleChatSelection(chat.id)}
+                      className="mt-1 shrink-0 text-black/50 dark:text-white/50 hover:text-sky-500 transition"
+                      aria-label={
+                        isSelected ? 'Unselect chat' : 'Select chat'
+                      }
+                    >
+                      {isSelected ? (
+                        <CheckSquare size={18} className="text-sky-500" />
+                      ) : (
+                        <Square size={18} />
+                      )}
+                    </button>
+
                     <Link
                       href={`/c/${chat.id}`}
                       className="flex-1 text-black dark:text-white text-base lg:text-lg font-medium leading-snug line-clamp-2 group-hover:text-[#24A0ED] transition duration-200"
@@ -136,6 +290,7 @@ const Page = () => {
                     >
                       {chat.title}
                     </Link>
+
                     <div className="pt-0.5 shrink-0">
                       <DeleteChat
                         chatId={chat.id}
@@ -145,7 +300,7 @@ const Page = () => {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 text-black/70 dark:text-white/70">
+                  <div className="flex flex-wrap items-center gap-2 text-black/70 dark:text-white/70 pl-7">
                     <span className="inline-flex items-center gap-1 text-xs">
                       <ClockIcon size={14} />
                       {formatTimeDifference(new Date(), chat.createdAt)} Ago

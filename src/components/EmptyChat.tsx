@@ -49,7 +49,7 @@ const EmptyChat = () => {
       <div className="flex flex-col items-center justify-center min-h-screen max-w-screen-sm mx-auto p-2 space-y-4">
         <div className="flex flex-col items-center justify-center w-full space-y-8">
           <img 
-            src="/Etharana_SX_Welcome.png" 
+            src="/Etherana_SX_Welcome.png" 
             alt="Etherana SX" 
             className="w-full max-w-[400px] h-auto -mt-8"
           />

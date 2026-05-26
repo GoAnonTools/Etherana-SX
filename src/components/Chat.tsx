@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { Plus } from 'lucide-react';
 import MessageInput from './MessageInput';
 import MessageBox from './MessageBox';
 import MessageBoxLoading from './MessageBoxLoading';
@@ -98,7 +99,23 @@ const Chat = () => {
                 'linear-gradient(to top, #0d1117 0%, #0d1117 35%, rgba(13,17,23,0.95) 45%, rgba(13,17,23,0.85) 55%, rgba(13,17,23,0.7) 65%, rgba(13,17,23,0.5) 75%, rgba(13,17,23,0.3) 85%, rgba(13,17,23,0.1) 92%, transparent 100%)',
             }}
           />
-          <MessageInput />
+          <div className="relative z-10 flex flex-col gap-2">
+            <div className="flex justify-end">
+              <button
+                type="button"
+                aria-label="New chat"
+                title="New chat"
+                onClick={() => {
+                  window.location.assign('/');
+                }}
+                className="inline-flex items-center gap-2 rounded-full border border-light-200 dark:border-dark-200 bg-light-secondary/95 dark:bg-dark-secondary/95 px-3 py-1.5 text-xs font-semibold text-black/70 dark:text-white/70 shadow-sm shadow-light-200/10 dark:shadow-black/20 backdrop-blur transition hover:text-black dark:hover:text-white hover:border-sky-400/60 active:scale-95"
+              >
+                <Plus size={14} />
+                <span>New chat</span>
+              </button>
+            </div>
+            <MessageInput />
+          </div>
         </div>
       )}
     </div>
