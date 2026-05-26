@@ -1,42 +1,287 @@
-#!/bin/sh
-set -e
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 
-# Resolve the SearXNG secret: use $SEARXNG_SECRET if set, otherwise generate a random one.
-if [ -z "$SEARXNG_SECRET" ]; then
-  echo "SEARXNG_SECRET not set — generating a random secret for this session."
-  SEARXNG_SECRET=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || od -An -tx1 -N32 /dev/urandom | tr -d ' \n')
-fi
+import type {
+  Config,
+  ConfigModelProvider,
+  UIConfigSections,
+} from './types';
 
-# Substitute the placeholder in the settings file with the resolved secret.
-sed -i "s/SEARXNG_SECRET_PLACEHOLDER/${SEARXNG_SECRET}/" /etc/searxng/settings.yml
+const CONFIG_DIR = path.join(process.cwd(), 'data');
+const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
-echo "Starting SearXNG..."
+const defaultConfig: Config = {
+  version: 1,
+  setupComplete: true,
+  preferences: {
+    theme: 'system',
+    optimizationMode: 'balanced',
+  },
+  personalization: {
+    instructions: '',
+  },
+  modelProviders: [],
+  search: {
+    searxngURL: process.env.SEARXNG_URL || 'http://localhost:8080',
+  },
+};
 
-# SearXNG needs to run as the searxng user; the container runs as etherana so we use sudo.
-sudo -H -u searxng bash -c "cd /usr/local/searxng/searxng-src && export SEARXNG_SETTINGS_PATH='/etc/searxng/settings.yml' && export FLASK_APP=searx/webapp.py && /usr/local/searxng/searx-pyenv/bin/python -m flask run --host=0.0.0.0 --port=8080" &
-SEARXNG_PID=$!
+const uiConfigSections: UIConfigSections = {
+  preferences: [
+    {
+      name: 'Optimization mode',
+      key: 'preferences.optimizationMode',
+      type: 'select',
+      required: false,
+      description: 'Default response mode for Etherana SX.',
+      scope: 'client',
+      default: 'balanced',
+      options: [
+        { name: 'Speed', value: 'speed' },
+        { name: 'Balanced', value: 'balanced' },
+        { name: 'Quality', value: 'quality' },
+      ],
+    },
+  ],
+  personalization: [
+    {
+      name: 'System instructions',
+      key: 'personalization.instructions',
+      type: 'textarea',
+      required: false,
+      description: 'Default custom instructions for your assistant.',
+      scope: 'client',
+      default: '',
+    },
+  ],
+  modelProviders: [],
+  search: [
+    {
+      name: 'SearXNG URL',
+      key: 'search.searxngURL',
+      type: 'string',
+      required: true,
+      description: 'URL used by Etherana SX for SearXNG web search.',
+      scope: 'server',
+      default: process.env.SEARXNG_URL || 'http://localhost:8080',
+    },
+  ],
+};
 
-echo "Waiting for SearXNG to be ready..."
-sleep 5
+class ConfigManager {
+  private config: Config;
 
-COUNTER=0
-MAX_TRIES=30
-until curl -s http://localhost:8080 > /dev/null 2>&1; do
-  COUNTER=$((COUNTER+1))
-  if [ $COUNTER -ge $MAX_TRIES ]; then
-    echo "Warning: SearXNG health check timeout, but continuing..."
-    break
-  fi
-  sleep 1
-done
+  constructor() {
+    this.ensureConfigDir();
+    this.config = this.loadConfig();
+  }
 
-if curl -s http://localhost:8080 > /dev/null 2>&1; then
-  echo "SearXNG started successfully (PID: $SEARXNG_PID)"
-else
-  echo "SearXNG may not be fully ready, but continuing (PID: $SEARXNG_PID)"
-fi
+  private ensureConfigDir() {
+    if (!fs.existsSync(CONFIG_DIR)) {
+      fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    }
+  }
 
-cd /home/etherana
-echo "Starting Etherana SX..."
+  private loadConfig(): Config {
+    if (!fs.existsSync(CONFIG_FILE)) {
+      this.saveConfig(defaultConfig);
+      return structuredClone(defaultConfig);
+    }
 
-exec node server.js
+    try {
+      const raw = fs.readFileSync(CONFIG_FILE, 'utf-8');
+      const parsed = JSON.parse(raw);
+
+      return {
+        ...structuredClone(defaultConfig),
+        ...parsed,
+        preferences: {
+          ...defaultConfig.preferences,
+          ...(parsed.preferences || {}),
+        },
+        personalization: {
+          ...defaultConfig.personalization,
+          ...(parsed.personalization || {}),
+        },
+        search: {
+          ...defaultConfig.search,
+          ...(parsed.search || {}),
+        },
+        modelProviders: parsed.modelProviders || [],
+      };
+    } catch (err) {
+      console.error('Failed to load config, using defaults:', err);
+      return structuredClone(defaultConfig);
+    }
+  }
+
+  private saveConfig(config: Config = this.config) {
+    this.ensureConfigDir();
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+  }
+
+  private getNestedValue(obj: any, key: string, fallback?: any) {
+    return key.split('.').reduce((acc, part) => {
+      if (acc && Object.prototype.hasOwnProperty.call(acc, part)) {
+        return acc[part];
+      }
+
+      return undefined;
+    }, obj) ?? fallback;
+  }
+
+  private setNestedValue(obj: any, key: string, value: any) {
+    const parts = key.split('.');
+    const last = parts.pop();
+
+    if (!last) return;
+
+    const target = parts.reduce((acc, part) => {
+      if (!acc[part] || typeof acc[part] !== 'object') {
+        acc[part] = {};
+      }
+
+      return acc[part];
+    }, obj);
+
+    target[last] = value;
+  }
+
+  isSetupComplete() {
+    return Boolean(this.config.setupComplete);
+  }
+
+  markSetupComplete() {
+    this.config.setupComplete = true;
+    this.saveConfig();
+  }
+
+  getCurrentConfig() {
+    return structuredClone(this.config);
+  }
+
+  getUIConfigSections() {
+    return structuredClone(uiConfigSections);
+  }
+
+  getConfig<T = any>(key: string, fallback?: T): T {
+    return this.getNestedValue(this.config, key, fallback) as T;
+  }
+
+  updateConfig(key: string, value: any) {
+    this.setNestedValue(this.config, key, value);
+    this.saveConfig();
+  }
+
+  addModelProvider(
+    type: string,
+    name: string,
+    config: Record<string, any>,
+  ): ConfigModelProvider {
+    const provider: ConfigModelProvider = {
+      id: crypto.randomUUID(),
+      name,
+      type,
+      chatModels: [],
+      embeddingModels: [],
+      config,
+      hash: crypto
+        .createHash('sha256')
+        .update(JSON.stringify({ type, name, config }))
+        .digest('hex'),
+    };
+
+    this.config.modelProviders.push(provider);
+    this.saveConfig();
+
+    return provider;
+  }
+
+  removeModelProvider(providerId: string) {
+    this.config.modelProviders = this.config.modelProviders.filter(
+      (provider) => provider.id !== providerId,
+    );
+
+    this.saveConfig();
+  }
+
+  async updateModelProvider(
+    providerId: string,
+    name: string,
+    config: Record<string, any>,
+  ): Promise<ConfigModelProvider> {
+    const provider = this.config.modelProviders.find(
+      (item) => item.id === providerId,
+    );
+
+    if (!provider) {
+      throw new Error(`Model provider "${providerId}" not found`);
+    }
+
+    provider.name = name;
+    provider.config = config;
+    provider.hash = crypto
+      .createHash('sha256')
+      .update(JSON.stringify({ type: provider.type, name, config }))
+      .digest('hex');
+
+    this.saveConfig();
+
+    return provider;
+  }
+
+  addProviderModel(
+    providerId: string,
+    type: 'embedding' | 'chat',
+    model: any,
+  ) {
+    const provider = this.config.modelProviders.find(
+      (item) => item.id === providerId,
+    );
+
+    if (!provider) {
+      throw new Error(`Model provider "${providerId}" not found`);
+    }
+
+    if (type === 'chat') {
+      provider.chatModels.push(model);
+    } else {
+      provider.embeddingModels.push(model);
+    }
+
+    this.saveConfig();
+
+    return model;
+  }
+
+  removeProviderModel(
+    providerId: string,
+    type: 'embedding' | 'chat',
+    modelKey: string,
+  ) {
+    const provider = this.config.modelProviders.find(
+      (item) => item.id === providerId,
+    );
+
+    if (!provider) {
+      throw new Error(`Model provider "${providerId}" not found`);
+    }
+
+    if (type === 'chat') {
+      provider.chatModels = provider.chatModels.filter(
+        (model) => model.key !== modelKey,
+      );
+    } else {
+      provider.embeddingModels = provider.embeddingModels.filter(
+        (model) => model.key !== modelKey,
+      );
+    }
+
+    this.saveConfig();
+  }
+}
+
+const configManager = new ConfigManager();
+
+export default configManager;
