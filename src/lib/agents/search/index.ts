@@ -53,6 +53,103 @@ class SearchAgent {
           .execute();
       }
 
+      const explicitResearchIntent =
+        /\b(research|sources|cite|citation|compare|latest|news|find|search|report|analyse|analyze|deep dive|with sources)\b/i.test(
+          input.followUp,
+        );
+
+      const shouldUseDirectSpeedAnswer =
+        input.config.mode === 'speed' &&
+        input.config.fileIds.length === 0 &&
+        !input.spaceId &&
+        !explicitResearchIntent;
+
+      if (shouldUseDirectSpeedAnswer) {
+        session.emit('data', {
+          type: 'researchComplete',
+        });
+
+        const directPrompt = `
+You are Etherana SX, a private local AI assistant.
+
+The user selected Speed mode.
+Answer directly and briefly.
+Do not perform research.
+Do not mention sources unless the user explicitly asks.
+Do not add citations.
+
+If the user enters only a product, website, app, company, or service name, treat it as a quick lookup request:
+- give the most likely official link if you are confident
+- add a one-sentence description
+- keep the answer short
+
+If you are not confident about an official link, say so instead of inventing one.
+`.trim();
+
+        const answerStream = input.config.llm.streamText({
+          messages: [
+            {
+              role: 'system',
+              content: directPrompt,
+            },
+            ...input.chatHistory.slice(-10),
+            {
+              role: 'user',
+              content: input.followUp,
+            },
+          ],
+        });
+
+        let responseBlockId = '';
+
+        for await (const chunk of answerStream) {
+          if (!responseBlockId) {
+            const block: TextBlock = {
+              id: crypto.randomUUID(),
+              type: 'text',
+              data: chunk.contentChunk,
+            };
+
+            session.emitBlock(block);
+            responseBlockId = block.id;
+          } else {
+            const block = session.getBlock(responseBlockId) as TextBlock | null;
+
+            if (!block) {
+              continue;
+            }
+
+            block.data += chunk.contentChunk;
+
+            session.updateBlock(block.id, [
+              {
+                op: 'replace',
+                path: '/data',
+                value: block.data,
+              },
+            ]);
+          }
+        }
+
+        session.emit('end', {});
+
+        await db
+          .update(messages)
+          .set({
+            status: 'completed',
+            responseBlocks: session.getAllBlocks(),
+          })
+          .where(
+            and(
+              eq(messages.chatId, input.chatId),
+              eq(messages.messageId, input.messageId),
+            ),
+          )
+          .execute();
+
+        return;
+      }
+
       const classification = await classify({
         chatHistory: input.chatHistory,
         enabledSources: input.config.sources,

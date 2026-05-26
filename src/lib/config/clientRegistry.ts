@@ -7,7 +7,7 @@ const getClientConfig = (key: string, defaultVal?: any) => {
 export const getTheme = () => getClientConfig('theme', 'dark');
 
 export const getAutoMediaSearch = () =>
-  getClientConfig('autoMediaSearch', 'true') === 'true';
+  getClientConfig('autoMediaSearch', 'false') === 'true';
 
 export const getSystemInstructions = () =>
   getClientConfig('systemInstructions', '');
