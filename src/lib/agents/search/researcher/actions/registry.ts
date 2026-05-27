@@ -70,10 +70,35 @@ class ActionRegistry {
       mode: SearchAgentConfig['mode'];
     },
   ) {
-    const action = this.actions.get(name);
+    const rawName = String(name || '');
+    let normalizedName = rawName;
+
+    if (!this.actions.has(normalizedName)) {
+      const knownAction = Array.from(this.actions.keys()).find((actionName) =>
+        rawName.includes(actionName),
+      );
+
+      if (knownAction) {
+        console.warn('[Etherana actions] Normalized malformed action name:', {
+          rawName: rawName.slice(0, 160),
+          normalizedName: knownAction,
+        });
+        normalizedName = knownAction;
+      }
+    }
+
+    const action = this.actions.get(normalizedName);
 
     if (!action) {
-      throw new Error(`Action with name ${name} not found`);
+      console.warn('[Etherana actions] Ignoring unknown action:', {
+        name: rawName.slice(0, 160),
+      });
+
+      return {
+        error: true,
+        ignored: true,
+        message: `Action with name ${rawName.slice(0, 80)} not found`,
+      } as unknown as ActionOutput;
     }
 
     return action.execute(params, additionalConfig);

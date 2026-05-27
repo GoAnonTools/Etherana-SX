@@ -35,6 +35,7 @@ const DeleteChat = ({
           'Content-Type': 'application/json',
         },
       });
+      window.location.assign('/');
 
       if (res.status != 200) {
         throw new Error('Failed to delete chat');

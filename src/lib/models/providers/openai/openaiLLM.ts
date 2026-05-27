@@ -298,6 +298,17 @@ class OpenAILLM extends BaseLLM<OpenAIConfig> {
     let recievedToolCalls: { name: string; id: string; arguments: string }[] =
       [];
 
+    const safelyParseToolArguments = (raw: string) => {
+      try {
+        return parse(raw || '{}');
+      } catch (err) {
+        console.warn('[Etherana tools] Ignoring invalid streamed tool arguments:', {
+          preview: String(raw || '').slice(0, 120),
+        });
+        return undefined;
+      }
+    };
+
     for await (const chunk of stream) {
       if (chunk.choices && chunk.choices.length > 0) {
         const toolCalls = chunk.choices[0].delta.tool_calls;
@@ -312,16 +323,19 @@ class OpenAILLM extends BaseLLM<OpenAIConfig> {
                   arguments: tc.function?.arguments || '',
                 };
                 recievedToolCalls.push(call);
-                return { ...call, arguments: parse(call.arguments || '{}') };
+                const parsedArguments = safelyParseToolArguments(call.arguments || '{}');
+                if (!parsedArguments) return undefined;
+                return { ...call, arguments: parsedArguments };
               } else {
                 const existingCall = recievedToolCalls[tc.index];
                 existingCall.arguments += tc.function?.arguments || '';
                 return {
                   ...existingCall,
-                  arguments: parse(existingCall.arguments),
+                  arguments: safelyParseToolArguments(existingCall.arguments),
+                  
                 };
               }
-            }) || [],
+            }).filter(Boolean) || [],
           done: chunk.choices[0].finish_reason !== null,
           additionalInfo: {
             finishReason: chunk.choices[0].finish_reason,

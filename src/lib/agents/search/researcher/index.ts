@@ -68,6 +68,55 @@ class Researcher {
       },
     ];
 
+    // Direct URL/domain bypass:
+    // If the user gives a concrete website like clameo.fr, do not ask the LLM
+    // to tool-call. Strict OpenAI-compatible providers such as Mistral/Groq/NVIDIA
+    // can corrupt tool calls. The app should scrape the provided site directly
+    // and give the content to the writer as plain context.
+    const directUrlMatches = Array.from(
+      input.followUp.matchAll(
+        /(?:https?:\/\/)?(?:www\.)?([a-z0-9-]+\.(?:com|fr|net|org|io|ai|app|dev|pro|co|uk|de|es|it|nl|be|eu))(?:\/[^\s]*)?/gi,
+      ),
+    );
+
+    if (directUrlMatches.length > 0) {
+      const urls = directUrlMatches.slice(0, 3).map((match) => {
+        const raw = match[0];
+        return raw.startsWith('http://') || raw.startsWith('https://')
+          ? raw
+          : `https://${raw}`;
+      });
+
+      const directOutput = await ActionRegistry.execute(
+        'scrape_url',
+        { urls },
+        {
+          llm: input.config.llm,
+          embedding: input.config.embedding,
+          session: session,
+          researchBlockId: researchBlockId,
+          fileIds: input.config.fileIds,
+          mode: input.config.mode,
+        },
+      );
+
+      actionOutput.push(directOutput);
+
+      const directSearchFindings =
+        directOutput.type === 'search_results' ? directOutput.results : [];
+
+      session.emitBlock({
+        id: crypto.randomUUID(),
+        type: 'source',
+        data: directSearchFindings,
+      });
+
+      return {
+        findings: actionOutput,
+        searchFindings: directSearchFindings,
+      };
+    }
+
     for (let i = 0; i < maxIteration; i++) {
       const researcherPrompt = getResearcherPrompt(
         availableActionsDescription,
