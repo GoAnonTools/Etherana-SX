@@ -30,6 +30,17 @@ type OpenAIConfig = {
 class OpenAILLM extends BaseLLM<OpenAIConfig> {
   openAIClient: OpenAI;
 
+  // Fix #3: detect local/OpenAI-compat providers so we can strip parameters
+  // that real OpenAI supports but local servers (LM Studio, Ollama shim,
+  // LiteLLM, etc.) reject with a 400 "unknown field" error.
+  // Local providers are identified by a custom baseURL that isn't api.openai.com.
+  protected get isLocalProvider(): boolean {
+    return (
+      !!this.config.baseURL &&
+      !this.config.baseURL.includes('api.openai.com')
+    );
+  }
+
   constructor(protected config: OpenAIConfig) {
     super(config);
 
@@ -90,8 +101,10 @@ class OpenAILLM extends BaseLLM<OpenAIConfig> {
       temperature:
         input.options?.temperature ?? this.config.options?.temperature ?? 1.0,
       top_p: input.options?.topP ?? this.config.options?.topP,
-      max_completion_tokens:
-        input.options?.maxTokens ?? this.config.options?.maxTokens,
+      // Local OpenAI-compat servers reject max_completion_tokens — use max_tokens instead
+      ...(this.isLocalProvider
+        ? { max_tokens: input.options?.maxTokens ?? this.config.options?.maxTokens }
+        : { max_completion_tokens: input.options?.maxTokens ?? this.config.options?.maxTokens }),
       stop: input.options?.stopSequences ?? this.config.options?.stopSequences,
       frequency_penalty:
         input.options?.frequencyPenalty ??
@@ -147,8 +160,10 @@ class OpenAILLM extends BaseLLM<OpenAIConfig> {
       temperature:
         input.options?.temperature ?? this.config.options?.temperature ?? 1.0,
       top_p: input.options?.topP ?? this.config.options?.topP,
-      max_completion_tokens:
-        input.options?.maxTokens ?? this.config.options?.maxTokens,
+      // Local OpenAI-compat servers reject max_completion_tokens — use max_tokens instead
+      ...(this.isLocalProvider
+        ? { max_tokens: input.options?.maxTokens ?? this.config.options?.maxTokens }
+        : { max_completion_tokens: input.options?.maxTokens ?? this.config.options?.maxTokens }),
       stop: input.options?.stopSequences ?? this.config.options?.stopSequences,
       frequency_penalty:
         input.options?.frequencyPenalty ??
@@ -202,8 +217,10 @@ class OpenAILLM extends BaseLLM<OpenAIConfig> {
       temperature:
         input.options?.temperature ?? this.config.options?.temperature ?? 1.0,
       top_p: input.options?.topP ?? this.config.options?.topP,
-      max_completion_tokens:
-        input.options?.maxTokens ?? this.config.options?.maxTokens,
+      // Local OpenAI-compat servers reject max_completion_tokens — use max_tokens instead
+      ...(this.isLocalProvider
+        ? { max_tokens: input.options?.maxTokens ?? this.config.options?.maxTokens }
+        : { max_completion_tokens: input.options?.maxTokens ?? this.config.options?.maxTokens }),
       stop: input.options?.stopSequences ?? this.config.options?.stopSequences,
       frequency_penalty:
         input.options?.frequencyPenalty ??

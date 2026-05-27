@@ -167,11 +167,16 @@ class Researcher {
         break;
       }
 
+      // Fix B7: omit the content key entirely when tool_calls are present.
+      // Several local OpenAI-compat servers (LM Studio, older Ollama builds)
+      // reject assistant messages that have both content: "" and tool_calls,
+      // returning a 400. The spec allows omitting content when tool_calls is set.
       agentMessageHistory.push({
         role: 'assistant',
-        content: '',
-        tool_calls: finalToolCalls,
-      });
+        ...(finalToolCalls.length > 0
+          ? { tool_calls: finalToolCalls }
+          : { content: '' }),
+      } as any);
 
       const actionResults = await ActionRegistry.executeAll(finalToolCalls, {
         llm: input.config.llm,

@@ -110,8 +110,14 @@ export const POST = async (req: Request) => {
     const parseBody = safeValidateBody(reqBody);
 
     if (!parseBody.success) {
+      const fieldErrors = parseBody.error
+        ?.map((e: any) => `${e.path || 'field'}: ${e.message}`)
+        .join('; ');
       return Response.json(
-        { message: 'Invalid request body', error: parseBody.error },
+        {
+          message: `Invalid request body — ${fieldErrors}`,
+          error: parseBody.error,
+        },
         { status: 400 },
       );
     }
@@ -130,13 +136,25 @@ export const POST = async (req: Request) => {
 
     const registry = new ModelRegistry();
 
-    const [llm, embedding] = await Promise.all([
-      registry.loadChatModel(body.chatModel.providerId, body.chatModel.key),
-      registry.loadEmbeddingModel(
-        body.embeddingModel.providerId,
-        body.embeddingModel.key,
-      ),
-    ]);
+    let llm: any;
+    let embedding: any;
+
+    try {
+      [llm, embedding] = await Promise.all([
+        registry.loadChatModel(body.chatModel.providerId, body.chatModel.key),
+        registry.loadEmbeddingModel(
+          body.embeddingModel.providerId,
+          body.embeddingModel.key,
+        ),
+      ]);
+    } catch (err: any) {
+      return Response.json(
+        {
+          message: `Model configuration error: ${err.message}. Please check your provider settings.`,
+        },
+        { status: 400 },
+      );
+    }
 
     const history: ChatTurnMessage[] = body.history.map((msg) => {
       if (msg[0] === 'human') {

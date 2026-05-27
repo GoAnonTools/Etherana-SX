@@ -99,6 +99,7 @@ const SpaceSelector = () => {
                     ) : (
                       <>
                         <button
+                          type="button"
                           onClick={() => setSpaceId(null)}
                           className={cn(
                             "w-full px-4 py-2.5 flex items-center justify-between text-left transition text-xs",
@@ -112,6 +113,7 @@ const SpaceSelector = () => {
                         {filteredSpaces.map((space) => (
                           <button
                             key={space.id}
+                            type="button"
                             onClick={() => setSpaceId(space.id)}
                             className={cn(
                               "w-full px-4 py-2.5 flex items-center justify-between text-left transition text-xs",
@@ -128,6 +130,7 @@ const SpaceSelector = () => {
                   
                   <div className="p-2 border-t border-light-200 dark:border-dark-200 bg-light-secondary/30 dark:bg-dark-secondary/30">
                     <button 
+                      type="button"
                       onClick={() => window.location.href = '/spaces'}
                       className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-blue-500/20"
                     >

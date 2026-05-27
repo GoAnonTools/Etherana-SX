@@ -60,6 +60,8 @@ type ChatContext = {
   rewrite: (messageId: string) => void;
   setChatModelProvider: (provider: ChatModelProvider) => void;
   setEmbeddingModelProvider: (provider: EmbeddingModelProvider) => void;
+  systemInstructions: string;
+  setSystemInstructions: (instructions: string) => void;
   spaceId: string | null;
   setSpaceId: (spaceId: string | null) => void;
 };
@@ -278,7 +280,7 @@ export const chatContext = createContext<ChatContext>({
   messages: [],
   sections: [],
   notFound: false,
-  optimizationMode: '',
+  optimizationMode: 'speed',
   searchMode: 'results',
   chatModelProvider: { key: '', providerId: '' },
   embeddingModelProvider: { key: '', providerId: '' },
@@ -293,6 +295,8 @@ export const chatContext = createContext<ChatContext>({
   setChatModelProvider: () => {},
   setEmbeddingModelProvider: () => {},
   setResearchEnded: () => {},
+  systemInstructions: '',
+  setSystemInstructions: () => {},
   spaceId: null,
   setSpaceId: () => {},
 });
@@ -321,7 +325,12 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [fileIds, setFileIds] = useState<string[]>([]);
 
   const [sources, setSources] = useState<string[]>([]);
-  const [optimizationMode, setOptimizationMode] = useState('speed');
+  const [optimizationMode, setOptimizationMode] = useState<'speed' | 'balanced' | 'quality'>(() => {
+    if (typeof window === 'undefined') return 'speed';
+    const stored = localStorage.getItem('optimizationMode');
+    if (stored === 'speed' || stored === 'balanced' || stored === 'quality') return stored;
+    return 'speed';
+  });
   const [searchMode, setSearchMode] = useState<SearchMode>('results');
 
   const [isMessagesLoaded, setIsMessagesLoaded] = useState(false);
@@ -344,6 +353,23 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [isConfigReady, setIsConfigReady] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [isReady, setIsReady] = useState(false);
+
+  // B10: store systemInstructions in React state so it's reactive (settings
+  // dialog changes take effect immediately), testable, and SSR-safe (no raw
+  // localStorage access inside the render path or inside sendMessage).
+  const [systemInstructions, setSystemInstructionsState] = useState<string>(
+    () => {
+      if (typeof window === 'undefined') return '';
+      return localStorage.getItem('systemInstructions') ?? '';
+    },
+  );
+
+  const setSystemInstructions = (instructions: string) => {
+    setSystemInstructionsState(instructions);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('systemInstructions', instructions);
+    }
+  };
 
   const messagesRef = useRef<Message[]>([]);
 
@@ -455,40 +481,70 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
 
         isReconnectingRef.current = true;
 
-        const res = await fetch(`/api/reconnect/${lastMsg.backendId}`, {
-          method: 'POST',
-        });
-
-        if (!res.body) throw new Error('No response body');
-
-        const reader = res.body?.getReader();
-        const decoder = new TextDecoder('utf-8');
-
-        let partialChunk = '';
-
-        const messageHandler = getMessageHandler(lastMsg);
-
+        // Fix B6: wrap the entire reconnect in try/catch/finally so that a
+        // stale backendId (server restarted, session gone) or any network
+        // failure does not permanently block future reconnect attempts and
+        // does not leave the UI stuck in a loading state.
         try {
+          const res = await fetch(`/api/reconnect/${lastMsg.backendId}`, {
+            method: 'POST',
+          });
+
+          if (!res.ok) {
+            // Session is gone — mark the message as errored and move on.
+            console.warn(`Reconnect failed with status ${res.status}, session likely expired.`);
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.messageId === lastMsg.messageId
+                  ? { ...msg, status: 'error' as const }
+                  : msg,
+              ),
+            );
+            return;
+          }
+
+          if (!res.body) throw new Error('No response body on reconnect');
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder('utf-8');
+
+          let partialChunk = '';
+
+          const messageHandler = getMessageHandler(lastMsg);
+
           while (true) {
             const { value, done } = await reader.read();
             if (done) break;
 
+            // Fix B4 (reconnect path): keep incomplete last line as partial
+            // tail instead of discarding it on a successful parse batch.
             partialChunk += decoder.decode(value, { stream: true });
+            const lines = partialChunk.split('\n');
+            partialChunk = lines.pop() ?? '';
 
-            try {
-              const messages = partialChunk.split('\n');
-              for (const msg of messages) {
-                if (!msg.trim()) continue;
-                const json = JSON.parse(msg);
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              try {
+                const json = JSON.parse(line);
                 messageHandler(json);
+              } catch {
+                console.warn('Malformed reconnect event line, skipping:', line);
               }
-              partialChunk = '';
-            } catch (error) {
-              console.warn('Incomplete JSON, waiting for next chunk...');
             }
           }
+        } catch (err) {
+          console.error('Reconnect error:', err);
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.messageId === lastMsg.messageId
+                ? { ...msg, status: 'error' as const }
+                : msg,
+            ),
+          );
         } finally {
+          // Always reset — no matter what happened above.
           isReconnectingRef.current = false;
+          setLoading(false);
         }
       }
     }
@@ -514,6 +570,10 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       setIsMessagesLoaded(false);
       setNotFound(false);
       setNewChatCreated(false);
+      // B9: clear the dedup set so messageEnd events from the new chat are
+      // never silently dropped because a stale id from a previous chat
+      // happens to collide, and so reconnect re-delivery always completes.
+      handledMessageEndRef.current = new Set();
     }
   }, [params.chatId, chatId]);
 
@@ -752,6 +812,14 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     rewrite = false,
   ) => {
     if (loading || !message) return;
+
+    // Guard: if the model config hasn't loaded yet, block the send and tell the
+    // user rather than letting a request go out with empty providerId/key which
+    // will result in a server-side 'Invalid provider id' error (500).
+    if (!isConfigReady) {
+      toast.error('Model config is still loading, please wait a moment.');
+      return;
+    }
     setLoading(true);
     setResearchEnded(false);
     setMessageAppeared(false);
@@ -762,6 +830,11 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
 
     messageId = messageId ?? generateId(7);
     const backendId = generateId(20);
+
+    // Fix #2: compute messageIndex BEFORE adding the new message to state,
+    // using the current messages array (which doesn't contain the new entry yet).
+    // This gives the correct slice index for rewrite history truncation.
+    const messageIndex = messages.findIndex((m) => m.messageId === messageId);
 
     const newMessage: Message = {
       messageId,
@@ -774,8 +847,6 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     setMessages((prevMessages) => [...prevMessages, newMessage]);
-
-    const messageIndex = messages.findIndex((m) => m.messageId === messageId);
 
     if (searchMode === 'results' && fileIds.length === 0 && !spaceId) {
       try {
@@ -833,7 +904,17 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         chatHistory.current = [
           ...chatHistory.current,
           ['human', message],
-          ['assistant', resultText],
+          // Fix B5: store a concise plain-text summary in chatHistory rather
+          // than the full markdown results dump. When the user later switches
+          // to Agent mode, the classifier and researcher see a clean history
+          // entry instead of a markdown link list that looks like a prior AI
+          // answer and causes it to skip search on follow-up questions.
+          [
+            'assistant',
+            results.length > 0
+              ? `Showed ${results.length} search results for "${message}": ${results.map((r: any) => r.title).join(', ')}.`
+              : `No search results found for "${message}".`,
+          ],
         ];
 
         setMessageAppeared(true);
@@ -854,67 +935,94 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }
 
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        content: message,
-        message: {
-          messageId: messageId,
-          chatId: chatId!,
+    // Fix #1: wrap the entire agent fetch+stream path in try/catch so that
+    // any failure (400, network error, bad JSON) shows a toast and resets
+    // state cleanly instead of leaving the UI frozen in a loading state.
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           content: message,
-        },
-        chatId: chatId!,
-        files: fileIds,
-        sources: sources,
-        optimizationMode: optimizationMode,
-        history: rewrite
-          ? chatHistory.current.slice(
-              0,
-              messageIndex === -1 ? undefined : messageIndex,
-            )
-          : chatHistory.current,
-        chatModel: {
-          key: chatModelProvider.key,
-          providerId: chatModelProvider.providerId,
-        },
-        embeddingModel: {
-          key: embeddingModelProvider.key,
-          providerId: embeddingModelProvider.providerId,
-        },
-        systemInstructions: localStorage.getItem('systemInstructions'),
-        spaceId: spaceId,
-      }),
-    });
+          message: {
+            messageId: messageId,
+            chatId: chatId!,
+            content: message,
+          },
+          chatId: chatId!,
+          files: fileIds,
+          sources: sources,
+          optimizationMode: optimizationMode,
+          history: rewrite
+            ? chatHistory.current.slice(
+                0,
+                messageIndex === -1 ? undefined : messageIndex,
+              )
+            : chatHistory.current,
+          chatModel: {
+            key: chatModelProvider.key,
+            providerId: chatModelProvider.providerId,
+          },
+          embeddingModel: {
+            key: embeddingModelProvider.key,
+            providerId: embeddingModelProvider.providerId,
+          },
+          systemInstructions: systemInstructions,
+          spaceId: spaceId,
+        }),
+      });
 
-    if (!res.body) throw new Error('No response body');
-
-    const reader = res.body?.getReader();
-    const decoder = new TextDecoder('utf-8');
-
-    let partialChunk = '';
-
-    const messageHandler = getMessageHandler(newMessage);
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-
-      partialChunk += decoder.decode(value, { stream: true });
-
-      try {
-        const messages = partialChunk.split('\n');
-        for (const msg of messages) {
-          if (!msg.trim()) continue;
-          const json = JSON.parse(msg);
-          messageHandler(json);
-        }
-        partialChunk = '';
-      } catch (error) {
-        console.warn('Incomplete JSON, waiting for next chunk...');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(
+          errData.message || `Server error ${res.status}`,
+        );
       }
+
+      if (!res.body) throw new Error('No response body');
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+
+      let partialChunk = '';
+
+      const messageHandler = getMessageHandler(newMessage);
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        // Fix: accumulate the new chunk, then split on newlines keeping any
+        // incomplete last line as the partial tail for the next iteration.
+        // This prevents valid events from being silently dropped when a TCP
+        // packet boundary falls mid-line.
+        partialChunk += decoder.decode(value, { stream: true });
+        const lines = partialChunk.split('\n');
+        partialChunk = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const json = JSON.parse(line);
+            messageHandler(json);
+          } catch {
+            console.warn('Malformed event line, skipping:', line);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('Agent request failed:', err);
+      toast.error(err.message || 'Agent request failed. Please try again.');
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.messageId === messageId
+            ? { ...msg, status: 'error' as const }
+            : msg,
+        ),
+      );
+      setLoading(false);
     }
   };
 
@@ -949,6 +1057,8 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         setEmbeddingModelProvider,
         researchEnded,
         setResearchEnded,
+        systemInstructions,
+        setSystemInstructions,
         spaceId,
         setSpaceId,
       }}
