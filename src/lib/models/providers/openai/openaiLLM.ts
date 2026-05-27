@@ -153,25 +153,147 @@ class OpenAILLM extends BaseLLM<OpenAIConfig> {
       });
     });
 
-    const stream = await this.openAIClient.chat.completions.create({
+    const providerBaseURL = String(
+      (this.config as any).baseURL ?? (this.config as any).baseUrl ?? '',
+    ).toLowerCase();
+
+    const isMistralProvider =
+      providerBaseURL.includes('mistral') ||
+      String(this.config.model || '').toLowerCase().includes('mistral');
+
+    // Local llama-server and Mistral can reject OpenAI-style tool payloads
+    // with a vague 400/no-body error. Keep Agent mode stable first.
+    const safeTools =
+      !this.isLocalProvider && !isMistralProvider && openaiTools.length > 0
+        ? openaiTools
+        : undefined;
+
+    const maxTokens = input.options?.maxTokens ?? this.config.options?.maxTokens;
+
+    const etheranaProviderFingerprint = JSON.stringify({
       model: this.config.model,
-      messages: this.convertToOpenAIMessages(input.messages),
-      tools: openaiTools.length > 0 ? openaiTools : undefined,
+      provider: (this.config as any).provider,
+      providerId: (this.config as any).providerId,
+      name: (this.config as any).name,
+      baseURL: (this.config as any).baseURL,
+      baseUrl: (this.config as any).baseUrl,
+      apiBaseURL: (this.config as any).apiBaseURL,
+      apiBaseUrl: (this.config as any).apiBaseUrl,
+      endpoint: (this.config as any).endpoint,
+      url: (this.config as any).url,
+    }).toLowerCase();
+
+    const etheranaModelName = String(this.config.model || '').toLowerCase();
+
+    const etheranaIsMistral =
+      etheranaProviderFingerprint.includes('mistral') ||
+      etheranaModelName.includes('mistral') ||
+      etheranaModelName.includes('codestral') ||
+      etheranaModelName.includes('magistral') ||
+      etheranaModelName.includes('ministral');
+
+    const etheranaRawModel = String(this.config.model || '');
+    const etheranaRawModelLower = etheranaRawModel.toLowerCase();
+
+    const etheranaLooksLikeMistralModel =
+      etheranaRawModelLower.startsWith('mistral-') ||
+      etheranaRawModelLower.startsWith('ministral-') ||
+      etheranaRawModelLower.startsWith('codestral-') ||
+      etheranaRawModelLower.startsWith('magistral-');
+
+    const etheranaLooksLikeSecretModel =
+      etheranaRawModel.length >= 24 &&
+      !etheranaRawModel.includes('-') &&
+      !etheranaLooksLikeMistralModel;
+
+    const etheranaRuntimeModel =
+      etheranaIsMistral && (!etheranaLooksLikeMistralModel || etheranaLooksLikeSecretModel)
+        ? 'mistral-small-latest'
+        : etheranaRawModel;
+
+    const etheranaMessages = this.convertToOpenAIMessages(input.messages);
+
+    // Mistral is stricter than local llama-server/OpenAI-compatible servers.
+    // Normalize Agent messages into simple system/user/assistant string messages.
+    const etheranaSafeMessages = etheranaIsMistral
+      ? etheranaMessages.map((message: any) => {
+          const cleanMessage: any = { ...message };
+
+          if (!['system', 'user', 'assistant'].includes(cleanMessage.role)) {
+            cleanMessage.role = 'user';
+          }
+
+          delete cleanMessage.tool_calls;
+          delete cleanMessage.tool_call_id;
+          delete cleanMessage.name;
+
+          if (Array.isArray(cleanMessage.content)) {
+            cleanMessage.content = cleanMessage.content
+              .map((part: any) => {
+                if (typeof part === 'string') return part;
+                if (typeof part?.text === 'string') return part.text;
+                if (typeof part?.content === 'string') return part.content;
+                return '';
+              })
+              .filter(Boolean)
+              .join('\n');
+          }
+
+          if (cleanMessage.content == null) {
+            cleanMessage.content = '';
+          }
+
+          return cleanMessage;
+        })
+      : etheranaMessages;
+
+    const etheranaMaxTokens =
+      input.options?.maxTokens ?? this.config.options?.maxTokens;
+
+    const etheranaPayload: any = {
+      model: etheranaRuntimeModel,
+      messages: etheranaSafeMessages,
       temperature:
         input.options?.temperature ?? this.config.options?.temperature ?? 1.0,
       top_p: input.options?.topP ?? this.config.options?.topP,
-      // Local OpenAI-compat servers reject max_completion_tokens — use max_tokens instead
-      ...(this.isLocalProvider
-        ? { max_tokens: input.options?.maxTokens ?? this.config.options?.maxTokens }
-        : { max_completion_tokens: input.options?.maxTokens ?? this.config.options?.maxTokens }),
-      stop: input.options?.stopSequences ?? this.config.options?.stopSequences,
-      frequency_penalty:
-        input.options?.frequencyPenalty ??
-        this.config.options?.frequencyPenalty,
-      presence_penalty:
-        input.options?.presencePenalty ?? this.config.options?.presencePenalty,
       stream: true,
-    });
+    };
+
+    // Do not send tools to Mistral/local for now. This avoids vague 400/no-body errors.
+    if (!etheranaIsMistral && !this.isLocalProvider && openaiTools.length > 0) {
+      etheranaPayload.tools = openaiTools;
+    }
+
+    if (etheranaMaxTokens !== undefined) {
+      if (this.isLocalProvider || etheranaIsMistral) {
+        etheranaPayload.max_tokens = etheranaMaxTokens;
+      } else {
+        etheranaPayload.max_completion_tokens = etheranaMaxTokens;
+      }
+    }
+
+    // Keep Mistral minimal. Some OpenAI params can trigger provider-specific 400s.
+    if (!etheranaIsMistral) {
+      const stopSequences =
+        input.options?.stopSequences ?? this.config.options?.stopSequences;
+      const frequencyPenalty =
+        input.options?.frequencyPenalty ??
+        this.config.options?.frequencyPenalty;
+      const presencePenalty =
+        input.options?.presencePenalty ?? this.config.options?.presencePenalty;
+
+      if (stopSequences !== undefined) etheranaPayload.stop = stopSequences;
+      if (frequencyPenalty !== undefined) {
+        etheranaPayload.frequency_penalty = frequencyPenalty;
+      }
+      if (presencePenalty !== undefined) {
+        etheranaPayload.presence_penalty = presencePenalty;
+      }
+    }
+    const stream = (await this.openAIClient.chat.completions.create({
+      ...etheranaPayload,
+      stream: true as const,
+    } as any)) as unknown as AsyncIterable<any>;
 
     let recievedToolCalls: { name: string; id: string; arguments: string }[] =
       [];
@@ -182,7 +304,7 @@ class OpenAILLM extends BaseLLM<OpenAIConfig> {
         yield {
           contentChunk: chunk.choices[0].delta.content || '',
           toolCallChunk:
-            toolCalls?.map((tc) => {
+            toolCalls?.map((tc: any) => {
               if (!recievedToolCalls[tc.index]) {
                 const call = {
                   name: tc.function?.name!,

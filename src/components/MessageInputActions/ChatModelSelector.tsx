@@ -138,12 +138,11 @@ const ModelSelector = () => {
 
                             <div className="flex flex-col px-2 py-2 space-y-0.5">
                               {provider.chatModels.map((model) => (
-                                <button
+                                <button type="button"
                                   key={model.key}
                                   onClick={() =>
                                     handleModelSelect(provider.id, model.key)
                                   }
-                                  type="button"
                                   className={cn(
                                     'px-3 py-2 flex items-center justify-between text-start duration-200 cursor-pointer transition rounded-lg group',
                                     chatModelProvider?.providerId ===

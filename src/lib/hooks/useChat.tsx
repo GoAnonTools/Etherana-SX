@@ -1048,7 +1048,12 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         setFileIds,
         setFiles,
         setSources,
-        setOptimizationMode,
+        setOptimizationMode: (mode: string) => {
+            if (mode === 'speed' || mode === 'balanced' || mode === 'quality') {
+                setOptimizationMode(mode);
+                localStorage.setItem('optimizationMode', mode);
+            }
+        },
         rewrite,
         sendMessage,
         setChatModelProvider,
