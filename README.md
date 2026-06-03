@@ -59,12 +59,36 @@ The experimental workbench where ideas become professional results.
    ```
 4. Access the setup wizard at `http://localhost:3000`.
 
+### Dev server + Docker (recommended)
+If you use the Docker-powered search backend (SearXNG), run:
+
+```bash
+npm run dev
+```
+
+To stop Docker services:
+
+```bash
+npm run dev:down
+```
+
+If you want to run **only** Next.js without Docker:
+
+```bash
+npm run dev:web
+```
+
 ### Docker Setup
 1. Build and run via Docker Compose:
    ```bash
    docker-compose up -d
    ```
 2. Access the app at `http://localhost:1414`.
+
+## 🔐 Security notes (local-first / no-auth)
+
+- **No authentication is expected**: this app is designed for local use. Do not expose it directly to the internet.
+- **Dependency audit status**: after the repo audit, we resolved all **Critical** and **High** npm advisories. `npm audit --omit=dev` still reports **2 Moderate** issues due to `postcss` being vendored inside `next` (`next/node_modules/postcss`). At the time of writing, the latest `next` release still bundles an older `postcss`, so this cannot be fully eliminated without patching/forking Next.
 
 ## 📜 License
 

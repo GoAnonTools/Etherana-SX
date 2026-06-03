@@ -4,7 +4,10 @@
   "license": "Apache-2.0",
   "author": "GoAnon",
   "scripts": {
-    "dev": "next dev",
+    "dev": "bash ./scripts/dev-all.sh",
+    "dev:web": "next dev",
+    "dev:all": "bash ./scripts/dev-all.sh",
+    "dev:down": "bash ./scripts/dev-down.sh",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "next lint",
@@ -35,7 +38,7 @@
     "markdown-to-jsx": "^7.7.2",
     "mathjs": "^15.1.0",
     "motion": "^12.23.26",
-    "next": "^16.0.7",
+    "next": "^16.2.7",
     "next-themes": "^0.3.0",
     "officeparser": "^6.0.7",
     "ollama": "^0.6.3",
@@ -67,12 +70,15 @@
     "@types/turndown": "^5.0.6",
     "autoprefixer": "^10.0.1",
     "drizzle-kit": "^0.18.1",
-    "eslint": "^8",
+    "eslint": "^9",
     "eslint-config-next": "^16.2.2",
-    "postcss": "^8",
+    "postcss": "^8.5.10",
     "prettier": "^3.2.5",
     "tailwindcss": "^3.3.0",
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "protobufjs": "^7.5.5"
   },
   "optionalDependencies": {
     "@napi-rs/canvas": "^0.1.87"
