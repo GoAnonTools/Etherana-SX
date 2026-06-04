@@ -32,6 +32,17 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import {
+  readAutomationOutputs as readVaultAutomationOutputs,
+  readAutomationRunHistory as readVaultAutomationRunHistory,
+  readCustomAutomations as readVaultCustomAutomations,
+  readHiddenTemplateIds as readVaultHiddenTemplateIds,
+  writeAutomationOutputs as writeVaultAutomationOutputs,
+  writeAutomationRunHistory as writeVaultAutomationRunHistory,
+  writeCustomAutomations as writeVaultCustomAutomations,
+  writeHiddenTemplateIds as writeVaultHiddenTemplateIds,
+} from '@/lib/vault/localVault';
+
 
 interface AutomationTemplate {
   id: string;
@@ -262,124 +273,35 @@ const getAutomationFromUrl = () => {
 };
 
 const readCustomAutomations = (): StoredAutomation[] => {
-  if (typeof window === 'undefined') return [];
-
-  try {
-    const raw = localStorage.getItem(CUSTOM_AUTOMATIONS_STORAGE_KEY);
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.filter((item): item is StoredAutomation => {
-      return (
-        typeof item?.id === 'string' &&
-        typeof item?.name === 'string' &&
-        typeof item?.prompt === 'string'
-      );
-    });
-  } catch {
-    return [];
-  }
+  return readVaultCustomAutomations();
 };
 
 const writeCustomAutomations = (automations: StoredAutomation[]) => {
-  if (typeof window === 'undefined') return;
-
-  localStorage.setItem(
-    CUSTOM_AUTOMATIONS_STORAGE_KEY,
-    JSON.stringify(automations),
-  );
+  writeVaultCustomAutomations(automations);
 };
 
 const readHiddenTemplateIds = (): string[] => {
-  if (typeof window === 'undefined') return [];
-
-  try {
-    const raw = localStorage.getItem(HIDDEN_TEMPLATE_AUTOMATION_IDS_STORAGE_KEY);
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.filter((item): item is string => typeof item === 'string');
-  } catch {
-    return [];
-  }
+  return readVaultHiddenTemplateIds();
 };
 
 const writeHiddenTemplateIds = (ids: string[]) => {
-  if (typeof window === 'undefined') return;
-
-  localStorage.setItem(
-    HIDDEN_TEMPLATE_AUTOMATION_IDS_STORAGE_KEY,
-    JSON.stringify(ids),
-  );
+  writeVaultHiddenTemplateIds(ids);
 };
 
 const readAutomationRunHistory = (): AutomationRunHistoryItem[] => {
-  if (typeof window === 'undefined') return [];
-
-  try {
-    const raw = localStorage.getItem(AUTOMATION_RUN_HISTORY_STORAGE_KEY);
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.filter((item): item is AutomationRunHistoryItem => {
-      return (
-        typeof item?.id === 'string' &&
-        typeof item?.automationId === 'string' &&
-        typeof item?.automationName === 'string' &&
-        typeof item?.startedAt === 'string'
-      );
-    });
-  } catch {
-    return [];
-  }
+  return readVaultAutomationRunHistory();
 };
 
 const writeAutomationRunHistory = (runs: AutomationRunHistoryItem[]) => {
-  if (typeof window === 'undefined') return;
-
-  localStorage.setItem(
-    AUTOMATION_RUN_HISTORY_STORAGE_KEY,
-    JSON.stringify(runs.slice(0, 50)),
-  );
+  writeVaultAutomationRunHistory(runs);
 };
 
 const readAutomationOutputs = (): AutomationOutputItem[] => {
-  if (typeof window === 'undefined') return [];
-
-  try {
-    const raw = localStorage.getItem(AUTOMATION_OUTPUTS_STORAGE_KEY);
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.filter((item): item is AutomationOutputItem => {
-      return (
-        typeof item?.id === 'string' &&
-        typeof item?.automationId === 'string' &&
-        typeof item?.automationName === 'string' &&
-        typeof item?.title === 'string' &&
-        typeof item?.createdAt === 'string'
-      );
-    });
-  } catch {
-    return [];
-  }
+  return readVaultAutomationOutputs();
 };
 
 const writeAutomationOutputs = (outputs: AutomationOutputItem[]) => {
-  if (typeof window === 'undefined') return;
-
-  localStorage.setItem(
-    AUTOMATION_OUTPUTS_STORAGE_KEY,
-    JSON.stringify(outputs.slice(0, 100)),
-  );
+  writeVaultAutomationOutputs(outputs);
 };
 
 const toAutomationTemplate = (
