@@ -1,6 +1,25 @@
 import { Discover } from '@/app/discover/page';
 import Link from 'next/link';
 
+const ThumbnailImage = ({ thumbnail, title }: { thumbnail: string; title: string }) => {
+  // Try to use the thumbnail directly — avoid URL parsing that breaks on
+  // non-standard thumbnail URLs returned by SearXNG engines.
+  return (
+    <img
+      className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+      src={thumbnail}
+      alt={title}
+      onError={(e) => {
+        // If the image fails to load, replace with a placeholder
+        const target = e.target as HTMLImageElement;
+        target.style.display = 'none';
+        const placeholder = target.nextElementSibling as HTMLDivElement;
+        if (placeholder) placeholder.style.display = 'flex';
+      }}
+    />
+  );
+};
+
 const MajorNewsCard = ({
   item,
   isLeft = true,
@@ -16,15 +35,17 @@ const MajorNewsCard = ({
     {isLeft ? (
       <>
         <div className="relative w-80 h-full overflow-hidden rounded-2xl flex-shrink-0">
-          <img
-            className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
-            src={
-              new URL(item.thumbnail).origin +
-              new URL(item.thumbnail).pathname +
-              `?id=${new URL(item.thumbnail).searchParams.get('id')}`
-            }
-            alt={item.title}
-          />
+          {item.thumbnail ? (
+            <ThumbnailImage thumbnail={item.thumbnail} title={item.title} />
+          ) : null}
+          <div
+            className="absolute inset-0 bg-light-200 dark:bg-dark-200 items-center justify-center"
+            style={{ display: item.thumbnail ? 'none' : 'flex' }}
+          >
+            <span className="text-4xl font-bold text-black/20 dark:text-white/20">
+              {item.title?.charAt(0)?.toUpperCase() || '?'}
+            </span>
+          </div>
         </div>
         <div className="flex flex-col justify-center flex-1 py-4">
           <h2
@@ -52,15 +73,17 @@ const MajorNewsCard = ({
           </p>
         </div>
         <div className="relative w-80 h-full overflow-hidden rounded-2xl flex-shrink-0">
-          <img
-            className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
-            src={
-              new URL(item.thumbnail).origin +
-              new URL(item.thumbnail).pathname +
-              `?id=${new URL(item.thumbnail).searchParams.get('id')}`
-            }
-            alt={item.title}
-          />
+          {item.thumbnail ? (
+            <ThumbnailImage thumbnail={item.thumbnail} title={item.title} />
+          ) : null}
+          <div
+            className="absolute inset-0 bg-light-200 dark:bg-dark-200 items-center justify-center"
+            style={{ display: item.thumbnail ? 'none' : 'flex' }}
+          >
+            <span className="text-4xl font-bold text-black/20 dark:text-white/20">
+              {item.title?.charAt(0)?.toUpperCase() || '?'}
+            </span>
+          </div>
         </div>
       </>
     )}

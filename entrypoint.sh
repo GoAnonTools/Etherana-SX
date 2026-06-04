@@ -13,7 +13,22 @@ sed -i "s/SEARXNG_SECRET_PLACEHOLDER/${SEARXNG_SECRET}/" /etc/searxng/settings.y
 echo "Starting SearXNG..."
 
 # SearXNG needs to run as the searxng user; the container runs as etherana so we use sudo.
-sudo -H -u searxng bash -c "cd /usr/local/searxng/searxng-src && export SEARXNG_SETTINGS_PATH='/etc/searxng/settings.yml' && export FLASK_APP=searx/webapp.py && /usr/local/searxng/searx-pyenv/bin/python -m flask run --host=0.0.0.0 --port=8080" &
+# Using uwsgi (production-grade) instead of Flask dev server for reliability and concurrency.
+sudo -H -u searxng /usr/bin/uwsgi \
+  --plugin python3 \
+  --module searx.webapp:app \
+  --virtualenv /usr/local/searxng/searx-pyenv \
+  --pythonpath /usr/local/searxng/searxng-src \
+  --chdir /usr/local/searxng/searxng-src \
+  --http 0.0.0.0:8080 \
+  --workers 4 \
+  --threads 4 \
+  --enable-threads \
+  --disable-logging \
+  --log-5xx \
+  --master \
+  --env SEARXNG_SETTINGS_PATH=/etc/searxng/settings.yml \
+  &
 SEARXNG_PID=$!
 
 echo "Waiting for SearXNG to be ready..."

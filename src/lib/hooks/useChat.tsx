@@ -396,12 +396,12 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
           const regex = /\[(\d+)\]/g;
 
           if (processedText.includes('<think>')) {
-            const openThinkTag = processedText.match(/<think>/g)?.length || 0;
+            const openThinkTag = processedText.match(/<think/g)?.length || 0;
             const closeThinkTag =
               processedText.match(/<\/think>/g)?.length || 0;
 
             if (openThinkTag && !closeThinkTag) {
-              processedText += '</think> <a> </a>';
+              processedText += ' <a> </a>';
             }
           }
 
@@ -464,6 +464,16 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
 
   const isReconnectingRef = useRef(false);
   const handledMessageEndRef = useRef<Set<string>>(new Set());
+
+  // Refs to coordinate the Labs /?q=xxx reset with the auto-send effect.
+  // resetForQRef tracks the last q param we've processed, preventing
+  // infinite loops when the reset causes state changes.
+  // resetInProgressRef is a synchronous flag that blocks the auto-send
+  // effect in the same render cycle where the reset fires (React state
+  // updates from effects are batched and not visible to other effects
+  // in the same cycle, but ref updates are immediate).
+  const resetForQRef = useRef<string | null>(null);
+  const resetInProgressRef = useRef(false);
 
   const checkReconnect = async () => {
     if (isReconnectingRef.current) return;
@@ -577,6 +587,72 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [params.chatId, chatId]);
 
+  // When navigating to /?spaceId=xxx (e.g. from a Space detail page),
+  // reset the entire chat state so a fresh conversation is started
+  // within that Space. Without this, the old chatId and null spaceId
+  // persist because ChatProvider lives in the root layout and never
+  // unmounts during navigation.
+  useEffect(() => {
+    const urlSpaceId = searchParams.get('spaceId');
+    if (urlSpaceId && urlSpaceId !== spaceId) {
+      setSpaceId(urlSpaceId);
+      setChatId(generateId(20));
+      setMessages([]);
+      chatHistory.current = [];
+      setFiles([]);
+      setFileIds([]);
+      setSources([]);
+      setNewChatCreated(true);
+      setIsMessagesLoaded(true);
+      setNotFound(false);
+      setLoading(false);
+      setResearchEnded(false);
+      handledMessageEndRef.current = new Set();
+    }
+  }, [searchParams, spaceId]);
+
+  // When navigating to /?q=xxx (e.g. from Labs presets), reset the
+  // chat state so a fresh conversation starts. Without this, the old
+  // chatId persists because ChatProvider lives in the root layout and
+  // never unmounts during navigation — so clicking a Labs preset sends
+  // the prompt into the existing chat instead of creating a new one.
+  //
+  // The resetForQRef prevents infinite loops by tracking the last `q`
+  // value we processed. The resetInProgressRef blocks the auto-send
+  // effect in the same render cycle (refs update synchronously, state
+  // updates are batched and not visible to other effects until the
+  // next render). On the next render, chatId has changed, the
+  // auto-send effect re-fires, and it sends to the correct new chat.
+  useEffect(() => {
+    const urlQ = searchParams.get('q');
+    if (urlQ && !params.chatId) {
+      // Only process if this is a new q value we haven't handled yet
+      if (resetForQRef.current !== urlQ) {
+        resetForQRef.current = urlQ;
+        // Only reset if we're coming from an existing conversation
+        if (messages.length > 0) {
+          resetInProgressRef.current = true;
+          setChatId(generateId(20));
+          setMessages([]);
+          chatHistory.current = [];
+          setFiles([]);
+          setFileIds([]);
+          setSources([]);
+          setNewChatCreated(true);
+          setIsMessagesLoaded(true);
+          setNotFound(false);
+          setLoading(false);
+          setResearchEnded(false);
+          handledMessageEndRef.current = new Set();
+        }
+      }
+    } else if (!urlQ || params.chatId) {
+      // Clear the ref when navigating away from /?q=xxx so that
+      // clicking the same Labs preset again triggers a fresh reset.
+      resetForQRef.current = null;
+    }
+  }, [searchParams, params.chatId]);
+
   useEffect(() => {
     if (
       chatId &&
@@ -637,10 +713,18 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         toast.error('Cannot send message before the configuration is ready');
         return;
       }
+      // If a q-param reset just fired in this same render cycle, skip
+      // the send. The ref was set synchronously by the reset effect
+      // above, so we can see it here even though state updates are
+      // still batched. On the next render (with the new chatId),
+      // this effect will re-fire because chatId is a dependency.
+      if (resetInProgressRef.current) {
+        resetInProgressRef.current = false;
+        return;
+      }
       sendMessage(initialMessage);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConfigReady, isReady, initialMessage]);
+  }, [isConfigReady, isReady, initialMessage, chatId]);
 
   const getMessageHandler = (message: Message) => {
     const messageId = message.messageId;

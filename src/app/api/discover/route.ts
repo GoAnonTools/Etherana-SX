@@ -2,23 +2,23 @@ import { searchSearxng } from '@/lib/searxng';
 
 const websitesForTopic = {
   tech: {
-    query: ['technology news', 'latest tech', 'AI', 'science and innovation'],
+    queries: ['technology news today', 'latest tech and AI news'],
     links: ['techcrunch.com', 'wired.com', 'theverge.com'],
   },
   finance: {
-    query: ['finance news', 'economy', 'stock market', 'investing'],
+    queries: ['finance news today', 'stock market and economy news'],
     links: ['bloomberg.com', 'cnbc.com', 'marketwatch.com'],
   },
   art: {
-    query: ['art news', 'culture', 'modern art', 'cultural events'],
+    queries: ['art and culture news', 'modern art and cultural events'],
     links: ['artnews.com', 'hyperallergic.com', 'theartnewspaper.com'],
   },
   sports: {
-    query: ['sports news', 'latest sports', 'cricket football tennis'],
+    queries: ['sports news today', 'latest sports results'],
     links: ['espn.com', 'bbc.com/sport', 'skysports.com'],
   },
   entertainment: {
-    query: ['entertainment news', 'movies', 'TV shows', 'celebrities'],
+    queries: ['entertainment news', 'movies and TV shows news'],
     links: ['hollywoodreporter.com', 'variety.com', 'deadline.com'],
   },
 };
@@ -40,38 +40,45 @@ export const GET = async (req: Request) => {
     if (mode === 'normal') {
       const seenUrls = new Set();
 
-      data = (
-        await Promise.all(
-          selectedTopic.links.flatMap((link) =>
-            selectedTopic.query.map(async (query) => {
-              return (
-                await searchSearxng(`site:${link} ${query}`, {
-                                    pageno: 1,
-                  language: 'en',
-                })
-              ).results;
-            }),
+      // Run searches in smaller batches to avoid overwhelming SearXNG.
+      // Each batch = 1 query × all links (3 requests), processed sequentially.
+      const allResults: any[] = [];
+
+      for (const query of selectedTopic.queries) {
+        const batchResults = await Promise.allSettled(
+          selectedTopic.links.map((link) =>
+            searchSearxng(`site:${link} ${query}`, {
+              pageno: 1,
+              language: 'en',
+            }).catch(() => ({ results: [], suggestions: [] })),
           ),
-        )
-      )
-        .flat()
+        );
+
+        for (const result of batchResults) {
+          if (result.status === 'fulfilled' && result.value?.results) {
+            allResults.push(...result.value.results);
+          }
+        }
+      }
+
+      data = allResults
         .filter((item) => {
           const url = item.url?.toLowerCase().trim();
-          if (seenUrls.has(url)) return false;
+          if (!url || seenUrls.has(url)) return false;
           seenUrls.add(url);
           return true;
         })
         .sort(() => Math.random() - 0.5);
     } else {
-      data = (
-        await searchSearxng(
-          `site:${selectedTopic.links[Math.floor(Math.random() * selectedTopic.links.length)]} ${selectedTopic.query[Math.floor(Math.random() * selectedTopic.query.length)]}`,
-          {
-                        pageno: 1,
-            language: 'en',
-          },
-        )
-      ).results;
+      const result = await searchSearxng(
+        `site:${selectedTopic.links[Math.floor(Math.random() * selectedTopic.links.length)]} ${selectedTopic.queries[Math.floor(Math.random() * selectedTopic.queries.length)]}`,
+        {
+          pageno: 1,
+          language: 'en',
+        },
+      ).catch(() => ({ results: [], suggestions: [] }));
+
+      data = result.results;
     }
 
     return Response.json(

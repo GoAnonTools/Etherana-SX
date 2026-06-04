@@ -70,7 +70,7 @@ const LABS = [
 
 const LabsPage = () => {
   return (
-    <div className="flex flex-col h-screen overflow-y-auto bg-light-primary dark:bg-dark-primary p-6 lg:p-12 scrollbar-hide">
+    <div className="flex flex-col min-h-screen bg-light-primary dark:bg-dark-primary p-6 lg:p-12">
       <div className="max-w-5xl mx-auto w-full">
         <div className="flex items-center justify-between mb-12">
           <div className="max-w-2xl">

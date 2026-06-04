@@ -10,7 +10,11 @@ search:
     - json
 
 server:
+  bind_address: "0.0.0.0"
+  port: 8080
   secret_key: 'SEARXNG_SECRET_PLACEHOLDER'
+  limiter: false
+  public_instance: false
 
 engines:
   - name: wolframalpha
