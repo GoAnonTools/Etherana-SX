@@ -7,6 +7,7 @@ import {
   LayoutGrid,
   Plus,
   Search,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -108,6 +109,15 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     },
   ];
 
+  const vaultLinks: NavLink[] = [
+    {
+      icon: ShieldCheck,
+      href: '/vault',
+      active: segments.includes('vault'),
+      label: 'Privacy Vault',
+    },
+  ];
+
   const mobileLinks: NavLink[] = [
     ...primaryLinks,
     {
@@ -117,6 +127,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       label: 'Spaces',
     },
     ...automationLinks,
+    ...vaultLinks,
   ];
 
   return (
@@ -211,6 +222,16 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
               <div className="space-y-1">
                 {automationLinks.map((link) => (
+                  <SidebarLink key={link.href} link={link} />
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <SectionTitle>Privacy</SectionTitle>
+
+              <div className="space-y-1">
+                {vaultLinks.map((link) => (
                   <SidebarLink key={link.href} link={link} />
                 ))}
               </div>
