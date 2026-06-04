@@ -306,6 +306,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
 
   const searchParams = useSearchParams();
   const initialMessage = searchParams.get('q');
+  const initialMode = searchParams.get('mode');
 
   const [chatId, setChatId] = useState<string | undefined>(params.chatId);
   const [spaceId, setSpaceId] = useState<string | null>(
@@ -331,8 +332,13 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     if (stored === 'speed' || stored === 'balanced' || stored === 'quality') return stored;
     return 'speed';
   });
-  const [searchMode, setSearchMode] = useState<SearchMode>('results');
+  const [searchMode, setSearchMode] = useState<SearchMode>(() => initialMode === 'agent' ? 'agent' : 'results');
 
+  useEffect(() => {
+    if (initialMode === 'agent' || initialMode === 'results') {
+      setSearchMode(initialMode);
+    }
+  }, [initialMode]);
   const [isMessagesLoaded, setIsMessagesLoaded] = useState(false);
 
   const [notFound, setNotFound] = useState(false);
@@ -909,7 +915,17 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     setMessageAppeared(false);
 
     if (messages.length <= 1) {
-      window.history.replaceState(null, '', `/c/${chatId}`);
+      const preservedMode =
+        typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('mode')
+          : null;
+
+      const nextChatUrl =
+        preservedMode === 'agent'
+          ? `/c/${chatId}?mode=agent`
+          : `/c/${chatId}`;
+
+      window.history.replaceState(null, '', nextChatUrl);
     }
 
     messageId = messageId ?? generateId(7);
@@ -932,7 +948,15 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
 
     setMessages((prevMessages) => [...prevMessages, newMessage]);
 
-    if (searchMode === 'results' && fileIds.length === 0 && !spaceId) {
+    const urlMode =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('mode')
+        : null;
+
+    const effectiveSearchMode: SearchMode =
+      urlMode === 'agent' || urlMode === 'results' ? urlMode : searchMode;
+
+    if (effectiveSearchMode === 'results' && fileIds.length === 0 && !spaceId) {
       try {
         const res = await fetch('/api/results', {
           method: 'POST',

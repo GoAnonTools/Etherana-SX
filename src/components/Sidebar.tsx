@@ -2,151 +2,248 @@
 
 import { cn } from '@/lib/utils';
 import {
-  BookOpenText,
-  Home,
-  Search,
-  LayoutGrid,
   CheckSquare,
-  Beaker,
-  Settings,
+  Compass,
+  LayoutGrid,
   Plus,
-  ArrowLeft,
+  Search,
+  type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useSelectedLayoutSegments } from 'next/navigation';
-import React, { useState, type ReactNode } from 'react';
+import React, { useEffect, useState } from 'react';
 import Layout from './Layout';
-import {
-  Description,
-  Dialog,
-  DialogPanel,
-  DialogTitle,
-} from '@headlessui/react';
 import SettingsButton from './Settings/SettingsButton';
 
-const VerticalIconContainer = ({ children }: { children: ReactNode }) => {
-  return <div className="flex flex-col items-center w-full">{children}</div>;
+interface Space {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+interface NavLink {
+  icon: LucideIcon;
+  href: string;
+  active: boolean;
+  label: string;
+}
+
+const SidebarLink = ({ link }: { link: NavLink }) => {
+  const Icon = link.icon;
+
+  return (
+    <Link
+      href={link.href}
+      className={cn(
+        'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition duration-200',
+        link.active
+          ? 'bg-light-200 text-black dark:bg-dark-200 dark:text-white'
+          : 'text-black/60 hover:bg-light-200 hover:text-black dark:text-white/60 dark:hover:bg-dark-200 dark:hover:text-white',
+      )}
+    >
+      <Icon
+        size={18}
+        className={cn(
+          'transition duration-200',
+          !link.active && 'group-hover:scale-105',
+        )}
+      />
+      <span>{link.label}</span>
+    </Link>
+  );
+};
+
+const SectionTitle = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-black/35 dark:text-white/35">
+      {children}
+    </p>
+  );
 };
 
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const segments = useSelectedLayoutSegments();
-  const [isOpen, setIsOpen] = useState<boolean>(true);
+  const [spaces, setSpaces] = useState<Space[]>([]);
 
-  const navLinks = [
-    {
-      icon: Home,
-      href: '/',
-      active: segments.length === 0 || segments.includes('c'),
-      label: 'Home',
-    },
+  const activeSpaceId = segments[0] === 'spaces' ? segments[1] : undefined;
+
+  useEffect(() => {
+    const fetchSpaces = async () => {
+      try {
+        const res = await fetch('/api/spaces');
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        setSpaces(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Failed to fetch spaces for sidebar:', err);
+      }
+    };
+
+    fetchSpaces();
+  }, []);
+
+  const primaryLinks: NavLink[] = [
     {
       icon: Search,
+      href: '/search',
+      active: segments.includes('search') || segments.includes('c'),
+      label: 'Search',
+    },
+    {
+      icon: Compass,
       href: '/discover',
       active: segments.includes('discover'),
       label: 'Discover',
     },
+  ];
+
+  const automationLinks: NavLink[] = [
     {
-      icon: BookOpenText,
-      href: '/library',
-      active: segments.includes('library') && !segments.includes('spaces'),
-      label: 'Library',
+      icon: CheckSquare,
+      href: '/tasks',
+      active: segments.includes('tasks'),
+      label: 'Automations',
     },
+  ];
+
+  const mobileLinks: NavLink[] = [
+    ...primaryLinks,
     {
       icon: LayoutGrid,
       href: '/spaces',
       active: segments.includes('spaces'),
       label: 'Spaces',
     },
-    {
-      icon: CheckSquare,
-      href: '/tasks',
-      active: segments.includes('tasks'),
-      label: 'Tasks',
-    },
-    {
-      icon: Beaker,
-      href: '/labs',
-      active: segments.includes('labs'),
-      label: 'Labs',
-    },
+    ...automationLinks,
   ];
 
   return (
     <div>
-      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-[72px] lg:flex-col border-r border-light-200 dark:border-dark-200">
-        <div className="flex grow flex-col items-center justify-between gap-y-5 overflow-y-auto bg-light-secondary dark:bg-dark-secondary px-2 py-8 shadow-sm shadow-light-200/10 dark:shadow-black/25">
-          <a
-            className="p-1 rounded-full hover:opacity-80 hover:scale-105 transition duration-200"
-            href="/"
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col border-r border-light-200 dark:border-dark-200">
+        <div className="flex h-full grow flex-col bg-light-secondary px-4 py-6 shadow-sm shadow-light-200/10 dark:bg-dark-secondary dark:shadow-black/25">
+          <Link
+            href="/search"
+            className="mb-6 flex items-center gap-3 rounded-2xl p-2 transition duration-200 hover:bg-light-200 dark:hover:bg-dark-200"
           >
-            <img src="/Etherana_SX_logo.png" alt="Etherana SX" className="w-10 h-10 object-contain" />
-          </a>
-          <VerticalIconContainer>
-            {navLinks.map((link, i) => {
-              const Icon = link.icon;
-              return (
-                <Link
-                  key={i}
-                  href={link.href}
-                  className={cn(
-                    'relative flex flex-col items-center justify-center space-y-0.5 cursor-pointer w-full py-2 rounded-lg',
-                    link.active
-                      ? 'text-black/70 dark:text-white/70 '
-                      : 'text-black/60 dark:text-white/60',
-                  )}
-                >
-                  <div
-                    className={cn(
-                      link.active && 'bg-light-200 dark:bg-dark-200',
-                      'group rounded-lg hover:bg-light-200 hover:dark:bg-dark-200 transition duration-200',
-                    )}
-                  >
-                    <Icon
-                      size={25}
-                      className={cn(
-                        !link.active && 'group-hover:scale-105',
-                        'transition duration-200 m-1.5',
-                      )}
-                    />
+            <img
+              src="/Etherana_SX_logo.png"
+              alt="Etherana SX"
+              className="h-10 w-10 object-contain"
+            />
+            <div>
+              <p className="text-sm font-bold leading-tight text-black dark:text-white">
+                Etherana SX
+              </p>
+              <p className="text-xs text-black/45 dark:text-white/45">
+                AI workspace
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            href="/search"
+            className="mb-6 flex items-center justify-center gap-2 rounded-full bg-black px-4 py-2.5 text-sm font-semibold text-white transition duration-200 hover:scale-[1.01] active:scale-[0.99] dark:bg-white dark:text-black"
+          >
+            <Plus size={16} />
+            New Search
+          </Link>
+
+          <nav className="flex flex-1 flex-col gap-7 overflow-y-auto">
+            <div className="space-y-1">
+              {primaryLinks.map((link) => (
+                <SidebarLink key={link.href} link={link} />
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <SectionTitle>Workspaces</SectionTitle>
+
+              <div className="space-y-1">
+                <SidebarLink
+                  link={{
+                    icon: LayoutGrid,
+                    href: '/spaces',
+                    active: segments.includes('spaces') && !activeSpaceId,
+                    label: 'All Spaces',
+                  }}
+                />
+
+                {spaces.length > 0 ? (
+                  <div className="space-y-1 pt-1">
+                    {spaces.slice(0, 6).map((space) => {
+                      const active = activeSpaceId === space.id;
+
+                      return (
+                        <Link
+                          key={space.id}
+                          href={`/spaces/${space.id}`}
+                          className={cn(
+                            'block truncate rounded-xl px-3 py-2 text-sm transition duration-200',
+                            active
+                              ? 'bg-light-200 font-medium text-black dark:bg-dark-200 dark:text-white'
+                              : 'text-black/55 hover:bg-light-200 hover:text-black dark:text-white/55 dark:hover:bg-dark-200 dark:hover:text-white',
+                          )}
+                          title={space.name}
+                        >
+                          <span className="mr-2 text-black/30 dark:text-white/30">
+                            •
+                          </span>
+                          {space.name}
+                        </Link>
+                      );
+                    })}
                   </div>
-                  <p
-                    className={cn(
-                      link.active
-                        ? 'text-black/80 dark:text-white/80'
-                        : 'text-black/60 dark:text-white/60',
-                      'text-[10px]',
-                    )}
+                ) : (
+                  <Link
+                    href="/spaces"
+                    className="block rounded-xl px-3 py-2 text-sm text-black/45 transition duration-200 hover:bg-light-200 hover:text-black dark:text-white/45 dark:hover:bg-dark-200 dark:hover:text-white"
                   >
-                    {link.label}
-                  </p>
-                </Link>
-              );
-            })}
-          </VerticalIconContainer>
+                    Create your first Space
+                  </Link>
+                )}
+              </div>
+            </div>
 
-          <SettingsButton />
+            <div className="space-y-2">
+              <SectionTitle>Automation</SectionTitle>
+
+              <div className="space-y-1">
+                {automationLinks.map((link) => (
+                  <SidebarLink key={link.href} link={link} />
+                ))}
+              </div>
+            </div>
+          </nav>
+
+          <div className="pt-6">
+            <SettingsButton />
+          </div>
         </div>
-      </div>
+      </aside>
 
-      <div className="fixed bottom-0 w-full z-50 flex flex-row items-center gap-x-6 bg-light-secondary dark:bg-dark-secondary px-4 py-4 shadow-sm lg:hidden">
-        {navLinks.map((link, i) => {
+      <div className="fixed bottom-0 z-50 flex w-full flex-row items-center gap-x-2 bg-light-secondary px-3 py-3 shadow-sm dark:bg-dark-secondary lg:hidden">
+        {mobileLinks.map((link) => {
           const Icon = link.icon;
+
           return (
             <Link
               href={link.href}
-              key={i}
+              key={link.href}
               className={cn(
-                'relative flex flex-col items-center space-y-1 text-center w-full',
+                'relative flex w-full flex-col items-center space-y-1 rounded-xl py-1.5 text-center text-xs transition duration-200',
                 link.active
                   ? 'text-black dark:text-white'
-                  : 'text-black dark:text-white/70',
+                  : 'text-black/60 dark:text-white/60',
               )}
             >
               {link.active && (
-                <div className="absolute top-0 -mt-4 h-1 w-full rounded-b-lg bg-black dark:bg-white" />
+                <div className="absolute top-0 -mt-3 h-1 w-8 rounded-b-lg bg-black dark:bg-white" />
               )}
-              <Icon />
-              <p className="text-xs">{link.label}</p>
+
+              <Icon size={20} />
+              <p>{link.label}</p>
             </Link>
           );
         })}

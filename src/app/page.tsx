@@ -1,13 +1,7 @@
-import ChatWindow from '@/components/ChatWindow';
-import { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Etherana SX',
-  description: 'AI-powered answering engine for solo entrepreneurs.',
-};
+import { redirect } from 'next/navigation';
 
 const Home = () => {
-  return <ChatWindow />;
+  redirect('/search');
 };
 
 export default Home;
