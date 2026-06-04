@@ -1206,9 +1206,10 @@ const AutomationDetail = ({
         {outputs.length > 0 ? (
           <div className="space-y-3">
             {outputs.slice(0, 5).map((output) => (
-              <article
+              <a
                 key={output.id}
-                className="rounded-2xl bg-light-primary p-4 dark:bg-dark-primary"
+                href={`/outputs/${output.id}`}
+                className="block rounded-2xl bg-light-primary p-4 transition hover:scale-[1.01] dark:bg-dark-primary"
               >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div>
@@ -1233,7 +1234,7 @@ const AutomationDetail = ({
                 <p className="mt-3 text-xs text-black/40 dark:text-white/40">
                   Created {new Date(output.createdAt).toLocaleString()}
                 </p>
-              </article>
+              </a>
             ))}
           </div>
         ) : (

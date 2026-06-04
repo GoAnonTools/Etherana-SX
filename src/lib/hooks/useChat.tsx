@@ -84,6 +84,87 @@ interface EmbeddingModelProvider {
 
 type SearchMode = 'results' | 'agent';
 
+
+type AutomationOutputStatus = 'drafting' | 'ready';
+
+interface AutomationOutputItem {
+  id: string;
+  automationId: string;
+  automationName: string;
+  title: string;
+  outputType: string;
+  outputDestination: string;
+  outputDestinationLabel: string;
+  status: AutomationOutputStatus;
+  createdAt: string;
+  runId: string;
+  prompt: string;
+  expectedOutput: string;
+  content?: string;
+}
+
+const AUTOMATION_OUTPUTS_STORAGE_KEY = 'etherana.automationOutputs.v1';
+
+const readAutomationOutputsForCapture = (): AutomationOutputItem[] => {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const raw = localStorage.getItem(AUTOMATION_OUTPUTS_STORAGE_KEY);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.filter((item): item is AutomationOutputItem => {
+      return (
+        typeof item?.id === 'string' &&
+        typeof item?.automationId === 'string' &&
+        typeof item?.automationName === 'string' &&
+        typeof item?.title === 'string' &&
+        typeof item?.createdAt === 'string'
+      );
+    });
+  } catch {
+    return [];
+  }
+};
+
+const writeAutomationOutputsForCapture = (
+  outputs: AutomationOutputItem[],
+) => {
+  if (typeof window === 'undefined') return;
+
+  localStorage.setItem(
+    AUTOMATION_OUTPUTS_STORAGE_KEY,
+    JSON.stringify(outputs.slice(0, 100)),
+  );
+};
+
+const captureAutomationOutputContent = (
+  outputId: string | null,
+  content: string,
+) => {
+  if (!outputId || !content.trim()) return;
+
+  const outputs = readAutomationOutputsForCapture();
+  const outputExists = outputs.some((output) => output.id === outputId);
+
+  if (!outputExists) return;
+
+  const nextOutputs = outputs.map((output) => {
+    if (output.id !== outputId) return output;
+
+    return {
+      ...output,
+      content: content.trim(),
+      status: 'ready' as const,
+    };
+  });
+
+  writeAutomationOutputsForCapture(nextOutputs);
+};
+
+
 const generateId = (bytes: number) => {
   if (
     typeof window !== 'undefined' &&
@@ -307,6 +388,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const searchParams = useSearchParams();
   const initialMessage = searchParams.get('q');
   const initialMode = searchParams.get('mode');
+  const initialOutputId = searchParams.get('outputId');
 
   const [chatId, setChatId] = useState<string | undefined>(params.chatId);
   const [spaceId, setSpaceId] = useState<string | null>(
@@ -915,15 +997,29 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     setMessageAppeared(false);
 
     if (messages.length <= 1) {
-      const preservedMode =
+      const urlParamsForChat =
         typeof window !== 'undefined'
-          ? new URLSearchParams(window.location.search).get('mode')
+          ? new URLSearchParams(window.location.search)
           : null;
 
-      const nextChatUrl =
-        preservedMode === 'agent'
-          ? `/c/${chatId}?mode=agent`
-          : `/c/${chatId}`;
+      const preservedMode = urlParamsForChat?.get('mode') ?? null;
+      const preservedOutputId =
+        urlParamsForChat?.get('outputId') ?? initialOutputId;
+
+      const nextChatParams = new URLSearchParams();
+
+      if (preservedMode === 'agent') {
+        nextChatParams.set('mode', 'agent');
+      }
+
+      if (preservedOutputId) {
+        nextChatParams.set('outputId', preservedOutputId);
+      }
+
+      const nextChatQuery = nextChatParams.toString();
+      const nextChatUrl = nextChatQuery
+        ? `/c/${chatId}?${nextChatQuery}`
+        : `/c/${chatId}`;
 
       window.history.replaceState(null, '', nextChatUrl);
     }
@@ -1119,6 +1215,36 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
             console.warn('Malformed event line, skipping:', line);
           }
         }
+      }
+
+      const captureFinalAgentOutput = () => {
+        const outputIdToCapture =
+          typeof window !== 'undefined'
+            ? new URLSearchParams(window.location.search).get('outputId') ??
+              initialOutputId
+            : initialOutputId;
+
+        if (!outputIdToCapture) return;
+
+        const completedMessage = messagesRef.current.find(
+          (msg) => msg.messageId === messageId,
+        );
+
+        const finalText =
+          completedMessage?.responseBlocks
+            ?.filter((block) => block.type === 'text')
+            .map((block) => String(block.data ?? ''))
+            .filter(Boolean)
+            .join('\n\n')
+            .trim() ?? '';
+
+        captureAutomationOutputContent(outputIdToCapture, finalText);
+      };
+
+      captureFinalAgentOutput();
+
+      if (typeof window !== 'undefined') {
+        window.setTimeout(captureFinalAgentOutput, 300);
       }
     } catch (err: any) {
       console.error('Agent request failed:', err);

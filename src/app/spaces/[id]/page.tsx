@@ -10,7 +10,8 @@ import {
   Trash2, 
   Upload, 
   Clock,
-  Globe2
+  Globe2,
+  ExternalLink
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatTimeDifference } from '@/lib/utils';
@@ -32,11 +33,54 @@ interface Chat {
   files: { fileId: string; name: string }[];
 }
 
+interface AutomationOutputItem {
+  id: string;
+  automationId: string;
+  automationName: string;
+  title: string;
+  outputType: string;
+  outputDestination: string;
+  outputDestinationLabel: string;
+  status: 'drafting' | 'ready';
+  createdAt: string;
+  runId: string;
+  prompt: string;
+  expectedOutput: string;
+  content?: string;
+}
+
+const AUTOMATION_OUTPUTS_STORAGE_KEY = 'etherana.automationOutputs.v1';
+
+const readAutomationOutputs = (): AutomationOutputItem[] => {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const raw = localStorage.getItem(AUTOMATION_OUTPUTS_STORAGE_KEY);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.filter((item): item is AutomationOutputItem => {
+      return (
+        typeof item?.id === 'string' &&
+        typeof item?.automationId === 'string' &&
+        typeof item?.automationName === 'string' &&
+        typeof item?.title === 'string' &&
+        typeof item?.createdAt === 'string'
+      );
+    });
+  } catch {
+    return [];
+  }
+};
+
 const SpaceDetailPage = () => {
   const { id } = useParams();
   const router = useRouter();
   const [space, setSpace] = useState<Space | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
+  const [outputs, setOutputs] = useState<AutomationOutputItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchSpaceDetails = async () => {
@@ -49,6 +93,7 @@ const SpaceDetailPage = () => {
       const data = await res.json();
       setSpace(data.space);
       setChats(data.chats);
+      setOutputs(readAutomationOutputs());
     } catch (err) {
       console.error('Failed to fetch space details:', err);
     } finally {
@@ -59,6 +104,20 @@ const SpaceDetailPage = () => {
   useEffect(() => {
     fetchSpaceDetails();
   }, [id]);
+
+  useEffect(() => {
+    const refreshOutputs = () => {
+      setOutputs(readAutomationOutputs());
+    };
+
+    window.addEventListener('storage', refreshOutputs);
+    window.addEventListener('focus', refreshOutputs);
+
+    return () => {
+      window.removeEventListener('storage', refreshOutputs);
+      window.removeEventListener('focus', refreshOutputs);
+    };
+  }, []);
 
   const handleDeleteSpace = async () => {
     if (!confirm('Are you sure you want to delete this space? Conversations will remain but won\'t be listed here.')) return;
@@ -149,6 +208,10 @@ const SpaceDetailPage = () => {
 
   if (!space) return null;
 
+  const spaceOutputs = outputs.filter(
+    (output) => output.outputDestination === `space:${space.id}`,
+  );
+
   return (
     <div className="flex flex-col h-screen overflow-y-auto bg-light-primary dark:bg-dark-primary scrollbar-hide">
       {/* Header */}
@@ -172,7 +235,7 @@ const SpaceDetailPage = () => {
               <Trash2 size={20} />
             </button>
             <Link 
-              href={`/?spaceId=${space.id}`}
+              href={`/search?spaceId=${space.id}`}
               className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition font-medium shadow-lg shadow-blue-500/20"
             >
               <Plus size={18} /> New Chat
@@ -182,8 +245,77 @@ const SpaceDetailPage = () => {
       </div>
 
       <div className="max-w-5xl mx-auto w-full px-6 py-10 grid grid-cols-1 lg:grid-cols-3 gap-10">
-        {/* Main Content: Conversations */}
+        {/* Main Content: Outputs + Conversations */}
         <div className="lg:col-span-2">
+          <section className="mb-10">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <FileText size={20} className="text-purple-500" /> Outputs
+              </h2>
+              <span className="text-xs bg-light-200 dark:bg-dark-200 px-2 py-1 rounded-md opacity-60">
+                {spaceOutputs.length}
+              </span>
+            </div>
+
+            {spaceOutputs.length === 0 ? (
+              <div className="bg-light-secondary dark:bg-dark-secondary rounded-2xl p-10 text-center border border-dashed border-light-200 dark:border-dark-200">
+                <p className="opacity-50">
+                  No outputs saved in this space yet.
+                </p>
+                <p className="text-sm opacity-40 mt-2">
+                  Run an automation and choose this Space as the save destination.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {spaceOutputs.map((output) => (
+                  <article
+                    key={output.id}
+                    className="group bg-light-secondary dark:bg-dark-secondary rounded-2xl p-5 border border-light-200 dark:border-dark-200 hover:border-purple-500/30 transition-all duration-300"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className="text-xs rounded-full bg-light-200 dark:bg-dark-200 px-2 py-1 opacity-70">
+                            {output.outputType}
+                          </span>
+                          <span className="text-xs rounded-full bg-light-200 dark:bg-dark-200 px-2 py-1 capitalize opacity-70">
+                            {output.status}
+                          </span>
+                        </div>
+
+                        <h3 className="text-lg font-semibold group-hover:text-purple-500 transition">
+                          {output.title}
+                        </h3>
+
+                        <p className="text-sm opacity-50 mt-2 line-clamp-2">
+                          {output.expectedOutput}
+                        </p>
+                      </div>
+
+                      <Link
+                        href={`/outputs/${output.id}`}
+                        className="inline-flex items-center gap-2 text-sm text-purple-500 hover:underline"
+                      >
+                        Open output
+                        <ExternalLink size={14} />
+                      </Link>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-xs opacity-50 mt-4">
+                      <span className="flex items-center gap-1">
+                        <Clock size={12} /> {formatTimeDifference(new Date(), output.createdAt)} Ago
+                      </span>
+                      <span>
+                        From {output.automationName}
+                      </span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold flex items-center gap-2">
               <MessageSquare size={20} className="text-blue-500" /> Conversations
@@ -196,7 +328,7 @@ const SpaceDetailPage = () => {
           {chats.length === 0 ? (
             <div className="bg-light-secondary dark:bg-dark-secondary rounded-2xl p-12 text-center border border-dashed border-light-200 dark:border-dark-200">
               <p className="opacity-50">No conversations in this space yet.</p>
-              <Link href={`/?spaceId=${space.id}`} className="text-blue-500 hover:underline mt-2 inline-block">
+              <Link href={`/search?spaceId=${space.id}`} className="text-blue-500 hover:underline mt-2 inline-block">
                 Start a conversation
               </Link>
             </div>
