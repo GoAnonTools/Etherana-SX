@@ -15,58 +15,12 @@ import {
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import {
+  type AutomationOutputItem,
+  readAutomationOutputs,
+  writeAutomationOutputs,
+} from '@/lib/vault/localVault';
 
-interface AutomationOutputItem {
-  id: string;
-  automationId: string;
-  automationName: string;
-  title: string;
-  outputType: string;
-  outputDestination: string;
-  outputDestinationLabel: string;
-  status: 'drafting' | 'ready';
-  createdAt: string;
-  updatedAt?: string;
-  runId: string;
-  prompt: string;
-  expectedOutput: string;
-  content?: string;
-}
-
-const AUTOMATION_OUTPUTS_STORAGE_KEY = 'etherana.automationOutputs.v1';
-
-const readAutomationOutputs = (): AutomationOutputItem[] => {
-  if (typeof window === 'undefined') return [];
-
-  try {
-    const raw = localStorage.getItem(AUTOMATION_OUTPUTS_STORAGE_KEY);
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.filter((item): item is AutomationOutputItem => {
-      return (
-        typeof item?.id === 'string' &&
-        typeof item?.automationId === 'string' &&
-        typeof item?.automationName === 'string' &&
-        typeof item?.title === 'string' &&
-        typeof item?.createdAt === 'string'
-      );
-    });
-  } catch {
-    return [];
-  }
-};
-
-const writeAutomationOutputs = (outputs: AutomationOutputItem[]) => {
-  if (typeof window === 'undefined') return;
-
-  localStorage.setItem(
-    AUTOMATION_OUTPUTS_STORAGE_KEY,
-    JSON.stringify(outputs.slice(0, 100)),
-  );
-};
 
 const getWordCount = (content: string) => {
   return content.trim().split(/\s+/).filter(Boolean).length;

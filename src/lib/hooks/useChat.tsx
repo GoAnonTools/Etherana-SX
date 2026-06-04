@@ -1,4 +1,5 @@
 'use client';
+import { captureAutomationOutputContent } from '@/lib/vault/localVault';
 
 import { Message } from '@/components/ChatWindow';
 import { Block } from '@/lib/types';
@@ -84,85 +85,6 @@ interface EmbeddingModelProvider {
 
 type SearchMode = 'results' | 'agent';
 
-
-type AutomationOutputStatus = 'drafting' | 'ready';
-
-interface AutomationOutputItem {
-  id: string;
-  automationId: string;
-  automationName: string;
-  title: string;
-  outputType: string;
-  outputDestination: string;
-  outputDestinationLabel: string;
-  status: AutomationOutputStatus;
-  createdAt: string;
-  runId: string;
-  prompt: string;
-  expectedOutput: string;
-  content?: string;
-}
-
-const AUTOMATION_OUTPUTS_STORAGE_KEY = 'etherana.automationOutputs.v1';
-
-const readAutomationOutputsForCapture = (): AutomationOutputItem[] => {
-  if (typeof window === 'undefined') return [];
-
-  try {
-    const raw = localStorage.getItem(AUTOMATION_OUTPUTS_STORAGE_KEY);
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.filter((item): item is AutomationOutputItem => {
-      return (
-        typeof item?.id === 'string' &&
-        typeof item?.automationId === 'string' &&
-        typeof item?.automationName === 'string' &&
-        typeof item?.title === 'string' &&
-        typeof item?.createdAt === 'string'
-      );
-    });
-  } catch {
-    return [];
-  }
-};
-
-const writeAutomationOutputsForCapture = (
-  outputs: AutomationOutputItem[],
-) => {
-  if (typeof window === 'undefined') return;
-
-  localStorage.setItem(
-    AUTOMATION_OUTPUTS_STORAGE_KEY,
-    JSON.stringify(outputs.slice(0, 100)),
-  );
-};
-
-const captureAutomationOutputContent = (
-  outputId: string | null,
-  content: string,
-) => {
-  if (!outputId || !content.trim()) return;
-
-  const outputs = readAutomationOutputsForCapture();
-  const outputExists = outputs.some((output) => output.id === outputId);
-
-  if (!outputExists) return;
-
-  const nextOutputs = outputs.map((output) => {
-    if (output.id !== outputId) return output;
-
-    return {
-      ...output,
-      content: content.trim(),
-      status: 'ready' as const,
-    };
-  });
-
-  writeAutomationOutputsForCapture(nextOutputs);
-};
 
 
 const generateId = (bytes: number) => {

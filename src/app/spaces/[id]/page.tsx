@@ -20,6 +20,12 @@ import {
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import React, { useEffect, useMemo, useState } from 'react';
+import {
+  type AutomationOutputItem,
+  type StoredAutomation,
+  readAutomationOutputs,
+  readCustomAutomations,
+} from '@/lib/vault/localVault';
 
 interface Space {
   id: string;
@@ -38,88 +44,8 @@ interface Chat {
   files: { fileId: string; name: string }[];
 }
 
-interface AutomationOutputItem {
-  id: string;
-  automationId: string;
-  automationName: string;
-  title: string;
-  outputType: string;
-  outputDestination: string;
-  outputDestinationLabel: string;
-  status: 'drafting' | 'ready';
-  createdAt: string;
-  updatedAt?: string;
-  runId: string;
-  prompt: string;
-  expectedOutput: string;
-  content?: string;
-}
-
-interface StoredAutomation {
-  id: string;
-  name: string;
-  category: string;
-  purpose: string;
-  frequency: string;
-  prompt: string;
-  output: string;
-  outputType?: string;
-  outputDestination?: string;
-  outputDestinationLabel?: string;
-  goodFor: string[];
-  createdAt: string;
-}
-
 type SpaceSection = 'conversations' | 'knowledge' | 'outputs' | 'automations';
 
-const AUTOMATION_OUTPUTS_STORAGE_KEY = 'etherana.automationOutputs.v1';
-const CUSTOM_AUTOMATIONS_STORAGE_KEY = 'etherana.customAutomations.v1';
-
-const readAutomationOutputs = (): AutomationOutputItem[] => {
-  if (typeof window === 'undefined') return [];
-
-  try {
-    const raw = localStorage.getItem(AUTOMATION_OUTPUTS_STORAGE_KEY);
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.filter((item): item is AutomationOutputItem => {
-      return (
-        typeof item?.id === 'string' &&
-        typeof item?.automationId === 'string' &&
-        typeof item?.automationName === 'string' &&
-        typeof item?.title === 'string' &&
-        typeof item?.createdAt === 'string'
-      );
-    });
-  } catch {
-    return [];
-  }
-};
-
-const readCustomAutomations = (): StoredAutomation[] => {
-  if (typeof window === 'undefined') return [];
-
-  try {
-    const raw = localStorage.getItem(CUSTOM_AUTOMATIONS_STORAGE_KEY);
-    if (!raw) return [];
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed.filter((item): item is StoredAutomation => {
-      return (
-        typeof item?.id === 'string' &&
-        typeof item?.name === 'string' &&
-        typeof item?.prompt === 'string'
-      );
-    });
-  } catch {
-    return [];
-  }
-};
 
 const EmptyState = ({
   title,

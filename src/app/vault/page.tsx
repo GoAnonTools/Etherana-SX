@@ -15,6 +15,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import {
+  type VaultMeta,
+  readVaultMeta,
+  readVaultStorageRecords,
+  writeVaultMeta,
+  writeVaultStorageRecord,
+} from '@/lib/vault/localVault';
 
 interface VaultSpace {
   id: string;
@@ -22,13 +29,6 @@ interface VaultSpace {
   description?: string;
   instruction?: string;
   createdAt?: string;
-}
-
-interface VaultMeta {
-  vaultId: string;
-  createdAt: string;
-  lastExportAt?: string;
-  lastImportAt?: string;
 }
 
 interface VaultPayload {
@@ -62,14 +62,6 @@ interface EncryptedVaultBackup {
   ciphertext: string;
 }
 
-const VAULT_META_STORAGE_KEY = 'etherana.privateVault.meta.v1';
-
-const VAULT_STORAGE_KEYS = [
-  'etherana.customAutomations.v1',
-  'etherana.hiddenTemplateAutomationIds.v1',
-  'etherana.automationRunHistory.v1',
-  'etherana.automationOutputs.v1',
-];
 
 const PBKDF2_ITERATIONS = 310_000;
 
@@ -196,32 +188,6 @@ const generateRecoveryPhrase = () => {
     .join('-');
 };
 
-const readVaultMeta = (): VaultMeta | null => {
-  if (typeof window === 'undefined') return null;
-
-  try {
-    const raw = localStorage.getItem(VAULT_META_STORAGE_KEY);
-
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw);
-
-    if (
-      typeof parsed?.vaultId !== 'string' ||
-      typeof parsed?.createdAt !== 'string'
-    ) {
-      return null;
-    }
-
-    return parsed as VaultMeta;
-  } catch {
-    return null;
-  }
-};
-
-const writeVaultMeta = (meta: VaultMeta) => {
-  localStorage.setItem(VAULT_META_STORAGE_KEY, JSON.stringify(meta));
-};
 
 const deriveKey = async (recoveryPhrase: string, salt: Uint8Array) => {
   const baseKey = await window.crypto.subtle.importKey(
@@ -327,15 +293,6 @@ const getBackupFilename = () => {
   return `etherana-private-vault-${date}.json`;
 };
 
-const readLocalStorageRecords = () => {
-  return VAULT_STORAGE_KEYS.flatMap((key) => {
-    const value = localStorage.getItem(key);
-
-    if (value === null) return [];
-
-    return [{ key, value }];
-  });
-};
 
 const rewriteSpaceDestinations = (
   key: string,
@@ -480,7 +437,7 @@ const VaultPage = () => {
         exportedAt: new Date().toISOString(),
         app: 'etherana-sx',
         vaultId: meta.vaultId,
-        localStorageRecords: readLocalStorageRecords(),
+        localStorageRecords: readVaultStorageRecords(),
         spaces,
         notes: [
           'This backup is end-to-end encrypted with your recovery phrase.',
@@ -567,7 +524,7 @@ const VaultPage = () => {
           spaceIdMap,
         );
 
-        localStorage.setItem(record.key, rewrittenValue);
+        writeVaultStorageRecord(record.key, rewrittenValue);
       });
 
       const importedMeta: VaultMeta = {
