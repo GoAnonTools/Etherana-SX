@@ -38,6 +38,199 @@ const getMarkdownFilename = (title: string) => {
     .replace(/(^-|-$)/g, '') || 'etherana-output'}.md`;
 };
 
+const renderPrintableInlineMarkdown = (value: string) => {
+  return escapeHtml(value)
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(
+      /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noreferrer">$1</a>',
+    )
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+};
+
+const renderPrintableTable = (rows: string[]) => {
+  const parsedRows = rows.map((row) =>
+    row
+      .trim()
+      .replace(/^\|/, '')
+      .replace(/\|$/, '')
+      .split('|')
+      .map((cell) => cell.trim()),
+  );
+
+  const bodyRows = parsedRows.filter(
+    (row) => !row.every((cell) => /^:?-{3,}:?$/.test(cell)),
+  );
+
+  if (bodyRows.length === 0) return '';
+
+  const [header, ...body] = bodyRows;
+
+  return `<table>
+    <thead>
+      <tr>${header
+        .map((cell) => `<th>${renderPrintableInlineMarkdown(cell)}</th>`)
+        .join('')}</tr>
+    </thead>
+    <tbody>
+      ${body
+        .map(
+          (row) =>
+            `<tr>${row
+              .map((cell) => `<td>${renderPrintableInlineMarkdown(cell)}</td>`)
+              .join('')}</tr>`,
+        )
+        .join('')}
+    </tbody>
+  </table>`;
+};
+
+const renderPrintableMarkdown = (markdown: string) => {
+  const lines = markdown.split('\n');
+  const html: string[] = [];
+  let paragraph: string[] = [];
+  let listType: 'ul' | 'ol' | null = null;
+  let codeBlock: string[] = [];
+  let inCodeBlock = false;
+
+  const closeParagraph = () => {
+    if (paragraph.length === 0) return;
+
+    html.push(
+      `<p>${paragraph.map(renderPrintableInlineMarkdown).join('<br />')}</p>`,
+    );
+    paragraph = [];
+  };
+
+  const closeList = () => {
+    if (!listType) return;
+
+    html.push(`</${listType}>`);
+    listType = null;
+  };
+
+  const openList = (type: 'ul' | 'ol') => {
+    closeParagraph();
+
+    if (listType === type) return;
+
+    closeList();
+    listType = type;
+    html.push(`<${type}>`);
+  };
+
+  const closeCodeBlock = () => {
+    if (!inCodeBlock) return;
+
+    html.push(`<pre class="code">${escapeHtml(codeBlock.join('\n'))}</pre>`);
+    codeBlock = [];
+    inCodeBlock = false;
+  };
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('```')) {
+      if (inCodeBlock) {
+        closeCodeBlock();
+      } else {
+        closeParagraph();
+        closeList();
+        inCodeBlock = true;
+        codeBlock = [];
+      }
+
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeBlock.push(line);
+      continue;
+    }
+
+    if (!trimmed) {
+      closeParagraph();
+      closeList();
+      continue;
+    }
+
+    if (
+      trimmed.includes('|') &&
+      lines[index + 1]?.trim().match(/^\|?\s*:?-{3,}:?/)
+    ) {
+      closeParagraph();
+      closeList();
+
+      const tableRows = [trimmed];
+      index += 1;
+
+      while (index < lines.length && lines[index].trim().includes('|')) {
+        tableRows.push(lines[index].trim());
+        index += 1;
+      }
+
+      index -= 1;
+      html.push(renderPrintableTable(tableRows));
+      continue;
+    }
+
+    if (/^---+$/.test(trimmed)) {
+      closeParagraph();
+      closeList();
+      html.push('<hr />');
+      continue;
+    }
+
+    const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
+
+    if (headingMatch) {
+      closeParagraph();
+      closeList();
+
+      const level = Math.min(headingMatch[1].length, 4);
+      html.push(
+        `<h${level}>${renderPrintableInlineMarkdown(headingMatch[2])}</h${level}>`,
+      );
+      continue;
+    }
+
+    if (trimmed.startsWith('> ')) {
+      closeParagraph();
+      closeList();
+      html.push(
+        `<blockquote>${renderPrintableInlineMarkdown(trimmed.slice(2))}</blockquote>`,
+      );
+      continue;
+    }
+
+    const unorderedMatch = trimmed.match(/^[-*]\s+(.+)$/);
+
+    if (unorderedMatch) {
+      openList('ul');
+      html.push(`<li>${renderPrintableInlineMarkdown(unorderedMatch[1])}</li>`);
+      continue;
+    }
+
+    const orderedMatch = trimmed.match(/^\d+\.\s+(.+)$/);
+
+    if (orderedMatch) {
+      openList('ol');
+      html.push(`<li>${renderPrintableInlineMarkdown(orderedMatch[1])}</li>`);
+      continue;
+    }
+
+    paragraph.push(trimmed);
+  }
+
+  closeCodeBlock();
+  closeParagraph();
+  closeList();
+
+  return html.join('\n');
+};
+
 const renderInlineMarkdown = (text: string) => {
   const parts = text.split(
     /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\)|\*[^*]+\*)/g,
@@ -635,6 +828,198 @@ const OutputDetailPage = () => {
     URL.revokeObjectURL(url);
   };
 
+  const printOutputAsPdf = () => {
+    if (!output) return;
+
+    const printableTitle = title || output.title;
+    const printableContent = content.trim();
+    const printableWindow = window.open('', '_blank');
+
+    if (!printableWindow) {
+      window.alert('Could not open the print window. Please allow pop-ups for Etherana SX.');
+      return;
+    }
+
+    printableWindow.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(printableTitle)}</title>
+  <style>
+    body {
+      margin: 0;
+      background: #f5f5f5;
+      color: #111;
+      font-family: Inter, Arial, sans-serif;
+      line-height: 1.65;
+    }
+
+    main {
+      max-width: 850px;
+      margin: 0 auto;
+      background: #fff;
+      min-height: 100vh;
+      padding: 48px;
+    }
+
+    .badge {
+      display: inline-block;
+      margin-bottom: 24px;
+      border: 1px solid #ddd;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #555;
+      letter-spacing: 0.02em;
+    }
+
+    h1 {
+      margin: 0 0 28px;
+      font-size: 30px;
+      line-height: 1.2;
+    }
+
+    .content {
+      font-size: 15px;
+    }
+
+    .content h1,
+    .content h2,
+    .content h3,
+    .content h4 {
+      margin: 28px 0 12px;
+      line-height: 1.25;
+    }
+
+    .content h1 {
+      font-size: 28px;
+    }
+
+    .content h2 {
+      font-size: 23px;
+      border-bottom: 1px solid #e5e5e5;
+      padding-bottom: 8px;
+    }
+
+    .content h3 {
+      font-size: 18px;
+    }
+
+    .content p {
+      margin: 0 0 14px;
+    }
+
+    .content strong {
+      font-weight: 750;
+    }
+
+    .content em {
+      color: #333;
+    }
+
+    .content blockquote {
+      margin: 18px 0;
+      border-left: 4px solid #111;
+      padding: 10px 16px;
+      background: #f7f7f7;
+      color: #333;
+    }
+
+    .content ul,
+    .content ol {
+      margin: 0 0 18px 22px;
+      padding: 0;
+    }
+
+    .content li {
+      margin: 6px 0;
+    }
+
+    .content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0 24px;
+      font-size: 13px;
+    }
+
+    .content th,
+    .content td {
+      border: 1px solid #ddd;
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .content th {
+      background: #f1f1f1;
+      font-weight: 750;
+    }
+
+    .content hr {
+      border: 0;
+      border-top: 1px solid #ddd;
+      margin: 28px 0;
+    }
+
+    .content code {
+      border-radius: 5px;
+      background: #f1f1f1;
+      padding: 2px 5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    .content pre.code {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      border-radius: 12px;
+      background: #111;
+      color: #fff;
+      padding: 16px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      overflow: auto;
+    }
+
+    .content a {
+      color: #111;
+      text-decoration: underline;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      main {
+        padding: 0;
+      }
+
+      .no-print {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="badge">Generated by Etherana SX</div>
+    <h1>${escapeHtml(printableTitle)}</h1>
+    <article class="content">${renderPrintableMarkdown(printableContent)}</article>
+  </main>
+  <script>
+    window.onload = () => {
+      window.focus();
+      window.print();
+    };
+  </script>
+</body>
+</html>`);
+
+    printableWindow.document.close();
+  };
+
   const deleteOutput = () => {
     if (!output) return;
 
@@ -726,7 +1111,17 @@ const OutputDetailPage = () => {
               className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black disabled:cursor-not-allowed disabled:opacity-40 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
             >
               <Download size={15} />
-              Markdown
+              Download .md
+            </button>
+
+            <button
+              type="button"
+              onClick={printOutputAsPdf}
+              disabled={!content.trim()}
+              className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black disabled:cursor-not-allowed disabled:opacity-40 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
+            >
+              <FileText size={15} />
+              Print / Save PDF
             </button>
 
             <button

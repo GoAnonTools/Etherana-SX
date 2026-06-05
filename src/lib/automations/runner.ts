@@ -1,3 +1,8 @@
+import APISearchAgent from '@/lib/agents/search/api';
+import SessionManager from '@/lib/session';
+import ModelRegistry from '@/lib/models/registry';
+import configManager from '@/lib/config';
+import type { SearchSources } from '@/lib/agents/search/types';
 import db from '@/lib/db';
 import {
   automationOutputRecords,
@@ -140,6 +145,8 @@ Execution rules:
 4. If context is missing, make reasonable assumptions and label them.
 5. If fresh information is required, research before writing the final answer.
 6. End with a short “Next improvement” section.
+7. Do not mention downloadable file formats such as PDF, DOCX, or Markdown unless the user explicitly asked for export instructions.
+8. Write the deliverable content only; Etherana SX will handle saving and exporting.
 
 Return the result in this format:
 
@@ -159,6 +166,226 @@ Give 3 to 5 concrete next actions.
 
 ## Next Improvement
 Explain what Etherana should remember, connect, or collect to make this automation better next time.`;
+};
+
+const getAutomationExecutionSources = (
+  automation: AutomationRecord,
+): SearchSources[] => {
+  const text = [
+    automation.name,
+    automation.category,
+    automation.purpose,
+    automation.prompt,
+    automation.output,
+  ]
+    .join(' ')
+    .toLowerCase();
+
+  const sources = new Set<SearchSources>();
+
+  if (
+    text.includes('news') ||
+    text.includes('latest') ||
+    text.includes('research') ||
+    text.includes('monitor') ||
+    text.includes('competitor') ||
+    text.includes('market') ||
+    text.includes('trend') ||
+    text.includes('funding') ||
+    text.includes('startup') ||
+    text.includes('regulatory') ||
+    text.includes('watch') ||
+    text.includes('scan')
+  ) {
+    sources.add('web');
+  }
+
+  if (
+    text.includes('paper') ||
+    text.includes('academic') ||
+    text.includes('study') ||
+    text.includes('studies') ||
+    text.includes('publication')
+  ) {
+    sources.add('academic');
+  }
+
+  if (
+    text.includes('community') ||
+    text.includes('forum') ||
+    text.includes('reddit') ||
+    text.includes('discussion')
+  ) {
+    sources.add('discussions');
+  }
+
+  return Array.from(sources);
+};
+
+const getAutomationOptimizationMode = () => {
+  const mode = configManager.getConfig<string>(
+    'preferences.optimizationMode',
+    'balanced',
+  );
+
+  if (mode === 'speed' || mode === 'balanced' || mode === 'quality') {
+    return mode;
+  }
+
+  return 'balanced';
+};
+
+const getFirstUsableModel = (
+  models: Array<{ key?: string; name?: string }> | undefined,
+) => {
+  return models?.find((model) => model.key && model.key !== 'error');
+};
+
+const executeAutomationWithAgent = async ({
+  automation,
+  prompt,
+}: {
+  automation: AutomationRecord;
+  prompt: string;
+}) => {
+  const registry = new ModelRegistry();
+  const providers = await registry.getActiveProviders();
+
+  const chatProvider = providers.find((provider) =>
+    getFirstUsableModel(provider.chatModels),
+  );
+  const embeddingProvider = providers.find((provider) =>
+    getFirstUsableModel(provider.embeddingModels),
+  );
+
+  const chatModel = getFirstUsableModel(chatProvider?.chatModels);
+  const embeddingModel = getFirstUsableModel(embeddingProvider?.embeddingModels);
+
+  if (!chatProvider || !chatModel?.key) {
+    throw new Error('No configured chat model is available for automations.');
+  }
+
+  if (!embeddingProvider || !embeddingModel?.key) {
+    throw new Error(
+      'No configured embedding model is available for automation search.',
+    );
+  }
+
+  const [llm, embedding] = await Promise.all([
+    registry.loadChatModel(chatProvider.id, chatModel.key),
+    registry.loadEmbeddingModel(embeddingProvider.id, embeddingModel.key),
+  ]);
+
+  const session = SessionManager.createSession();
+  const agent = new APISearchAgent();
+
+  const systemInstructions = [
+    configManager.getConfig<string>('personalization.instructions', ''),
+    'You are running a saved Etherana SX automation. Produce the final reusable output directly. Do not describe that you are preparing a workflow unless generation cannot be completed.',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  return new Promise<{ content: string; sourceCount: number }>(
+    (resolve, reject) => {
+      let content = '';
+      let sourceCount = 0;
+      let settled = false;
+
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        session.removeAllListeners();
+
+        const cleanContent = content.trim();
+
+        if (!cleanContent) {
+          reject(new Error('Automation AI execution returned empty content.'));
+          return;
+        }
+
+        resolve({
+          content: cleanContent,
+          sourceCount,
+        });
+      };
+
+      const fail = (error: unknown) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        session.removeAllListeners();
+
+        reject(
+          error instanceof Error
+            ? error
+            : new Error('Automation AI execution failed.'),
+        );
+      };
+
+      const timeout = setTimeout(() => {
+        fail(new Error('Automation AI execution timed out.'));
+      }, 180_000);
+
+      session.subscribe((event: string, data: Record<string, any>) => {
+        if (event === 'data') {
+          if (data.type === 'response') {
+            content += data.data || '';
+          }
+
+          if (data.type === 'searchResults' && Array.isArray(data.data)) {
+            sourceCount = data.data.length;
+          }
+        }
+
+        if (event === 'end') {
+          finish();
+        }
+
+        if (event === 'error') {
+          fail(
+            new Error(
+              typeof data?.data === 'string'
+                ? data.data
+                : 'Automation AI execution failed.',
+            ),
+          );
+        }
+      });
+
+      agent
+        .searchAsync(session, {
+          chatHistory: [],
+          followUp: prompt,
+          chatId: `automation-${automation.id}-${crypto.randomUUID()}`,
+          messageId: crypto.randomUUID(),
+          config: {
+            llm,
+            embedding,
+            sources: getAutomationExecutionSources(automation),
+            mode: getAutomationOptimizationMode(),
+            fileIds: [],
+            systemInstructions,
+          },
+        })
+        .catch(fail);
+    },
+  );
+};
+
+const addEtheranaGeneratedSignature = (content: string) => {
+  const cleanContent = content.trim();
+
+  if (!cleanContent) return cleanContent;
+
+  if (cleanContent.includes('Generated by Etherana SX')) {
+    return cleanContent;
+  }
+
+  return `> Generated by Etherana SX
+
+${cleanContent}`;
 };
 
 const buildPreparedOutputContent = ({
@@ -245,6 +472,36 @@ export const runAutomationById = async (
     outputId,
   });
 
+  let outputContent = addEtheranaGeneratedSignature(
+    buildPreparedOutputContent({
+      automation,
+      prompt,
+      trigger,
+      startedAt,
+    }),
+  );
+
+  try {
+    const generated = await executeAutomationWithAgent({
+      automation,
+      prompt,
+    });
+
+    outputContent = addEtheranaGeneratedSignature(generated.content);
+  } catch (error) {
+    outputContent = `${outputContent}
+
+## AI Execution Status
+
+Etherana could not generate the final AI deliverable automatically, so it saved this prepared workflow instead.
+
+Reason: ${
+      error instanceof Error
+        ? error.message
+        : 'Unknown automation execution error.'
+    }`;
+  }
+
   await db.insert(automationOutputRecords).values({
     id: outputId,
     automationId: automation.id,
@@ -258,12 +515,7 @@ export const runAutomationById = async (
     runId,
     prompt,
     expectedOutput: automation.output,
-    content: buildPreparedOutputContent({
-      automation,
-      prompt,
-      trigger,
-      startedAt,
-    }),
+    content: outputContent,
   });
 
   const completedAt = new Date();
