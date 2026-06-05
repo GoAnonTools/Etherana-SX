@@ -1071,6 +1071,64 @@ const VaultPage = () => {
         </section>
 
         <section className="mt-8 rounded-[2rem] border border-light-200 bg-light-secondary p-6 shadow-sm dark:border-dark-200 dark:bg-dark-secondary">
+          <div className="mb-5 flex items-center gap-2">
+            <ShieldCheck size={18} className="text-blue-500" />
+            <h2 className="text-lg font-semibold text-black dark:text-white">
+              Vault restore checklist
+            </h2>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-3">
+            <div className="rounded-2xl bg-light-primary p-5 dark:bg-dark-primary">
+              <p className="mb-3 text-sm font-semibold text-green-600 dark:text-green-400">
+                Restored
+              </p>
+
+              <ul className="space-y-2 text-sm leading-relaxed text-black/60 dark:text-white/60">
+                <li>Spaces metadata</li>
+                <li>Conversations</li>
+                <li>Messages</li>
+                <li>Custom automations</li>
+                <li>Automation outputs</li>
+                <li>Run history</li>
+              </ul>
+            </div>
+
+            <div className="rounded-2xl bg-light-primary p-5 dark:bg-dark-primary">
+              <p className="mb-3 text-sm font-semibold text-orange-600 dark:text-orange-400">
+                Restored for search
+              </p>
+
+              <ul className="space-y-2 text-sm leading-relaxed text-black/60 dark:text-white/60">
+                <li>Knowledge file names</li>
+                <li>Processed chunks</li>
+                <li>Embeddings</li>
+                <li>Uploaded-file search index</li>
+              </ul>
+            </div>
+
+            <div className="rounded-2xl bg-light-primary p-5 dark:bg-dark-primary">
+              <p className="mb-3 text-sm font-semibold text-black/55 dark:text-white/55">
+                Not included yet
+              </p>
+
+              <ul className="space-y-2 text-sm leading-relaxed text-black/60 dark:text-white/60">
+                <li>Original PDF/DOCX/TXT binaries</li>
+                <li>Cross-device live sync</li>
+                <li>QR device pairing</li>
+                <li>Cloud encrypted blob sync</li>
+              </ul>
+            </div>
+          </div>
+
+          <p className="mt-5 text-sm leading-relaxed text-black/50 dark:text-white/50">
+            This vault is already useful for restoring workspaces and searchable
+            knowledge. Original uploaded files will require a dedicated encrypted
+            file-blob layer.
+          </p>
+        </section>
+
+        <section className="mt-8 rounded-[2rem] border border-light-200 bg-light-secondary p-6 shadow-sm dark:border-dark-200 dark:bg-dark-secondary">
           <div className="mb-4 flex items-center gap-2">
             <CheckCircle2 size={18} className="text-green-500" />
             <h2 className="text-lg font-semibold text-black dark:text-white">
