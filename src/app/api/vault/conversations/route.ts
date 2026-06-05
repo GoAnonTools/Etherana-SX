@@ -101,9 +101,19 @@ export const POST = async (req: Request) => {
 
     let importedChats = 0;
     let importedMessages = 0;
+    let skippedExistingChats = 0;
 
     for (const conversation of conversations) {
-      const newChatId = generateId();
+      const existingChat = await db.query.chats.findFirst({
+        where: eq(chats.id, conversation.id),
+      });
+
+      if (existingChat) {
+        skippedExistingChats += 1;
+        continue;
+      }
+
+      const newChatId = conversation.id || generateId();
       const newSpaceId = conversation.spaceId
         ? spaceIdMap[conversation.spaceId] ?? null
         : null;
@@ -137,6 +147,7 @@ export const POST = async (req: Request) => {
     return Response.json({
       importedChats,
       importedMessages,
+      skippedExistingChats,
     });
   } catch (error) {
     console.error('Failed to import vault conversations:', error);

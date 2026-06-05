@@ -29,6 +29,7 @@ interface VaultSpace {
   description?: string;
   instruction?: string;
   createdAt?: string;
+  files?: { name: string; fileId: string }[];
 }
 
 interface VaultConversationMessage {
@@ -423,6 +424,13 @@ const VaultPage = () => {
         description: String(space.description ?? ''),
         instruction: String(space.instruction ?? ''),
         createdAt: String(space.createdAt ?? ''),
+        files: Array.isArray(space.files)
+          ? space.files.filter(
+              (file: any) =>
+                typeof file?.name === 'string' &&
+                typeof file?.fileId === 'string',
+            )
+          : [],
       }));
     } catch {
       return [];
@@ -528,6 +536,66 @@ const VaultPage = () => {
     }
   };
 
+  const restoreSpaceFromVault = async (space: VaultSpace) => {
+    const files = Array.isArray(space.files) ? space.files : [];
+
+    try {
+      const existingRes = await fetch(`/api/spaces/${space.id}`);
+
+      if (existingRes.ok) {
+        await fetch(`/api/spaces/${space.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: space.name,
+            description: space.description ?? '',
+            instruction: space.instruction ?? '',
+            files,
+          }),
+        });
+
+        return space.id;
+      }
+    } catch {
+      // If lookup fails, create a new Space below.
+    }
+
+    const createRes = await fetch('/api/spaces', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: space.name,
+        description: space.description ?? '',
+        instruction: space.instruction ?? '',
+      }),
+    });
+
+    if (!createRes.ok) return null;
+
+    const created = await createRes.json();
+    const createdId = String(created.id ?? created.space?.id ?? '');
+
+    if (!createdId) return null;
+
+    if (files.length > 0) {
+      await fetch(`/api/spaces/${createdId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          files,
+        }),
+      });
+    }
+
+    return createdId;
+  };
+
   const importVault = async () => {
     if (!backupFile) {
       setStatus('Choose an encrypted vault backup file first.');
@@ -556,25 +624,10 @@ const VaultPage = () => {
       const spaceIdMap: Record<string, string> = {};
 
       for (const space of payload.spaces) {
-        const res = await fetch('/api/spaces', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: space.name,
-            description: space.description ?? '',
-            instruction: space.instruction ?? '',
-          }),
-        });
+        const restoredSpaceId = await restoreSpaceFromVault(space);
 
-        if (!res.ok) continue;
-
-        const created = await res.json();
-        const createdId = String(created.id ?? created.space?.id ?? '');
-
-        if (createdId) {
-          spaceIdMap[space.id] = createdId;
+        if (restoredSpaceId) {
+          spaceIdMap[space.id] = restoredSpaceId;
         }
       }
 
