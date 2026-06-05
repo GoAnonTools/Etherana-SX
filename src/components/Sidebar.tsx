@@ -6,6 +6,7 @@ import {
   CheckSquare,
   Compass,
   LayoutGrid,
+  Library,
   Plus,
   Search,
   ShieldCheck,
@@ -104,6 +105,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       href: '/discover',
       active: segments.includes('discover'),
       label: 'Discover',
+    },
+    {
+      icon: Library,
+      href: '/library',
+      active: segments.includes('library'),
+      label: 'Library',
     },
   ];
 
