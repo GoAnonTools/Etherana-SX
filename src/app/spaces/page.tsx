@@ -1,95 +1,308 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Plus, LayoutGrid, MessageSquare, FileText, ChevronRight } from 'lucide-react';
+import {
+  ArrowRight,
+  BookOpen,
+  Briefcase,
+  Compass,
+  FileText,
+  GraduationCap,
+  LayoutGrid,
+  Lightbulb,
+  Link as LinkIcon,
+  Loader2,
+  Plus,
+  Rocket,
+  Search,
+  Sparkles,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 
 interface Space {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   instruction?: string;
   createdAt: string;
+  files?: { name: string; fileId: string }[];
 }
 
-const CATEGORIES = [
+interface StarterNote {
+  title: string;
+  content: string;
+}
+
+interface StarterLink {
+  title: string;
+  url: string;
+  description?: string;
+}
+
+interface SpaceTemplate {
+  id: string;
+  name: string;
+  description: string;
+  instruction: string;
+  icon: LucideIcon;
+  tags: string[];
+  starterNotes: StarterNote[];
+  starterLinks: StarterLink[];
+}
+
+type ActiveTab = 'spaces' | 'templates';
+
+const SPACE_TEMPLATES: SpaceTemplate[] = [
   {
-    id: 'operations',
-    name: 'Operations',
-    description: 'Manage day-to-day tasks, business structure, and efficiency.',
-    examples: 'Daily to-do lists, SOPs (Standard Operating Procedures), software stack management, business registration details.',
-    questions: ['What should I focus on today?', 'How can I automate my invoicing process?', 'Review my business structure for tax efficiency.'],
-    instruction: 'Be organized, concise, and focus on actionable efficiency. Help the user prioritize and streamline.'
+    id: 'client-project',
+    name: 'Client Project',
+    description:
+      'Centralize client context, notes, links, deliverables, conversations, and automation outputs.',
+    instruction:
+      'Use this Space as a client project hub. Prioritize client-specific documents, notes, links, conversations, outputs, and project history. When answering, help turn scattered context into clear decisions, deliverables, and next actions.',
+    icon: Briefcase,
+    tags: ['Client work', 'Deliverables', 'Follow-up'],
+    starterNotes: [
+      {
+        title: 'Client goals',
+        content:
+          'Write the client’s main goals, success criteria, constraints, and important deadlines here.',
+      },
+      {
+        title: 'Open questions',
+        content:
+          'List unresolved questions, missing information, risks, and points to clarify with the client.',
+      },
+      {
+        title: 'Next actions',
+        content:
+          'Keep the next concrete actions here so this Space stays execution-focused.',
+      },
+    ],
+    starterLinks: [],
   },
   {
-    id: 'sales',
-    name: 'Sales',
-    description: 'Track leads, conversion strategies, and revenue generation.',
-    examples: 'CRM notes, sales scripts, pricing strategy, follow-up templates.',
-    questions: ['How should I respond to this pricing objection?', 'Give me a follow-up email template for a warm lead.', 'How can I increase my conversion rate?'],
-    instruction: 'Be persuasive yet professional. Focus on value proposition and clear call-to-actions.'
+    id: 'startup-idea',
+    name: 'Startup Idea',
+    description:
+      'Develop a business idea with research, strategy, positioning, product notes, and execution plans.',
+    instruction:
+      'Use this Space to develop a startup or business idea. Help evaluate the market, clarify the customer problem, define positioning, generate experiments, track assumptions, and turn ideas into concrete next steps.',
+    icon: Rocket,
+    tags: ['Business idea', 'Strategy', 'Validation'],
+    starterNotes: [
+      {
+        title: 'Problem statement',
+        content:
+          'Describe the problem, who has it, how painful it is, and how they currently solve it.',
+      },
+      {
+        title: 'Target users',
+        content:
+          'Describe the ideal customer, their context, buying triggers, and objections.',
+      },
+      {
+        title: 'Validation experiments',
+        content:
+          'List small tests that can validate demand before building too much.',
+      },
+    ],
+    starterLinks: [],
   },
   {
-    id: 'marketing',
-    name: 'Marketing',
-    description: 'Build brand awareness and attract new customers.',
-    examples: 'Social media content calendar, ad copy, SEO keywords, brand voice guidelines.',
-    questions: ['Generate 5 LinkedIn post ideas for this week.', 'Optimize this meta description for better SEO.', 'What is a good lead magnet for my target audience?'],
-    instruction: 'Be creative, brand-aware, and growth-oriented. Focus on engagement and reach.'
+    id: 'market-research',
+    name: 'Market Research',
+    description:
+      'Collect competitors, references, trends, notes, sources, and analysis in one research hub.',
+    instruction:
+      'Use this Space as a research hub. Prioritize saved links, notes, documents, and conversation history. Summarize sources clearly, compare options, identify patterns, and produce actionable insights.',
+    icon: Search,
+    tags: ['Research', 'Competitors', 'Trends'],
+    starterNotes: [
+      {
+        title: 'Research questions',
+        content:
+          'List the questions this research should answer. Keep them specific and decision-oriented.',
+      },
+      {
+        title: 'Competitor notes',
+        content:
+          'Capture competitor positioning, pricing, features, strengths, weaknesses, and opportunities.',
+      },
+      {
+        title: 'Key findings',
+        content:
+          'Summarize the most important findings and what they mean for the project.',
+      },
+    ],
+    starterLinks: [],
   },
   {
-    id: 'client-work',
-    name: 'Client work',
-    description: 'Manage project delivery and client communications.',
-    examples: 'Project timelines, client feedback, meeting notes, deliverables checklist.',
-    questions: ['What is the next step for Project X?', 'Draft a polite response to this client request for out-of-scope work.', 'Summarize these meeting notes.'],
-    instruction: 'Be professional, detail-oriented, and client-centric. Focus on clarity and boundary setting.'
+    id: 'content-calendar',
+    name: 'Content Calendar',
+    description:
+      'Plan content ideas, sources, article drafts, social posts, newsletters, and publishing actions.',
+    instruction:
+      'Use this Space to plan and produce content. Help organize ideas, references, outlines, drafts, publishing calendars, repurposing opportunities, and content automation outputs.',
+    icon: FileText,
+    tags: ['Content', 'Publishing', 'Ideas'],
+    starterNotes: [
+      {
+        title: 'Content pillars',
+        content:
+          'List the main themes this project should talk about regularly.',
+      },
+      {
+        title: 'Ideas backlog',
+        content:
+          'Collect raw content ideas here before turning them into outlines or drafts.',
+      },
+      {
+        title: 'Publishing checklist',
+        content:
+          'Define the checklist to review before publishing: title, hook, CTA, links, visuals, SEO, and distribution.',
+      },
+    ],
+    starterLinks: [],
   },
   {
-    id: 'development',
-    name: 'Product or service development',
-    description: 'Innovate and improve what you sell.',
-    examples: 'Product roadmap, feature ideas, feedback summaries, competitor analysis.',
-    questions: ['What is the most requested feature from my feedback logs?', 'Analyze this competitor new offering.', 'How can I turn this service into a productized offering?'],
-    instruction: 'Be analytical, innovative, and market-focused. Encourage high-level thinking.'
+    id: 'personal-project',
+    name: 'Personal Project',
+    description:
+      'Organize a personal goal, learning plan, side project, move, purchase, or life admin project.',
+    instruction:
+      'Use this Space to organize a personal project. Help clarify the goal, collect notes and links, break the work into steps, track progress, and keep decisions easy to review.',
+    icon: Lightbulb,
+    tags: ['Personal', 'Planning', 'Progress'],
+    starterNotes: [
+      {
+        title: 'Goal',
+        content:
+          'Write the goal, why it matters, and what “done” looks like.',
+      },
+      {
+        title: 'Plan',
+        content:
+          'Break the project into simple phases, actions, and deadlines.',
+      },
+      {
+        title: 'Useful references',
+        content:
+          'Save important reminders, decisions, links, and constraints here.',
+      },
+    ],
+    starterLinks: [],
   },
   {
-    id: 'research',
-    name: 'Research and ideas',
-    description: 'Brainstorm and stay ahead of trends.',
-    examples: 'Industry news, raw brainstorms, future project ideas, learning notes.',
-    questions: ['What are the latest trends in my industry?', 'Brainstorm 10 ways to use AI in my business.', 'Synthesize these three articles into key takeaways.'],
-    instruction: 'Be explorative, curious, and synthesizing. Help connect dots between disparate ideas.'
+    id: 'learning-notes',
+    name: 'Learning / Course Notes',
+    description:
+      'Collect course notes, links, documents, summaries, explanations, and revision outputs.',
+    instruction:
+      'Use this Space as a learning hub. Explain difficult concepts simply, connect ideas, create summaries, generate quizzes, organize notes, and help prepare revision plans from the saved material.',
+    icon: GraduationCap,
+    tags: ['Learning', 'Notes', 'Revision'],
+    starterNotes: [
+      {
+        title: 'Course objectives',
+        content:
+          'List what you need to understand, memorize, practice, or produce.',
+      },
+      {
+        title: 'Difficult concepts',
+        content:
+          'Collect confusing concepts here so Etherana can explain them later.',
+      },
+      {
+        title: 'Revision plan',
+        content:
+          'Create a study plan with priorities, exercises, and checkpoints.',
+      },
+    ],
+    starterLinks: [],
   },
   {
-    id: 'references',
-    name: 'Sources, links, and saved references',
-    description: 'A repository for external knowledge and bookmarks.',
-    examples: 'Tool links, course logins (names), reference articles, inspiring websites.',
-    questions: ['Where is the documentation for my tools?', 'Find the link I saved last week about growth hacks.', 'List all my saved references about competitive analysis.'],
-    instruction: 'Be organized and librarian-like. Focus on retrieval and categorization.'
-  }
+    id: 'operations-hub',
+    name: 'Operations Hub',
+    description:
+      'Track recurring tasks, processes, SOPs, links, decisions, automations, and internal workflows.',
+    instruction:
+      'Use this Space as an operations hub. Help document processes, improve workflows, track recurring tasks, summarize decisions, and generate practical operating procedures.',
+    icon: Users,
+    tags: ['Operations', 'Processes', 'SOPs'],
+    starterNotes: [
+      {
+        title: 'Recurring tasks',
+        content:
+          'List weekly or monthly tasks that need to be tracked or automated.',
+      },
+      {
+        title: 'Processes to document',
+        content:
+          'List processes that should become checklists, SOPs, or automations.',
+      },
+      {
+        title: 'Important links',
+        content:
+          'Add links to tools, dashboards, documents, folders, or references.',
+      },
+    ],
+    starterLinks: [],
+  },
 ];
 
+const getSpaceInitials = (name: string) => {
+  const words = name.trim().split(/\s+/).slice(0, 2);
+
+  return words.map((word) => word[0]?.toUpperCase()).join('') || 'S';
+};
+
+const formatDate = (date: string) => {
+  try {
+    return new Date(date).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return 'Unknown date';
+  }
+};
+
 const SpacesPage = () => {
+  const router = useRouter();
+
   const [spaces, setSpaces] = useState<Space[]>([]);
+  const [activeTab, setActiveTab] = useState<ActiveTab>('spaces');
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newDescription, setNewDescription] = useState('');
-  const [newInstruction, setNewInstruction] = useState('');
-  const [activeTab, setActiveTab] = useState<'my-spaces' | 'templates'>('my-spaces');
+  const [creatingTemplateId, setCreatingTemplateId] = useState<string | null>(
+    null,
+  );
+  const [creatingSpace, setCreatingSpace] = useState(false);
+  const [newSpaceName, setNewSpaceName] = useState('');
+  const [newSpaceDescription, setNewSpaceDescription] = useState('');
+
+  const sortedSpaces = useMemo(() => {
+    return [...spaces].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }, [spaces]);
 
   const fetchSpaces = async () => {
     try {
       const res = await fetch('/api/spaces');
+
+      if (!res.ok) return;
+
       const data = await res.json();
-      setSpaces(data);
-      if (data.length === 0) {
-        setActiveTab('templates');
-      }
-    } catch (err) {
-      console.error('Failed to fetch spaces:', err);
+
+      setSpaces(Array.isArray(data) ? data : data.spaces ?? []);
+    } catch (error) {
+      console.error('Failed to fetch Spaces:', error);
     } finally {
       setLoading(false);
     }
@@ -99,244 +312,377 @@ const SpacesPage = () => {
     fetchSpaces();
   }, []);
 
-  const handleCreateSpace = async (e?: React.FormEvent, customData?: { name: string, description: string, instruction: string }) => {
-    if (e) e.preventDefault();
-    
-    const name = customData?.name || newName;
-    const description = customData?.description || newDescription;
-    const instruction = customData?.instruction || newInstruction;
+  const createSpace = async ({
+    name,
+    description,
+    instruction,
+  }: {
+    name: string;
+    description?: string;
+    instruction?: string;
+  }) => {
+    const res = await fetch('/api/spaces', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name,
+        description: description ?? '',
+        instruction: instruction ?? '',
+      }),
+    });
 
-    if (!name) return;
+    if (!res.ok) {
+      throw new Error('Could not create Space.');
+    }
+
+    const created = await res.json();
+    const createdId = String(created.id ?? created.space?.id ?? '');
+
+    if (!createdId) {
+      throw new Error('Space created but no id was returned.');
+    }
+
+    return createdId;
+  };
+
+  const createCapture = async (
+    spaceId: string,
+    payload:
+      | {
+          kind: 'note';
+          title: string;
+          content: string;
+        }
+      | {
+          kind: 'link';
+          title: string;
+          url: string;
+          description?: string;
+        },
+  ) => {
+    await fetch(`/api/spaces/${spaceId}/captures`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+  };
+
+  const handleCreateBlankSpace = async () => {
+    if (!newSpaceName.trim()) return;
+
+    setCreatingSpace(true);
 
     try {
-      const res = await fetch('/api/spaces', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description, instruction }),
+      const spaceId = await createSpace({
+        name: newSpaceName.trim(),
+        description: newSpaceDescription.trim(),
+        instruction:
+          'Use this Space to organize conversations, knowledge, notes, links, outputs, and automations for this project.',
       });
 
-      if (res.ok) {
-        setNewName('');
-        setNewDescription('');
-        setNewInstruction('');
-        setIsModalOpen(false);
-        fetchSpaces();
-        setActiveTab('my-spaces');
-      }
-    } catch (err) {
-      console.error('Failed to create space:', err);
+      setNewSpaceName('');
+      setNewSpaceDescription('');
+      router.push(`/spaces/${spaceId}`);
+    } catch (error) {
+      console.error('Failed to create Space:', error);
+      alert('Could not create this Space.');
+    } finally {
+      setCreatingSpace(false);
+    }
+  };
+
+  const handleUseTemplate = async (template: SpaceTemplate) => {
+    setCreatingTemplateId(template.id);
+
+    try {
+      const spaceId = await createSpace({
+        name: template.name,
+        description: template.description,
+        instruction: template.instruction,
+      });
+
+      await Promise.all([
+        ...template.starterNotes.map((note) =>
+          createCapture(spaceId, {
+            kind: 'note',
+            title: note.title,
+            content: note.content,
+          }),
+        ),
+        ...template.starterLinks.map((link) =>
+          createCapture(spaceId, {
+            kind: 'link',
+            title: link.title,
+            url: link.url,
+            description: link.description,
+          }),
+        ),
+      ]);
+
+      router.push(`/spaces/${spaceId}`);
+    } catch (error) {
+      console.error('Failed to use Space template:', error);
+      alert('Could not create a Space from this template.');
+    } finally {
+      setCreatingTemplateId(null);
     }
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-y-auto bg-light-primary dark:bg-dark-primary p-6 lg:p-12">
-      <div className="max-w-5xl mx-auto w-full">
-        <div className="flex items-center justify-between mb-10">
-          <div>
-            <h1 className="text-3xl font-bold text-black/80 dark:text-white/90 flex items-center gap-3">
-              <LayoutGrid className="text-blue-500" /> Spaces
-            </h1>
-            <p className="text-black/50 dark:text-white/50 mt-2">
-              Organize your research and conversations into projects
-            </p>
+    <main className="min-h-screen bg-light-primary px-6 py-10 dark:bg-dark-primary lg:px-10">
+      <div className="mx-auto max-w-7xl">
+        <header className="rounded-[2rem] border border-light-200 bg-light-secondary p-7 shadow-sm dark:border-dark-200 dark:bg-dark-secondary">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-light-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-black/45 dark:border-dark-200 dark:text-white/45">
+            <LayoutGrid size={14} />
+            Spaces
           </div>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition duration-300 font-medium shadow-lg shadow-blue-500/20"
-          >
-            <Plus size={18} /> New Space
-          </button>
-        </div>
 
-        <div className="flex border-b border-light-200 dark:border-dark-200 mb-8">
-          <button
-            onClick={() => setActiveTab('my-spaces')}
-            className={`px-6 py-3 font-medium transition duration-200 border-b-2 ${
-              activeTab === 'my-spaces'
-                ? 'border-blue-500 text-blue-500'
-                : 'border-transparent text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white'
-            }`}
-          >
-            My Spaces
-          </button>
-          <button
-            onClick={() => setActiveTab('templates')}
-            className={`px-6 py-3 font-medium transition duration-200 border-b-2 ${
-              activeTab === 'templates'
-                ? 'border-blue-500 text-blue-500'
-                : 'border-transparent text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white'
-            }`}
-          >
-            Templates
-          </button>
-        </div>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight text-black dark:text-white md:text-5xl">
+                Project workspaces
+              </h1>
 
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
-          </div>
-        ) : activeTab === 'my-spaces' ? (
-          spaces.length === 0 ? (
-            <div className="bg-light-secondary dark:bg-dark-secondary rounded-2xl p-16 text-center border border-light-200 dark:border-dark-200">
-              <div className="bg-blue-500/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <LayoutGrid size={40} className="text-blue-500" />
-              </div>
-              <h2 className="text-xl font-semibold mb-2">No active Spaces</h2>
-              <p className="text-black/50 dark:text-white/50 max-w-sm mx-auto mb-8">
-                Spaces help you organize your entrepreneur journey. Start with a template or create a custom one.
+              <p className="mt-4 max-w-3xl text-base leading-relaxed text-black/60 dark:text-white/60">
+                Use Spaces to keep conversations, files, notes, links, outputs,
+                and automations together for each project.
               </p>
-              <button
-                onClick={() => setActiveTab('templates')}
-                className="text-blue-500 hover:underline font-medium"
-              >
-                Browse Templates
-              </button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {spaces.map((space) => (
-                <Link
-                  key={space.id}
-                  href={`/spaces/${space.id}`}
-                  className="group bg-light-secondary dark:bg-dark-secondary rounded-2xl p-6 border border-light-200 dark:border-dark-200 hover:border-blue-500/50 hover:shadow-xl transition duration-300 relative overflow-hidden flex flex-col"
-                >
-                  <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ChevronRight size={20} className="text-black/30 dark:text-white/30" />
-                  </div>
-                  <h3 className="text-xl font-bold text-black/80 dark:text-white/90 mb-2 truncate">
-                    {space.name}
-                  </h3>
-                  <p className="text-black/50 dark:text-white/50 text-sm mb-6 line-clamp-3 flex-grow">
-                    {space.description || 'No description provided.'}
-                  </p>
-                  <div className="flex items-center gap-4 text-xs text-black/40 dark:text-white/40 mt-auto pt-4 border-t border-light-200/50 dark:border-dark-200/50">
-                    <div className="flex items-center gap-1.5">
-                      <MessageSquare size={14} /> Chats
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <FileText size={14} /> Files
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )
-        ) : (
-          <div className="space-y-12 pb-20">
-            <div className="grid grid-cols-1 gap-8">
-              {CATEGORIES.map((cat) => (
-                <div 
-                  key={cat.id}
-                  className="bg-light-secondary dark:bg-dark-secondary rounded-3xl p-8 border border-light-200 dark:border-dark-200 shadow-sm"
-                >
-                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-8">
-                    <div className="flex-1 max-w-2xl">
-                      <h3 className="text-2xl font-bold mb-3">{cat.name}</h3>
-                      <p className="text-black/70 dark:text-white/70 mb-6 text-lg">
-                        {cat.description}
-                      </p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        <div>
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-blue-500 mb-3">What to store</h4>
-                          <p className="text-sm text-black/50 dark:text-white/50 leading-relaxed italic">
-                            {cat.examples}
-                          </p>
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-blue-500 mb-3">Questions to ask</h4>
-                          <ul className="space-y-2">
-                            {cat.questions.map((q, i) => (
-                              <li key={i} className="text-sm text-black/60 dark:text-white/60 flex items-start gap-2">
-                                <span className="text-blue-500 font-bold">•</span> {q}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
 
-                      <div className="bg-light-100 dark:bg-dark-primary/50 rounded-2xl p-4 border border-light-200 dark:border-dark-200/50">
-                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-black/30 dark:text-white/30 mb-2">AI Reply Behavior</h4>
-                        <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed font-mono">
-                          {cat.instruction}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="lg:w-48 flex shrink-0">
-                      <button
-                        onClick={() => handleCreateSpace(undefined, { name: cat.name, description: cat.description, instruction: cat.instruction })}
-                        className="w-full py-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl font-bold hover:scale-[1.02] active:scale-[0.98] transition duration-200 shadow-xl"
-                      >
-                        Launch Space
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+            <div className="rounded-3xl bg-light-primary p-4 dark:bg-dark-primary lg:w-[360px]">
+              <p className="mb-3 text-sm font-semibold text-black dark:text-white">
+                Create blank Space
+              </p>
 
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-light-primary dark:bg-dark-secondary rounded-3xl w-full max-w-lg p-8 border border-light-200 dark:border-dark-200 shadow-2xl animate-in fade-in zoom-in duration-300">
-            <h2 className="text-2xl font-bold mb-6">Create a New Space</h2>
-            <form onSubmit={handleCreateSpace}>
-              <div className="space-y-4 mb-8">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 opacity-70">Space Name</label>
-                  <input
-                    autoFocus
-                    type="text"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    className="w-full bg-light-secondary dark:bg-dark-primary border border-light-200 dark:border-dark-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition duration-200"
-                    placeholder="e.g., Marketing Project, Research..."
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 opacity-70">Description (Optional)</label>
-                  <textarea
-                    value={newDescription}
-                    onChange={(e) => setNewDescription(e.target.value)}
-                    className="w-full bg-light-secondary dark:bg-dark-primary border border-light-200 dark:border-dark-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition duration-200 min-h-[80px] resize-none"
-                    placeholder="What is this space for?"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5 opacity-70">AI Instruction (Optional)</label>
-                  <textarea
-                    value={newInstruction}
-                    onChange={(e) => setNewInstruction(e.target.value)}
-                    className="w-full bg-light-secondary dark:bg-dark-primary border border-light-200 dark:border-dark-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition duration-200 min-h-[80px] resize-none"
-                    placeholder="How should the AI behave in this space?"
-                  />
-                </div>
-              </div>
-              <div className="flex items-center justify-end gap-3">
+              <div className="space-y-3">
+                <input
+                  value={newSpaceName}
+                  onChange={(event) => setNewSpaceName(event.target.value)}
+                  placeholder="Space name"
+                  className="w-full rounded-2xl border border-light-200 bg-light-secondary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-secondary dark:text-white dark:focus:border-white"
+                />
+
+                <input
+                  value={newSpaceDescription}
+                  onChange={(event) =>
+                    setNewSpaceDescription(event.target.value)
+                  }
+                  placeholder="Short description"
+                  className="w-full rounded-2xl border border-light-200 bg-light-secondary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-secondary dark:text-white dark:focus:border-white"
+                />
+
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-6 py-2.5 rounded-full hover:bg-light-200 dark:hover:bg-dark-200 transition duration-200"
+                  onClick={handleCreateBlankSpace}
+                  disabled={creatingSpace || !newSpaceName.trim()}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] disabled:opacity-40 dark:bg-white dark:text-black"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition duration-300 font-medium shadow-lg shadow-blue-500/20"
-                >
+                  {creatingSpace ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Plus size={16} />
+                  )}
                   Create Space
                 </button>
               </div>
-            </form>
+            </div>
           </div>
+        </header>
+
+        <div className="mt-8 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => setActiveTab('spaces')}
+            className={`rounded-full px-5 py-2.5 text-sm font-semibold transition ${
+              activeTab === 'spaces'
+                ? 'bg-black text-white dark:bg-white dark:text-black'
+                : 'bg-light-secondary text-black/55 hover:text-black dark:bg-dark-secondary dark:text-white/55 dark:hover:text-white'
+            }`}
+          >
+            My Spaces · {spaces.length}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('templates')}
+            className={`rounded-full px-5 py-2.5 text-sm font-semibold transition ${
+              activeTab === 'templates'
+                ? 'bg-black text-white dark:bg-white dark:text-black'
+                : 'bg-light-secondary text-black/55 hover:text-black dark:bg-dark-secondary dark:text-white/55 dark:hover:text-white'
+            }`}
+          >
+            Templates · {SPACE_TEMPLATES.length}
+          </button>
         </div>
-      )}
-    </div>
+
+        {activeTab === 'spaces' && (
+          <section className="mt-8">
+            {loading ? (
+              <div className="flex min-h-[240px] items-center justify-center rounded-[2rem] border border-light-200 bg-light-secondary dark:border-dark-200 dark:bg-dark-secondary">
+                <Loader2 className="animate-spin text-black/40 dark:text-white/40" />
+              </div>
+            ) : sortedSpaces.length === 0 ? (
+              <div className="rounded-[2rem] border border-dashed border-light-200 bg-light-secondary p-10 text-center dark:border-dark-200 dark:bg-dark-secondary">
+                <Sparkles
+                  size={32}
+                  className="mx-auto mb-4 text-black/35 dark:text-white/35"
+                />
+
+                <h2 className="text-xl font-semibold text-black dark:text-white">
+                  No Spaces yet
+                </h2>
+
+                <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-black/55 dark:text-white/55">
+                  Create a blank Space or use a template to start with a real
+                  project structure.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('templates')}
+                  className="mt-5 inline-flex items-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
+                >
+                  Browse templates
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {sortedSpaces.map((space) => (
+                  <Link
+                    key={space.id}
+                    href={`/spaces/${space.id}`}
+                    className="group flex min-h-[260px] flex-col rounded-[2rem] border border-light-200 bg-light-secondary p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-dark-200 dark:bg-dark-secondary"
+                  >
+                    <div className="mb-5 flex items-start justify-between gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-light-primary text-sm font-bold text-black dark:bg-dark-primary dark:text-white">
+                        {getSpaceInitials(space.name)}
+                      </div>
+
+                      <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-medium text-black/45 dark:bg-dark-primary dark:text-white/45">
+                        {formatDate(space.createdAt)}
+                      </span>
+                    </div>
+
+                    <h2 className="text-xl font-bold text-black dark:text-white">
+                      {space.name}
+                    </h2>
+
+                    <p className="mt-3 line-clamp-3 flex-1 text-sm leading-relaxed text-black/55 dark:text-white/55">
+                      {space.description ||
+                        'A project Space for conversations, knowledge, notes, links, outputs, and automations.'}
+                    </p>
+
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-light-primary px-3 py-1 text-xs text-black/45 dark:bg-dark-primary dark:text-white/45">
+                        <BookOpen size={12} />
+                        {space.files?.length ?? 0} files
+                      </span>
+                    </div>
+
+                    <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
+                      Open Space
+                      <ArrowRight
+                        size={16}
+                        className="transition group-hover:translate-x-1"
+                      />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeTab === 'templates' && (
+          <section className="mt-8">
+            <div className="mb-5">
+              <h2 className="text-2xl font-bold text-black dark:text-white">
+                Space templates
+              </h2>
+
+              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-black/55 dark:text-white/55">
+                Templates are starter blueprints. Using one creates a real,
+                editable Space with default instructions and starter notes.
+              </p>
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {SPACE_TEMPLATES.map((template) => {
+                const Icon = template.icon;
+                const isCreating = creatingTemplateId === template.id;
+
+                return (
+                  <article
+                    key={template.id}
+                    className="flex min-h-[300px] flex-col rounded-[2rem] border border-light-200 bg-light-secondary p-6 shadow-sm dark:border-dark-200 dark:bg-dark-secondary"
+                  >
+                    <div className="mb-5 flex items-start justify-between gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-light-primary text-black dark:bg-dark-primary dark:text-white">
+                        <Icon size={22} />
+                      </div>
+
+                      <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-medium text-black/45 dark:bg-dark-primary dark:text-white/45">
+                        Template
+                      </span>
+                    </div>
+
+                    <h3 className="text-xl font-bold text-black dark:text-white">
+                      {template.name}
+                    </h3>
+
+                    <p className="mt-3 flex-1 text-sm leading-relaxed text-black/55 dark:text-white/55">
+                      {template.description}
+                    </p>
+
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      {template.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full bg-light-primary px-3 py-1 text-xs text-black/45 dark:bg-dark-primary dark:text-white/45"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="mt-5 grid grid-cols-2 gap-2 text-xs text-black/45 dark:text-white/45">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-light-primary px-3 py-2 dark:bg-dark-primary">
+                        <FileText size={12} />
+                        {template.starterNotes.length} notes
+                      </span>
+
+                      <span className="inline-flex items-center gap-1 rounded-full bg-light-primary px-3 py-2 dark:bg-dark-primary">
+                        <LinkIcon size={12} />
+                        {template.starterLinks.length} links
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleUseTemplate(template)}
+                      disabled={Boolean(creatingTemplateId)}
+                      className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] disabled:opacity-40 dark:bg-white dark:text-black"
+                    >
+                      {isCreating ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Compass size={16} />
+                      )}
+                      {isCreating ? 'Creating Space...' : 'Use template'}
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
+      </div>
+    </main>
   );
 };
 
