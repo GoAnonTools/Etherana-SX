@@ -56,6 +56,29 @@ interface VaultUploadRecord {
   content: string;
 }
 
+interface VaultSpaceNote {
+  id: string;
+  spaceId: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface VaultSpaceLink {
+  id: string;
+  spaceId: string;
+  title: string;
+  url: string;
+  description?: string | null;
+  createdAt: string;
+}
+
+interface VaultSpaceCaptures {
+  notes: VaultSpaceNote[];
+  links: VaultSpaceLink[];
+}
+
 interface VaultPayload {
   version: 1;
   exportedAt: string;
@@ -68,6 +91,7 @@ interface VaultPayload {
   spaces: VaultSpace[];
   conversations: VaultConversationChat[];
   uploads: VaultUploadRecord[];
+  captures?: VaultSpaceCaptures;
   notes: string[];
 }
 
@@ -465,6 +489,31 @@ const VaultPage = () => {
     }
   };
 
+  const fetchCaptures = async (): Promise<VaultSpaceCaptures> => {
+    try {
+      const res = await fetch('/api/vault/captures');
+
+      if (!res.ok) {
+        return {
+          notes: [],
+          links: [],
+        };
+      }
+
+      const data = await res.json();
+
+      return {
+        notes: Array.isArray(data.notes) ? data.notes : [],
+        links: Array.isArray(data.links) ? data.links : [],
+      };
+    } catch {
+      return {
+        notes: [],
+        links: [],
+      };
+    }
+  };
+
 
   const ensureVaultMeta = () => {
     const existing = readVaultMeta();
@@ -496,6 +545,7 @@ const VaultPage = () => {
       const spaces = await fetchSpaces();
       const conversations = await fetchConversations();
       const uploads = await fetchUploads();
+      const captures = await fetchCaptures();
 
       const payload: VaultPayload = {
         version: 1,
@@ -506,12 +556,14 @@ const VaultPage = () => {
         spaces,
         conversations,
         uploads,
+        captures,
         notes: [
           'This backup is end-to-end encrypted with your recovery phrase.',
           'Etherana cannot recover this vault if the recovery phrase is lost.',
           'Uploaded original file binaries are not included in this version.',
           'Processed knowledge chunks and embeddings are included.',
           'Space conversations and messages are included.',
+          'Personal notes and saved links are included.',
         ],
       };
 
@@ -682,6 +734,29 @@ const VaultPage = () => {
         }
       }
 
+      let importedNotes = 0;
+      let importedLinks = 0;
+
+      if (payload.captures) {
+        const capturesRes = await fetch('/api/vault/captures', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            notes: payload.captures.notes ?? [],
+            links: payload.captures.links ?? [],
+            spaceIdMap,
+          }),
+        });
+
+        if (capturesRes.ok) {
+          const capturesData = await capturesRes.json();
+          importedNotes = Number(capturesData.importedNotes ?? 0);
+          importedLinks = Number(capturesData.importedLinks ?? 0);
+        }
+      }
+
 
 
       const importedMeta: VaultMeta = {
@@ -694,7 +769,7 @@ const VaultPage = () => {
       setVaultMeta(importedMeta);
 
       setStatus(
-        `Vault imported. Restored ${payload.localStorageRecords.length} data groups, ${Object.keys(spaceIdMap).length} spaces, ${importedChats} conversations, ${importedMessages} messages, and ${importedUploads} knowledge files.`,
+        `Vault imported. Restored ${payload.localStorageRecords.length} data groups, ${Object.keys(spaceIdMap).length} spaces, ${importedChats} conversations, ${importedMessages} messages, ${importedUploads} knowledge files, ${importedNotes} notes, and ${importedLinks} links.`,
       );
     } catch (error) {
       console.error(error);
