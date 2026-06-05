@@ -22,6 +22,13 @@ import {
   writeVaultMeta,
   writeVaultStorageRecord,
 } from '@/lib/vault/localVault';
+import {
+  getEncryptedVaultDbStats,
+  isEncryptedVaultUnlocked,
+  migrateLocalVaultToEncryptedDb,
+  restoreEncryptedDbToLocalVault,
+  unlockEncryptedVaultStorage,
+} from '@/lib/vault/encryptedVaultDb';
 
 interface VaultSpace {
   id: string;
@@ -338,11 +345,25 @@ const VaultPage = () => {
   const [importPhrase, setImportPhrase] = useState('');
   const [backupFile, setBackupFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [encryptedStorageStatus, setEncryptedStorageStatus] =
+    useState<string | null>(null);
+  const [encryptedRecordCount, setEncryptedRecordCount] = useState(0);
+  const [unlockPhrase, setUnlockPhrase] = useState('');
   const [working, setWorking] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const refreshEncryptedStorageStats = async () => {
+    try {
+      const stats = await getEncryptedVaultDbStats();
+      setEncryptedRecordCount(stats.count);
+    } catch {
+      setEncryptedRecordCount(0);
+    }
+  };
+
   useEffect(() => {
     setVaultMeta(readVaultMeta());
+    refreshEncryptedStorageStats();
   }, []);
 
   const phraseWarning = useMemo(() => {
@@ -543,6 +564,75 @@ const VaultPage = () => {
       console.error(error);
       setStatus(
         'Could not import the vault. Check the file and recovery phrase.',
+      );
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const unlockEncryptedStorage = async () => {
+    if (!unlockPhrase.trim()) {
+      setEncryptedStorageStatus('Enter your recovery phrase first.');
+      return;
+    }
+
+    setWorking(true);
+    setEncryptedStorageStatus(null);
+
+    try {
+      const result = await unlockEncryptedVaultStorage(unlockPhrase.trim());
+      await refreshEncryptedStorageStats();
+      setEncryptedStorageStatus(
+        `Encrypted device storage unlocked for ${result.vaultId}.`,
+      );
+    } catch (error) {
+      console.error(error);
+      setEncryptedStorageStatus('Could not unlock encrypted storage.');
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const migrateToEncryptedStorage = async () => {
+    setWorking(true);
+    setEncryptedStorageStatus(null);
+
+    try {
+      const result = await migrateLocalVaultToEncryptedDb();
+      await refreshEncryptedStorageStats();
+      setEncryptedStorageStatus(
+        `Migrated ${result.migrated} local data groups into encrypted storage.`,
+      );
+    } catch (error) {
+      console.error(error);
+      setEncryptedStorageStatus(
+        'Could not migrate. Unlock encrypted storage first.',
+      );
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const restoreFromEncryptedStorage = async () => {
+    const confirmed = window.confirm(
+      'Restore encrypted records into local app storage on this browser?',
+    );
+
+    if (!confirmed) return;
+
+    setWorking(true);
+    setEncryptedStorageStatus(null);
+
+    try {
+      const result = await restoreEncryptedDbToLocalVault();
+      await refreshEncryptedStorageStats();
+      setEncryptedStorageStatus(
+        `Restored ${result.restored} encrypted records into local app storage.`,
+      );
+    } catch (error) {
+      console.error(error);
+      setEncryptedStorageStatus(
+        'Could not restore. Unlock encrypted storage first.',
       );
     } finally {
       setWorking(false);
@@ -775,6 +865,106 @@ const VaultPage = () => {
             {status}
           </div>
         )}
+
+        <section className="mt-8 rounded-[2rem] border border-light-200 bg-light-secondary p-6 shadow-sm dark:border-dark-200 dark:bg-dark-secondary">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-light-primary dark:bg-dark-primary">
+              <Lock size={20} />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-semibold text-black dark:text-white">
+                Encrypted device storage
+              </h2>
+
+              <p className="text-sm text-black/50 dark:text-white/50">
+                Store local vault records encrypted inside this browser. This is
+                the foundation for anonymous encrypted sync.
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-5 grid gap-3 text-sm text-black/55 dark:text-white/55 md:grid-cols-3">
+            <div className="rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-black/35 dark:text-white/35">
+                State
+              </p>
+              <p className="mt-2 font-medium">
+                {isEncryptedVaultUnlocked() ? 'Unlocked' : 'Locked'}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-black/35 dark:text-white/35">
+                Records
+              </p>
+              <p className="mt-2 font-medium">{encryptedRecordCount}</p>
+            </div>
+
+            <div className="rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-black/35 dark:text-white/35">
+                Last migration
+              </p>
+              <p className="mt-2 font-medium">
+                {vaultMeta?.encryptedDbMigratedAt
+                  ? new Date(vaultMeta.encryptedDbMigratedAt).toLocaleString()
+                  : 'Never'}
+              </p>
+            </div>
+          </div>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-black dark:text-white">
+              Recovery phrase
+            </span>
+
+            <input
+              value={unlockPhrase}
+              onChange={(event) => setUnlockPhrase(event.target.value)}
+              type="password"
+              placeholder="Enter your recovery phrase to unlock encrypted storage"
+              className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
+            />
+          </label>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <button
+              type="button"
+              onClick={unlockEncryptedStorage}
+              disabled={working}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] disabled:opacity-40 dark:bg-white dark:text-black"
+            >
+              <KeyRound size={16} />
+              Unlock
+            </button>
+
+            <button
+              type="button"
+              onClick={migrateToEncryptedStorage}
+              disabled={working}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-3 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black disabled:opacity-40 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+            >
+              <Lock size={16} />
+              Migrate
+            </button>
+
+            <button
+              type="button"
+              onClick={restoreFromEncryptedStorage}
+              disabled={working}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-3 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black disabled:opacity-40 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+            >
+              <RefreshCw size={16} />
+              Restore
+            </button>
+          </div>
+
+          {encryptedStorageStatus && (
+            <div className="mt-5 rounded-2xl bg-light-primary p-4 text-sm text-black/65 dark:bg-dark-primary dark:text-white/65">
+              {encryptedStorageStatus}
+            </div>
+          )}
+        </section>
 
         <section className="mt-8 rounded-[2rem] border border-light-200 bg-light-secondary p-6 shadow-sm dark:border-dark-200 dark:bg-dark-secondary">
           <div className="mb-4 flex items-center gap-2">
