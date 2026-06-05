@@ -369,6 +369,14 @@ const normalizeStoredAutomationForRuntime = (
   };
 };
 
+const getAutomationDisplayKey = (name: string) => {
+  return name
+    .replace(/\s+Copy$/i, '')
+    .replace(/\s+Custom$/i, '')
+    .trim()
+    .toLowerCase();
+};
+
 const readCustomAutomations = (): StoredAutomation[] => {
   return readVaultCustomAutomations();
 };
@@ -1038,6 +1046,7 @@ const AutomationsList = ({
   onOpenBuilder,
   onCloseBuilder,
   onSaveAutomation,
+  onCleanDuplicateAutomations,
   onCreateSpace,
   onRestoreTemplates,
   onSelect,
@@ -1051,6 +1060,7 @@ const AutomationsList = ({
   onOpenBuilder: () => void;
   onCloseBuilder: () => void;
   onSaveAutomation: (automation: StoredAutomation) => void;
+  onCleanDuplicateAutomations: () => void;
   onCreateSpace: (name: string) => Promise<AutomationSpace | null>;
   onRestoreTemplates: () => void;
   onSelect: (id: string) => void;
@@ -1094,6 +1104,14 @@ const AutomationsList = ({
           >
             <Plus size={17} />
             New Automation
+          </button>
+
+          <button
+            type="button"
+            onClick={onCleanDuplicateAutomations}
+            className="inline-flex items-center justify-center rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/60 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/60 dark:hover:bg-dark-primary dark:hover:text-white"
+          >
+            Clean duplicates
           </button>
         </div>
       </header>
@@ -1812,6 +1830,54 @@ const AutomationsPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const cleanDuplicateAutomations = () => {
+    const newestByKey = new Map<string, StoredAutomation>();
+
+    [...customAutomations]
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .forEach((automation) => {
+        const key = getAutomationDisplayKey(automation.name);
+
+        if (!newestByKey.has(key)) {
+          newestByKey.set(key, automation);
+        }
+      });
+
+    const cleanedAutomations = Array.from(newestByKey.values());
+    const removedCount = customAutomations.length - cleanedAutomations.length;
+
+    if (removedCount <= 0) {
+      window.alert('No duplicate automations found.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Clean ${removedCount} duplicate automation${removedCount > 1 ? 's' : ''}? The newest version will be kept. Runs and outputs will not be deleted.`,
+    );
+
+    if (!confirmed) return;
+
+    setCustomAutomations(cleanedAutomations);
+    writeCustomAutomations(cleanedAutomations);
+
+    const selectedStillExists =
+      selectedAutomationId &&
+      cleanedAutomations.some((automation) => automation.id === selectedAutomationId);
+
+    if (selectedAutomationId && !selectedStillExists) {
+      setSelectedAutomationId(undefined);
+
+      const url = new URL(window.location.href);
+      url.pathname = '/tasks';
+      url.search = '';
+      window.history.pushState({}, '', url.toString());
+    }
+
+    window.alert(
+      `Cleaned ${removedCount} duplicate automation${removedCount > 1 ? 's' : ''}.`,
+    );
+  };
+
   const duplicateAutomation = (automation: AutomationTemplate) => {
     const duplicated: StoredAutomation = {
       id: `custom-${Date.now()}`,
@@ -1990,6 +2056,7 @@ const AutomationsPage = () => {
         setIsBuilderOpen(false);
       }}
       onSaveAutomation={saveAutomation}
+      onCleanDuplicateAutomations={cleanDuplicateAutomations}
       onCreateSpace={createSpaceForAutomation}
       onRestoreTemplates={restoreTemplates}
       onSelect={selectAutomation}
