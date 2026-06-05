@@ -8,6 +8,7 @@ import {
   Bot,
   ChevronLeft,
   Clock,
+  Download,
   ExternalLink,
   FileText,
   Globe2,
@@ -90,6 +91,121 @@ const EmptyState = ({
   );
 };
 
+const PBKDF2_ITERATIONS = 310_000;
+
+const textEncoder = new TextEncoder();
+
+const bytesToBase64 = (bytes: Uint8Array) => {
+  let binary = '';
+
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+
+  return window.btoa(binary);
+};
+
+const generateBytes = (length: number) => {
+  const bytes = new Uint8Array(length);
+  window.crypto.getRandomValues(bytes);
+  return bytes;
+};
+
+const toArrayBuffer = (bytes: Uint8Array): ArrayBuffer => {
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  const view = new Uint8Array(buffer);
+  view.set(bytes);
+  return buffer;
+};
+
+const deriveSpaceExportKey = async (
+  recoveryPhrase: string,
+  salt: Uint8Array,
+) => {
+  const baseKey = await window.crypto.subtle.importKey(
+    'raw',
+    toArrayBuffer(textEncoder.encode(recoveryPhrase)),
+    'PBKDF2',
+    false,
+    ['deriveKey'],
+  );
+
+  return window.crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: toArrayBuffer(salt),
+      iterations: PBKDF2_ITERATIONS,
+      hash: 'SHA-256',
+    },
+    baseKey,
+    {
+      name: 'AES-GCM',
+      length: 256,
+    },
+    false,
+    ['encrypt'],
+  );
+};
+
+const downloadJson = (filename: string, data: unknown) => {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: 'application/json;charset=utf-8',
+  });
+
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+
+  URL.revokeObjectURL(url);
+};
+
+const slugify = (value: string) => {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+};
+
+const encryptSpaceVaultPayload = async (
+  payload: any,
+  recoveryPhrase: string,
+) => {
+  const salt = generateBytes(16);
+  const iv = generateBytes(12);
+  const key = await deriveSpaceExportKey(recoveryPhrase, salt);
+
+  const encrypted = await window.crypto.subtle.encrypt(
+    {
+      name: 'AES-GCM',
+      iv: toArrayBuffer(iv),
+    },
+    key,
+    toArrayBuffer(textEncoder.encode(JSON.stringify(payload))),
+  );
+
+  return {
+    version: 1,
+    app: 'etherana-sx',
+    vaultId: payload.vaultId,
+    createdAt: new Date().toISOString(),
+    kdf: {
+      name: 'PBKDF2',
+      hash: 'SHA-256',
+      iterations: PBKDF2_ITERATIONS,
+      salt: bytesToBase64(salt),
+    },
+    cipher: {
+      name: 'AES-GCM',
+      iv: bytesToBase64(iv),
+    },
+    ciphertext: bytesToBase64(new Uint8Array(encrypted)),
+  };
+};
+
 const SpaceDetailPage = () => {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -110,6 +226,7 @@ const SpaceDetailPage = () => {
     StoredAutomation[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [exportingSpace, setExportingSpace] = useState(false);
   const [activeSection, setActiveSection] =
     useState<SpaceSection>('outputs');
 
@@ -239,6 +356,42 @@ const SpaceDetailPage = () => {
       window.removeEventListener(automationStorageChangedEvent, refresh);
     };
   }, []);
+
+  const handleExportSpace = async () => {
+    if (!space) return;
+
+    const recoveryPhrase = window.prompt(
+      `Choose a recovery phrase to encrypt the "${space.name}" Space export. You will need it to import this Space later.`,
+    );
+
+    if (!recoveryPhrase?.trim()) return;
+
+    setExportingSpace(true);
+
+    try {
+      const res = await fetch(`/api/vault/spaces/${space.id}`);
+
+      if (!res.ok) {
+        throw new Error('Could not prepare Space export.');
+      }
+
+      const payload = await res.json();
+      const encryptedVault = await encryptSpaceVaultPayload(
+        payload,
+        recoveryPhrase.trim(),
+      );
+
+      const date = new Date().toISOString().slice(0, 10);
+      const filename = `etherana-space-${slugify(space.name) || space.id}-${date}.json`;
+
+      downloadJson(filename, encryptedVault);
+    } catch (error) {
+      console.error('Failed to export Space:', error);
+      alert('Could not export this Space.');
+    } finally {
+      setExportingSpace(false);
+    }
+  };
 
   const handleDeleteSpace = async () => {
     if (
@@ -469,6 +622,16 @@ const SpaceDetailPage = () => {
                 <Plus size={18} />
                 New Chat
               </Link>
+
+              <button
+                type="button"
+                onClick={handleExportSpace}
+                disabled={exportingSpace}
+                className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black disabled:opacity-50 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+              >
+                <Download size={18} />
+                {exportingSpace ? 'Exporting...' : 'Export Space'}
+              </button>
 
               <button
                 type="button"
