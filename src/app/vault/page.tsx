@@ -344,6 +344,18 @@ const getBackupFilename = () => {
   return `etherana-private-vault-${date}.json`;
 };
 
+const getSpaceBackupFilename = (spaceName: string, spaceId: string) => {
+  const date = new Date().toISOString().slice(0, 10);
+  const slug =
+    spaceName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60) || spaceId;
+
+  return `etherana-space-${slug}-${date}.json`;
+};
+
 
 const rewriteSpaceDestinations = (
   key: string,
@@ -388,12 +400,29 @@ const VaultPage = () => {
   const [exportPhrase, setExportPhrase] = useState('');
   const [importPhrase, setImportPhrase] = useState('');
   const [backupFile, setBackupFile] = useState<File | null>(null);
+  const [exportScope, setExportScope] = useState<'workspace' | 'space'>(
+    'workspace',
+  );
+  const [exportSpaces, setExportSpaces] = useState<VaultSpace[]>([]);
+  const [selectedExportSpaceId, setSelectedExportSpaceId] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setVaultMeta(readVaultMeta());
+
+    fetchSpaces()
+      .then((spaces) => {
+        setExportSpaces(spaces);
+
+        if (spaces.length > 0) {
+          setSelectedExportSpaceId((current) => current || spaces[0].id);
+        }
+      })
+      .catch(() => {
+        setExportSpaces([]);
+      });
   }, []);
 
   const phraseWarning = useMemo(() => {
@@ -537,39 +566,66 @@ const VaultPage = () => {
       return;
     }
 
+    if (exportScope === 'space' && !selectedExportSpaceId) {
+      setStatus('Choose a Space to export.');
+      return;
+    }
+
     setWorking(true);
     setStatus(null);
 
     try {
       const meta = ensureVaultMeta();
-      const spaces = await fetchSpaces();
-      const conversations = await fetchConversations();
-      const uploads = await fetchUploads();
-      const captures = await fetchCaptures();
 
-      const payload: VaultPayload = {
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        app: 'etherana-sx',
-        vaultId: meta.vaultId,
-        localStorageRecords: readVaultStorageRecords(),
-        spaces,
-        conversations,
-        uploads,
-        captures,
-        notes: [
-          'This backup is end-to-end encrypted with your recovery phrase.',
-          'Etherana cannot recover this vault if the recovery phrase is lost.',
-          'Uploaded original file binaries are not included in this version.',
-          'Processed knowledge chunks and embeddings are included.',
-          'Space conversations and messages are included.',
-          'Personal notes and saved links are included.',
-        ],
-      };
+      let payload: VaultPayload;
+      let filename = getBackupFilename();
+
+      if (exportScope === 'space') {
+        const selectedSpace = exportSpaces.find(
+          (space) => space.id === selectedExportSpaceId,
+        );
+
+        const res = await fetch(`/api/vault/spaces/${selectedExportSpaceId}`);
+
+        if (!res.ok) {
+          throw new Error('Could not prepare selected Space export.');
+        }
+
+        payload = (await res.json()) as VaultPayload;
+        filename = getSpaceBackupFilename(
+          selectedSpace?.name ?? 'space',
+          selectedExportSpaceId,
+        );
+      } else {
+        const spaces = await fetchSpaces();
+        const conversations = await fetchConversations();
+        const uploads = await fetchUploads();
+        const captures = await fetchCaptures();
+
+        payload = {
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          app: 'etherana-sx',
+          vaultId: meta.vaultId,
+          localStorageRecords: readVaultStorageRecords(),
+          spaces,
+          conversations,
+          uploads,
+          captures,
+          notes: [
+            'This backup is end-to-end encrypted with your recovery phrase.',
+            'Etherana cannot recover this vault if the recovery phrase is lost.',
+            'Uploaded original file binaries are not included in this version.',
+            'Processed knowledge chunks and embeddings are included.',
+            'Space conversations and messages are included.',
+            'Personal notes and saved links are included.',
+          ],
+        };
+      }
 
       const backup = await encryptPayload(payload, exportPhrase.trim());
 
-      downloadJson(getBackupFilename(), backup);
+      downloadJson(filename, backup);
 
       const updatedMeta: VaultMeta = {
         ...meta,
@@ -579,7 +635,11 @@ const VaultPage = () => {
       writeVaultMeta(updatedMeta);
       setVaultMeta(updatedMeta);
 
-      setStatus('Encrypted vault exported successfully.');
+      setStatus(
+        exportScope === 'space'
+          ? 'Encrypted Space vault exported successfully.'
+          : 'Encrypted workspace vault exported successfully.',
+      );
     } catch (error) {
       console.error(error);
       setStatus('Could not export the vault.');
@@ -917,6 +977,66 @@ const VaultPage = () => {
                   Create a portable backup for another device.
                 </p>
               </div>
+            </div>
+
+            <div className="mb-5 rounded-3xl bg-light-primary p-4 dark:bg-dark-primary">
+              <p className="mb-3 text-sm font-semibold text-black dark:text-white">
+                Export scope
+              </p>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setExportScope('workspace')}
+                  className={`rounded-2xl border px-4 py-3 text-left text-sm transition ${
+                    exportScope === 'workspace'
+                      ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+                      : 'border-light-200 text-black/60 hover:text-black dark:border-dark-200 dark:text-white/60 dark:hover:text-white'
+                  }`}
+                >
+                  <span className="block font-semibold">Entire workspace</span>
+                  <span className="mt-1 block text-xs opacity-70">
+                    Export all Spaces and workspace data.
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setExportScope('space')}
+                  className={`rounded-2xl border px-4 py-3 text-left text-sm transition ${
+                    exportScope === 'space'
+                      ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+                      : 'border-light-200 text-black/60 hover:text-black dark:border-dark-200 dark:text-white/60 dark:hover:text-white'
+                  }`}
+                >
+                  <span className="block font-semibold">Selected Space</span>
+                  <span className="mt-1 block text-xs opacity-70">
+                    Export only one project Space.
+                  </span>
+                </button>
+              </div>
+
+              {exportScope === 'space' && (
+                <label className="mt-4 block space-y-2">
+                  <span className="text-sm font-medium text-black dark:text-white">
+                    Space to export
+                  </span>
+
+                  <select
+                    value={selectedExportSpaceId}
+                    onChange={(event) =>
+                      setSelectedExportSpaceId(event.target.value)
+                    }
+                    className="w-full rounded-2xl border border-light-200 bg-light-secondary px-4 py-3 text-sm text-black outline-none dark:border-dark-200 dark:bg-dark-secondary dark:text-white"
+                  >
+                    {exportSpaces.map((space) => (
+                      <option key={space.id} value={space.id}>
+                        {space.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
 
             <label className="space-y-2">
