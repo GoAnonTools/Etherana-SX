@@ -56,6 +56,13 @@ export interface VaultMeta {
   lastSyncPullAt?: string;
 }
 
+export interface AutomationStorageSnapshot {
+  automations: StoredAutomation[];
+  hiddenTemplateIds: string[];
+  runs: AutomationRunHistoryItem[];
+  outputs: AutomationOutputItem[];
+}
+
 export const CUSTOM_AUTOMATIONS_STORAGE_KEY =
   'etherana.customAutomations.v1';
 
@@ -156,6 +163,8 @@ export const writeCustomAutomations = (
   automations: StoredAutomation[],
 ) => {
   writeJsonArray(CUSTOM_AUTOMATIONS_STORAGE_KEY, automations, 100);
+  emitAutomationStorageChanged();
+  scheduleAutomationStorageMirror();
 };
 
 export const readHiddenTemplateIds = () => {
@@ -167,6 +176,8 @@ export const readHiddenTemplateIds = () => {
 
 export const writeHiddenTemplateIds = (ids: string[]) => {
   writeJsonArray(HIDDEN_TEMPLATE_AUTOMATION_IDS_STORAGE_KEY, ids, 100);
+  emitAutomationStorageChanged();
+  scheduleAutomationStorageMirror();
 };
 
 export const readAutomationRunHistory = () => {
@@ -180,6 +191,8 @@ export const writeAutomationRunHistory = (
   runs: AutomationRunHistoryItem[],
 ) => {
   writeJsonArray(AUTOMATION_RUN_HISTORY_STORAGE_KEY, runs, 50);
+  emitAutomationStorageChanged();
+  scheduleAutomationStorageMirror();
 };
 
 export const readAutomationOutputs = () => {
@@ -193,6 +206,8 @@ export const writeAutomationOutputs = (
   outputs: AutomationOutputItem[],
 ) => {
   writeJsonArray(AUTOMATION_OUTPUTS_STORAGE_KEY, outputs, 100);
+  emitAutomationStorageChanged();
+  scheduleAutomationStorageMirror();
 };
 
 export const captureAutomationOutputContent = (
@@ -266,3 +281,142 @@ export const writeVaultStorageRecord = (key: string, value: string) => {
 
   localStorage.setItem(key, value);
 };
+
+
+const AUTOMATION_STORAGE_API_PATH = '/api/automations/storage';
+const AUTOMATION_STORAGE_CHANGED_EVENT = 'etherana.automation-storage-changed';
+
+let automationStorageMirrorTimer: ReturnType<typeof setTimeout> | null = null;
+
+const hasAutomationStorageData = (snapshot: AutomationStorageSnapshot) => {
+  return (
+    snapshot.automations.length > 0 ||
+    snapshot.hiddenTemplateIds.length > 0 ||
+    snapshot.runs.length > 0 ||
+    snapshot.outputs.length > 0
+  );
+};
+
+export const emitAutomationStorageChanged = () => {
+  if (!isBrowser()) return;
+
+  window.dispatchEvent(new Event(AUTOMATION_STORAGE_CHANGED_EVENT));
+};
+
+export const getAutomationStorageChangedEventName = () => {
+  return AUTOMATION_STORAGE_CHANGED_EVENT;
+};
+
+export const readAutomationStorageSnapshot = (): AutomationStorageSnapshot => {
+  return {
+    automations: readCustomAutomations(),
+    hiddenTemplateIds: readHiddenTemplateIds(),
+    runs: readAutomationRunHistory(),
+    outputs: readAutomationOutputs(),
+  };
+};
+
+export const writeAutomationStorageSnapshot = (
+  snapshot: Partial<AutomationStorageSnapshot>,
+) => {
+  if (snapshot.automations) {
+    writeJsonArray(CUSTOM_AUTOMATIONS_STORAGE_KEY, snapshot.automations, 100);
+  }
+
+  if (snapshot.hiddenTemplateIds) {
+    writeJsonArray(
+      HIDDEN_TEMPLATE_AUTOMATION_IDS_STORAGE_KEY,
+      snapshot.hiddenTemplateIds,
+      100,
+    );
+  }
+
+  if (snapshot.runs) {
+    writeJsonArray(AUTOMATION_RUN_HISTORY_STORAGE_KEY, snapshot.runs, 50);
+  }
+
+  if (snapshot.outputs) {
+    writeJsonArray(AUTOMATION_OUTPUTS_STORAGE_KEY, snapshot.outputs, 100);
+  }
+
+  emitAutomationStorageChanged();
+};
+
+export const pushAutomationStorageToDatabase = async (
+  snapshot: AutomationStorageSnapshot = readAutomationStorageSnapshot(),
+) => {
+  if (!isBrowser()) return null;
+
+  const res = await fetch(AUTOMATION_STORAGE_API_PATH, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(snapshot),
+  });
+
+  if (!res.ok) {
+    throw new Error('Could not save automation storage to database.');
+  }
+
+  return res.json();
+};
+
+export const pullAutomationStorageFromDatabase = async () => {
+  if (!isBrowser()) return null;
+
+  const res = await fetch(AUTOMATION_STORAGE_API_PATH);
+
+  if (!res.ok) {
+    throw new Error('Could not read automation storage from database.');
+  }
+
+  const remote = (await res.json()) as AutomationStorageSnapshot;
+  const local = readAutomationStorageSnapshot();
+
+  const normalizedRemote: AutomationStorageSnapshot = {
+    automations: Array.isArray(remote.automations) ? remote.automations : [],
+    hiddenTemplateIds: Array.isArray(remote.hiddenTemplateIds)
+      ? remote.hiddenTemplateIds
+      : [],
+    runs: Array.isArray(remote.runs) ? remote.runs : [],
+    outputs: Array.isArray(remote.outputs) ? remote.outputs : [],
+  };
+
+  if (hasAutomationStorageData(normalizedRemote)) {
+    writeAutomationStorageSnapshot(normalizedRemote);
+    return {
+      source: 'database' as const,
+      snapshot: normalizedRemote,
+    };
+  }
+
+  if (hasAutomationStorageData(local)) {
+    await pushAutomationStorageToDatabase(local);
+    return {
+      source: 'local-migrated-to-database' as const,
+      snapshot: local,
+    };
+  }
+
+  return {
+    source: 'empty' as const,
+    snapshot: normalizedRemote,
+  };
+};
+
+function scheduleAutomationStorageMirror() {
+  if (!isBrowser()) return;
+
+  if (automationStorageMirrorTimer) {
+    clearTimeout(automationStorageMirrorTimer);
+  }
+
+  automationStorageMirrorTimer = setTimeout(() => {
+    automationStorageMirrorTimer = null;
+
+    pushAutomationStorageToDatabase().catch((error) => {
+      console.warn('Could not mirror automation storage to database:', error);
+    });
+  }, 250);
+}

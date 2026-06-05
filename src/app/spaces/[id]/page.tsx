@@ -23,6 +23,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   type AutomationOutputItem,
   type StoredAutomation,
+  getAutomationStorageChangedEventName,
   readAutomationOutputs,
   readCustomAutomations,
 } from '@/lib/vault/localVault';
@@ -131,12 +132,16 @@ const SpaceDetailPage = () => {
   useEffect(() => {
     const refresh = () => refreshLocalWorkspaceData();
 
+    const automationStorageChangedEvent = getAutomationStorageChangedEventName();
+
     window.addEventListener('storage', refresh);
     window.addEventListener('focus', refresh);
+    window.addEventListener(automationStorageChangedEvent, refresh);
 
     return () => {
       window.removeEventListener('storage', refresh);
       window.removeEventListener('focus', refresh);
+      window.removeEventListener(automationStorageChangedEvent, refresh);
     };
   }, []);
 

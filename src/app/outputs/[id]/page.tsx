@@ -17,6 +17,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import {
   type AutomationOutputItem,
+  getAutomationStorageChangedEventName,
   readAutomationOutputs,
   writeAutomationOutputs,
 } from '@/lib/vault/localVault';
@@ -535,7 +536,7 @@ const OutputDetailPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
+  const refreshOutput = () => {
     const storedOutputs = readAutomationOutputs();
     const output = storedOutputs.find((item) => item.id === params.id);
 
@@ -546,6 +547,20 @@ const OutputDetailPage = () => {
       setContent(output.content ?? '');
       setIsEditing(!output.content?.trim());
     }
+  };
+
+  useEffect(() => {
+    refreshOutput();
+
+    const automationStorageChangedEvent = getAutomationStorageChangedEventName();
+
+    window.addEventListener(automationStorageChangedEvent, refreshOutput);
+    window.addEventListener('focus', refreshOutput);
+
+    return () => {
+      window.removeEventListener(automationStorageChangedEvent, refreshOutput);
+      window.removeEventListener('focus', refreshOutput);
+    };
   }, [params.id]);
 
   const output = useMemo(() => {

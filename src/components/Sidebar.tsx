@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { pullAutomationStorageFromDatabase } from '@/lib/vault/localVault';
 import {
   CheckSquare,
   Compass,
@@ -67,6 +68,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const [spaces, setSpaces] = useState<Space[]>([]);
 
   const activeSpaceId = segments[0] === 'spaces' ? segments[1] : undefined;
+
+  useEffect(() => {
+    pullAutomationStorageFromDatabase().catch((err) => {
+      console.warn('Could not hydrate automation storage from database:', err);
+    });
+  }, []);
 
   useEffect(() => {
     const fetchSpaces = async () => {
