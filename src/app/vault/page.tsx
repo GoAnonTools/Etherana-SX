@@ -38,6 +38,25 @@ interface VaultSpace {
   createdAt?: string;
 }
 
+interface VaultConversationMessage {
+  messageId: string;
+  backendId: string;
+  query: string;
+  createdAt: string;
+  responseBlocks: unknown[];
+  status: 'answering' | 'completed' | 'error' | null;
+}
+
+interface VaultConversationChat {
+  id: string;
+  title: string;
+  createdAt: string;
+  sources: unknown[];
+  files: { name: string; fileId: string }[];
+  spaceId: string | null;
+  messages: VaultConversationMessage[];
+}
+
 interface VaultPayload {
   version: 1;
   exportedAt: string;
@@ -48,6 +67,7 @@ interface VaultPayload {
     value: string;
   }[];
   spaces: VaultSpace[];
+  conversations: VaultConversationChat[];
   notes: string[];
 }
 
@@ -424,6 +444,20 @@ const VaultPage = () => {
     }
   };
 
+  const fetchConversations = async (): Promise<VaultConversationChat[]> => {
+    try {
+      const res = await fetch('/api/vault/conversations');
+
+      if (!res.ok) return [];
+
+      const data = await res.json();
+
+      return Array.isArray(data.conversations) ? data.conversations : [];
+    } catch {
+      return [];
+    }
+  };
+
   const ensureVaultMeta = () => {
     const existing = readVaultMeta();
 
@@ -452,6 +486,7 @@ const VaultPage = () => {
     try {
       const meta = ensureVaultMeta();
       const spaces = await fetchSpaces();
+      const conversations = await fetchConversations();
 
       const payload: VaultPayload = {
         version: 1,
@@ -460,10 +495,12 @@ const VaultPage = () => {
         vaultId: meta.vaultId,
         localStorageRecords: readVaultStorageRecords(),
         spaces,
+        conversations,
         notes: [
           'This backup is end-to-end encrypted with your recovery phrase.',
           'Etherana cannot recover this vault if the recovery phrase is lost.',
           'Uploaded file binaries are not included in this version.',
+          'Space conversations and messages are included.',
         ],
       };
 
@@ -548,6 +585,28 @@ const VaultPage = () => {
         writeVaultStorageRecord(record.key, rewrittenValue);
       });
 
+      let importedChats = 0;
+      let importedMessages = 0;
+
+      if (Array.isArray(payload.conversations) && payload.conversations.length > 0) {
+        const conversationsRes = await fetch('/api/vault/conversations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            conversations: payload.conversations,
+            spaceIdMap,
+          }),
+        });
+
+        if (conversationsRes.ok) {
+          const conversationsData = await conversationsRes.json();
+          importedChats = Number(conversationsData.importedChats ?? 0);
+          importedMessages = Number(conversationsData.importedMessages ?? 0);
+        }
+      }
+
       const importedMeta: VaultMeta = {
         vaultId: payload.vaultId || backup.vaultId || generateVaultId(),
         createdAt: new Date().toISOString(),
@@ -558,7 +617,7 @@ const VaultPage = () => {
       setVaultMeta(importedMeta);
 
       setStatus(
-        `Vault imported. Restored ${payload.localStorageRecords.length} data groups and ${Object.keys(spaceIdMap).length} spaces.`,
+        `Vault imported. Restored ${payload.localStorageRecords.length} data groups, ${Object.keys(spaceIdMap).length} spaces, ${importedChats} conversations, and ${importedMessages} messages.`,
       );
     } catch (error) {
       console.error(error);
