@@ -119,3 +119,22 @@ export const hiddenTemplateAutomationRecords = sqliteTable(
     hiddenAt: text('hiddenAt').notNull(),
   },
 );
+
+
+export const spaceNotes = sqliteTable('space_notes', {
+  id: text('id').primaryKey(),
+  spaceId: text('spaceId').notNull(),
+  title: text('title').notNull(),
+  content: text('content').notNull(),
+  createdAt: text('createdAt').notNull(),
+  updatedAt: text('updatedAt').notNull(),
+});
+
+export const spaceLinks = sqliteTable('space_links', {
+  id: text('id').primaryKey(),
+  spaceId: text('spaceId').notNull(),
+  title: text('title').notNull(),
+  url: text('url').notNull(),
+  description: text('description'),
+  createdAt: text('createdAt').notNull(),
+});

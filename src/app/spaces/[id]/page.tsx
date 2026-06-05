@@ -12,7 +12,9 @@ import {
   FileText,
   Globe2,
   LayoutGrid,
+  Link as LinkIcon,
   MessageSquare,
+  NotebookPen,
   Plus,
   Trash2,
   Upload,
@@ -43,6 +45,22 @@ interface Chat {
   createdAt: string;
   sources: string[];
   files: { fileId: string; name: string }[];
+}
+
+interface SpaceNote {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface SpaceSavedLink {
+  id: string;
+  title: string;
+  url: string;
+  description?: string;
+  createdAt: string;
 }
 
 type SpaceSection = 'conversations' | 'knowledge' | 'outputs' | 'automations';
@@ -80,6 +98,13 @@ const SpaceDetailPage = () => {
 
   const [space, setSpace] = useState<Space | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
+  const [notes, setNotes] = useState<SpaceNote[]>([]);
+  const [savedLinks, setSavedLinks] = useState<SpaceSavedLink[]>([]);
+  const [noteTitle, setNoteTitle] = useState('');
+  const [noteContent, setNoteContent] = useState('');
+  const [linkTitle, setLinkTitle] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkDescription, setLinkDescription] = useState('');
   const [outputs, setOutputs] = useState<AutomationOutputItem[]>([]);
   const [customAutomations, setCustomAutomations] = useState<
     StoredAutomation[]
@@ -91,6 +116,75 @@ const SpaceDetailPage = () => {
   const refreshLocalWorkspaceData = () => {
     setOutputs(readAutomationOutputs());
     setCustomAutomations(readCustomAutomations());
+  };
+
+  const fetchSpaceCaptures = async () => {
+    try {
+      const res = await fetch(`/api/spaces/${spaceId}/captures`);
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      setNotes(Array.isArray(data.notes) ? data.notes : []);
+      setSavedLinks(Array.isArray(data.links) ? data.links : []);
+    } catch (err) {
+      console.error('Failed to fetch Space captures:', err);
+    }
+  };
+
+  const createNote = async () => {
+    if (!noteContent.trim()) return;
+
+    const res = await fetch(`/api/spaces/${spaceId}/captures`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        kind: 'note',
+        title: noteTitle.trim() || 'Untitled note',
+        content: noteContent.trim(),
+      }),
+    });
+
+    if (!res.ok) return;
+
+    setNoteTitle('');
+    setNoteContent('');
+    fetchSpaceCaptures();
+  };
+
+  const createLink = async () => {
+    if (!linkUrl.trim()) return;
+
+    const res = await fetch(`/api/spaces/${spaceId}/captures`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        kind: 'link',
+        title: linkTitle.trim() || linkUrl.trim(),
+        url: linkUrl.trim(),
+        description: linkDescription.trim(),
+      }),
+    });
+
+    if (!res.ok) return;
+
+    setLinkTitle('');
+    setLinkUrl('');
+    setLinkDescription('');
+    fetchSpaceCaptures();
+  };
+
+  const deleteCapture = async (kind: 'note' | 'link', id: string) => {
+    await fetch(`/api/spaces/${spaceId}/captures?kind=${kind}&id=${id}`, {
+      method: 'DELETE',
+    });
+
+    fetchSpaceCaptures();
   };
 
   const fetchSpaceDetails = async () => {
@@ -118,6 +212,7 @@ const SpaceDetailPage = () => {
       );
 
       refreshLocalWorkspaceData();
+      fetchSpaceCaptures();
     } catch (err) {
       console.error('Failed to fetch space details:', err);
     } finally {
@@ -311,7 +406,7 @@ const SpaceDetailPage = () => {
       id: 'knowledge' as const,
       label: 'Knowledge',
       icon: BookOpen,
-      count: space?.files.length ?? 0,
+      count: (space?.files.length ?? 0) + notes.length + savedLinks.length,
     },
     {
       id: 'outputs' as const,
@@ -588,39 +683,195 @@ const SpaceDetailPage = () => {
                 </label>
               </div>
 
-              {space.files.length === 0 ? (
-                <EmptyState
-                  title="No knowledge files yet."
-                  description="Upload PDFs, documents, and notes that Etherana should use as knowledge for this Space."
-                />
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {space.files.map((file) => (
-                    <div
-                      key={file.fileId}
-                      className="flex items-center justify-between gap-4 rounded-3xl border border-light-200 bg-light-secondary p-5 dark:border-dark-200 dark:bg-dark-secondary"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-black dark:text-white">
-                          {file.name}
-                        </p>
+              <div className="grid gap-5 lg:grid-cols-2">
+                <section className="rounded-3xl border border-light-200 bg-light-secondary p-5 dark:border-dark-200 dark:bg-dark-secondary">
+                  <div className="mb-4 flex items-center gap-2">
+                    <FileText size={18} className="text-green-500" />
+                    <h3 className="font-semibold text-black dark:text-white">
+                      Files
+                    </h3>
+                  </div>
 
-                        <p className="mt-1 text-xs text-black/40 dark:text-white/40">
-                          Knowledge source
-                        </p>
-                      </div>
+                  {space.files.length === 0 ? (
+                    <p className="text-sm text-black/45 dark:text-white/45">
+                      No files yet. Upload documents that Etherana should use as
+                      knowledge for this Space.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {space.files.map((file) => (
+                        <div
+                          key={file.fileId}
+                          className="flex items-center justify-between gap-4 rounded-2xl bg-light-primary p-4 dark:bg-dark-primary"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-black dark:text-white">
+                              {file.name}
+                            </p>
 
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteFile(file.fileId)}
-                        className="rounded-full p-2 text-red-500 transition hover:bg-red-500/10"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                            <p className="mt-1 text-xs text-black/40 dark:text-white/40">
+                              Knowledge source
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteFile(file.fileId)}
+                            className="rounded-full p-2 text-red-500 transition hover:bg-red-500/10"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
+                  )}
+                </section>
+
+                <section className="rounded-3xl border border-light-200 bg-light-secondary p-5 dark:border-dark-200 dark:bg-dark-secondary">
+                  <div className="mb-4 flex items-center gap-2">
+                    <NotebookPen size={18} className="text-blue-500" />
+                    <h3 className="font-semibold text-black dark:text-white">
+                      Personal notes
+                    </h3>
+                  </div>
+
+                  <div className="space-y-3">
+                    <input
+                      value={noteTitle}
+                      onChange={(event) => setNoteTitle(event.target.value)}
+                      placeholder="Note title"
+                      className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
+                    />
+
+                    <textarea
+                      value={noteContent}
+                      onChange={(event) => setNoteContent(event.target.value)}
+                      placeholder="Write a quick note for this Space..."
+                      rows={4}
+                      className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={createNote}
+                      className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
+                    >
+                      <Plus size={16} />
+                      Save note
+                    </button>
+                  </div>
+
+                  <div className="mt-5 space-y-3">
+                    {notes.map((note) => (
+                      <article
+                        key={note.id}
+                        className="rounded-2xl bg-light-primary p-4 dark:bg-dark-primary"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <h4 className="font-semibold text-black dark:text-white">
+                            {note.title}
+                          </h4>
+
+                          <button
+                            type="button"
+                            onClick={() => deleteCapture('note', note.id)}
+                            className="rounded-full p-1.5 text-red-500 transition hover:bg-red-500/10"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-black/60 dark:text-white/60">
+                          {note.content}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="rounded-3xl border border-light-200 bg-light-secondary p-5 dark:border-dark-200 dark:bg-dark-secondary lg:col-span-2">
+                  <div className="mb-4 flex items-center gap-2">
+                    <LinkIcon size={18} className="text-purple-500" />
+                    <h3 className="font-semibold text-black dark:text-white">
+                      Saved links
+                    </h3>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <input
+                      value={linkTitle}
+                      onChange={(event) => setLinkTitle(event.target.value)}
+                      placeholder="Link title"
+                      className="rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
+                    />
+
+                    <input
+                      value={linkUrl}
+                      onChange={(event) => setLinkUrl(event.target.value)}
+                      placeholder="https://example.com"
+                      className="rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
+                    />
+
+                    <input
+                      value={linkDescription}
+                      onChange={(event) =>
+                        setLinkDescription(event.target.value)
+                      }
+                      placeholder="Why this link matters"
+                      className="rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={createLink}
+                    className="mt-3 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
+                  >
+                    <Plus size={16} />
+                    Save link
+                  </button>
+
+                  <div className="mt-5 grid gap-3 md:grid-cols-2">
+                    {savedLinks.map((savedLink) => (
+                      <article
+                        key={savedLink.id}
+                        className="rounded-2xl bg-light-primary p-4 dark:bg-dark-primary"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <a
+                              href={savedLink.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="truncate font-semibold text-purple-500 hover:underline"
+                            >
+                              {savedLink.title}
+                            </a>
+
+                            <p className="mt-1 truncate text-xs text-black/40 dark:text-white/40">
+                              {savedLink.url}
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => deleteCapture('link', savedLink.id)}
+                            className="rounded-full p-1.5 text-red-500 transition hover:bg-red-500/10"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+
+                        {savedLink.description && (
+                          <p className="mt-2 text-sm leading-relaxed text-black/60 dark:text-white/60">
+                            {savedLink.description}
+                          </p>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              </div>
             </div>
           )}
 
