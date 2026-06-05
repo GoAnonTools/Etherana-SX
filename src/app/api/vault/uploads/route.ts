@@ -108,6 +108,7 @@ export const POST = async (req: Request) => {
     const uploads = Array.isArray(body.uploads) ? body.uploads : [];
 
     const current = readUploadedFilesRecord();
+
     const currentById = new Map(
       current.files
         .filter((record) => typeof record.id === 'string')
@@ -138,6 +139,7 @@ export const POST = async (req: Request) => {
       const contentFileName = `${crypto.randomBytes(16).toString(
         'hex',
       )}.json`;
+
       const contentPath = path.join(uploadsDir, contentFileName);
 
       fs.writeFileSync(contentPath, upload.content);
@@ -145,7 +147,6 @@ export const POST = async (req: Request) => {
       const restoredRecord = {
         ...oldRecord,
         contentPath,
-        // Keep the original ID so existing spaces/chats still point to it.
         id: oldRecord.id,
         fileExtension,
       };

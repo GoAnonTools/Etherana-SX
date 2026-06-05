@@ -478,6 +478,7 @@ const VaultPage = () => {
     }
   };
 
+
   const ensureVaultMeta = () => {
     const existing = readVaultMeta();
 
@@ -648,6 +649,8 @@ const VaultPage = () => {
           importedUploads = Number(uploadsData.imported ?? 0);
         }
       }
+
+
 
       const importedMeta: VaultMeta = {
         vaultId: payload.vaultId || backup.vaultId || generateVaultId(),
