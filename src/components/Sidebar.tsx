@@ -114,7 +114,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       icon: ShieldCheck,
       href: '/vault',
       active: segments.includes('vault'),
-      label: 'Privacy Vault',
+      label: 'Backup Vault',
     },
   ];
 
