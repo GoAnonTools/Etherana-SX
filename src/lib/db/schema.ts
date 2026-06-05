@@ -48,3 +48,15 @@ export const chats = sqliteTable('chats', {
     .default(sql`'[]'`),
   spaceId: text('spaceId'),
 });
+
+
+export const vaultSyncRecords = sqliteTable('vault_sync_records', {
+  id: text('id').primaryKey(),
+  vaultId: text('vaultId').notNull(),
+  recordKey: text('recordKey').notNull(),
+  ciphertext: text('ciphertext').notNull(),
+  iv: text('iv').notNull(),
+  updatedAt: text('updatedAt').notNull(),
+  deletedAt: text('deletedAt'),
+  deviceId: text('deviceId'),
+});
