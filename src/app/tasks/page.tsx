@@ -535,6 +535,17 @@ const AutomationBuilder = ({
     (outputDestination !== NEW_SPACE_DESTINATION ||
       newSpaceName.trim().length > 0);
 
+  const setTestScheduleInTwoMinutes = () => {
+    const date = new Date(Date.now() + 2 * 60 * 1000);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+
+    setMode('auto');
+    setStatus('active');
+    setScheduleType('daily');
+    setScheduleTime(`${hours}:${minutes}`);
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -685,6 +696,116 @@ const AutomationBuilder = ({
               <option value="paused">Paused</option>
             </select>
           </label>
+        </div>
+
+        <div className="rounded-3xl border border-light-200 bg-light-primary p-5 dark:border-dark-200 dark:bg-dark-primary">
+          <div className="mb-5">
+            <h3 className="text-sm font-semibold text-black dark:text-white">
+              Automation schedule settings
+            </h3>
+
+            <p className="mt-1 text-xs text-black/50 dark:text-white/50">
+              Choose when Auto-run should execute this automation while the local server is active.
+            </p>
+
+            <button
+              type="button"
+              onClick={setTestScheduleInTwoMinutes}
+              className="mt-4 inline-flex items-center justify-center rounded-full border border-light-200 px-4 py-2 text-xs font-semibold text-black/60 transition hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/60 dark:hover:bg-dark-secondary dark:hover:text-white"
+            >
+              Test in 2 minutes
+            </button>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-black dark:text-white">
+                Schedule type
+              </span>
+
+              <select
+                value={scheduleType}
+                onChange={(event) =>
+                  setScheduleType(event.target.value as AutomationScheduleType)
+                }
+                className="w-full rounded-2xl border border-light-200 bg-light-secondary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-secondary dark:text-white dark:focus:border-white"
+              >
+                <option value="manual">Manual only</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-sm font-medium text-black dark:text-white">
+                Time
+              </span>
+
+              <input
+                type="time"
+                value={scheduleTime}
+                onChange={(event) => setScheduleTime(event.target.value)}
+                className="w-full rounded-2xl border border-light-200 bg-light-secondary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-secondary dark:text-white dark:focus:border-white"
+              />
+            </label>
+          </div>
+
+          {scheduleType === 'weekly' && (
+            <div className="mt-5">
+              <p className="mb-3 text-sm font-medium text-black dark:text-white">
+                Days
+              </p>
+
+              <div className="flex flex-wrap gap-2">
+                {WEEKDAY_OPTIONS.map((day) => {
+                  const selected = scheduleDays.includes(day.value);
+
+                  return (
+                    <button
+                      key={day.value}
+                      type="button"
+                      onClick={() =>
+                        setScheduleDays((current) =>
+                          selected
+                            ? current.filter((item) => item !== day.value)
+                            : [...current, day.value],
+                        )
+                      }
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                        selected
+                          ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+                          : 'border-light-200 text-black/55 hover:bg-light-secondary dark:border-dark-200 dark:text-white/55 dark:hover:bg-dark-secondary'
+                      }`}
+                    >
+                      {day.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {scheduleType === 'monthly' && (
+            <label className="mt-5 block space-y-2">
+              <span className="text-sm font-medium text-black dark:text-white">
+                Day of month
+              </span>
+
+              <input
+                type="number"
+                min={1}
+                max={31}
+                value={scheduleDayOfMonth}
+                onChange={(event) =>
+                  setScheduleDayOfMonth(
+                    Math.min(31, Math.max(1, Number(event.target.value) || 1)),
+                  )
+                }
+                className="w-full rounded-2xl border border-light-200 bg-light-secondary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-secondary dark:text-white dark:focus:border-white"
+              />
+            </label>
+          )}
         </div>
 
         <label className="space-y-2">

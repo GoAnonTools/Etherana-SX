@@ -69,6 +69,32 @@ type RunnerGlobalState = {
   isRunning?: boolean;
 };
 
+const getAutomationDisplayKey = (name: string) => {
+  return name
+    .replace(/\s+Copy$/i, '')
+    .replace(/\s+Custom$/i, '')
+    .trim()
+    .toLowerCase();
+};
+
+const getNewestRunnableAutomations = (
+  automations: AutomationRecord[],
+) => {
+  const newestByDisplayKey = new Map<string, AutomationRecord>();
+
+  [...automations]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .forEach((automation) => {
+      const key = getAutomationDisplayKey(automation.name);
+
+      if (!newestByDisplayKey.has(key)) {
+        newestByDisplayKey.set(key, automation);
+      }
+    });
+
+  return Array.from(newestByDisplayKey.values());
+};
+
 const getRunnerState = () => {
   const globalForRunner = globalThis as typeof globalThis & {
     __etheranaAutomationRunner?: RunnerGlobalState;
@@ -301,24 +327,47 @@ export const runDueAutomations = async () => {
         ),
       );
 
-    const results = [];
+    const runnableAutomations = getNewestRunnableAutomations(
+      activeAutoAutomations,
+    );
 
-    for (const automation of activeAutoAutomations) {
+    const results: Array<Record<string, unknown>> = [];
+    const pending: Array<Record<string, unknown>> = [];
+
+    for (const automation of runnableAutomations) {
       const currentNextRunAt =
         automation.nextRunAt ||
         computeNextRunAt(
           {
             mode: 'auto',
             status: 'active',
-            scheduleType: getScheduleType(automation.scheduleType, automation.frequency),
+            scheduleType: getScheduleType(
+              automation.scheduleType,
+              automation.frequency,
+            ),
             scheduleTime: automation.scheduleTime || undefined,
-            scheduleDays: getScheduleDays(automation.scheduleDays, automation.frequency),
-            scheduleDayOfMonth: automation.scheduleDayOfMonth || undefined,
+            scheduleDays: getScheduleDays(
+              automation.scheduleDays,
+              automation.frequency,
+            ),
+            scheduleDayOfMonth:
+              automation.scheduleDayOfMonth || undefined,
           },
           now,
         );
 
       if (!currentNextRunAt) {
+        pending.push({
+          automationId: automation.id,
+          automationName: automation.name,
+          status: 'skipped',
+          reason: 'No next run could be calculated.',
+          mode: automation.mode,
+          scheduleType: automation.scheduleType,
+          scheduleTime: automation.scheduleTime,
+          scheduleDays: automation.scheduleDays,
+          nextRunAt: null,
+        });
         continue;
       }
 
@@ -332,6 +381,18 @@ export const runDueAutomations = async () => {
       const isDue = new Date(currentNextRunAt).getTime() <= now.getTime();
 
       if (!isDue) {
+        pending.push({
+          automationId: automation.id,
+          automationName: automation.name,
+          status: 'pending',
+          reason: 'Not due yet.',
+          mode: automation.mode,
+          scheduleType: automation.scheduleType,
+          scheduleTime: automation.scheduleTime,
+          scheduleDays: automation.scheduleDays,
+          nextRunAt: currentNextRunAt,
+          now: now.toISOString(),
+        });
         continue;
       }
 
@@ -358,8 +419,12 @@ export const runDueAutomations = async () => {
 
     return {
       checkedAt: now.toISOString(),
-      checked: activeAutoAutomations.length,
+      checked: runnableAutomations.length,
+      rawChecked: activeAutoAutomations.length,
+      duplicateSkipped:
+        activeAutoAutomations.length - runnableAutomations.length,
       ran: results.length,
+      pending,
       results,
     };
   } finally {
