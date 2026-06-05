@@ -7,8 +7,10 @@ import {
   BookOpen,
   Bot,
   ChevronLeft,
+  Archive,
+  Copy,
+  Edit3,
   Clock,
-  Download,
   ExternalLink,
   FileText,
   Globe2,
@@ -37,6 +39,7 @@ interface Space {
   description: string;
   instruction?: string;
   createdAt: string;
+  archivedAt?: string | null;
   files: { name: string; fileId: string }[];
 }
 
@@ -226,7 +229,11 @@ const SpaceDetailPage = () => {
     StoredAutomation[]
   >([]);
   const [loading, setLoading] = useState(true);
-  const [exportingSpace, setExportingSpace] = useState(false);
+  const [editingSpace, setEditingSpace] = useState(false);
+  const [duplicatingSpace, setDuplicatingSpace] = useState(false);
+  const [spaceNameDraft, setSpaceNameDraft] = useState('');
+  const [spaceDescriptionDraft, setSpaceDescriptionDraft] = useState('');
+  const [spaceInstructionDraft, setSpaceInstructionDraft] = useState('');
   const [activeSection, setActiveSection] =
     useState<SpaceSection>('outputs');
 
@@ -357,43 +364,169 @@ const SpaceDetailPage = () => {
     };
   }, []);
 
-  const handleExportSpace = async () => {
-    if (!space) return;
+const handleUpdateSpace = async () => {
+  if (!space) return;
 
-    const recoveryPhrase = window.prompt(
-      `Choose a recovery phrase to encrypt the "${space.name}" Space export. You will need it to import this Space later.`,
-    );
+  try {
+    const res = await fetch(`/api/spaces/${spaceId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: spaceNameDraft.trim() || space.name,
+        description: spaceDescriptionDraft.trim(),
+        instruction: spaceInstructionDraft.trim(),
+      }),
+    });
 
-    if (!recoveryPhrase?.trim()) return;
-
-    setExportingSpace(true);
-
-    try {
-      const res = await fetch(`/api/vault/spaces/${space.id}`);
-
-      if (!res.ok) {
-        throw new Error('Could not prepare Space export.');
-      }
-
-      const payload = await res.json();
-      const encryptedVault = await encryptSpaceVaultPayload(
-        payload,
-        recoveryPhrase.trim(),
-      );
-
-      const date = new Date().toISOString().slice(0, 10);
-      const filename = `etherana-space-${slugify(space.name) || space.id}-${date}.json`;
-
-      downloadJson(filename, encryptedVault);
-    } catch (error) {
-      console.error('Failed to export Space:', error);
-      alert('Could not export this Space.');
-    } finally {
-      setExportingSpace(false);
+    if (!res.ok) {
+      throw new Error('Could not update Space.');
     }
-  };
 
-  const handleDeleteSpace = async () => {
+    await fetchSpaceDetails();
+    setEditingSpace(false);
+  } catch (error) {
+    console.error('Failed to update Space:', error);
+    alert('Could not update this Space.');
+  }
+};
+
+const handleDuplicateSpace = async () => {
+  if (!space) return;
+
+  setDuplicatingSpace(true);
+
+  try {
+    const createRes = await fetch('/api/spaces', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: `${space.name} Copy`,
+        description: space.description ?? '',
+        instruction: space.instruction ?? '',
+        files: space.files ?? [],
+      }),
+    });
+
+    if (!createRes.ok) {
+      const errorData = await createRes.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Could not duplicate Space.');
+    }
+
+    const created = await createRes.json();
+    const newSpaceId = String(created.id ?? created.space?.id ?? '');
+
+    if (!newSpaceId) {
+      throw new Error('Duplicate Space was created without an id.');
+    }
+
+    const capturesRes = await fetch(`/api/spaces/${spaceId}/captures`);
+
+    if (capturesRes.ok) {
+      const captures = await capturesRes.json();
+      const notes = Array.isArray(captures.notes) ? captures.notes : [];
+      const links = Array.isArray(captures.links) ? captures.links : [];
+
+      await Promise.all([
+        ...notes.map((note: any) =>
+          fetch(`/api/spaces/${newSpaceId}/captures`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              kind: 'note',
+              title: note.title,
+              content: note.content,
+            }),
+          }),
+        ),
+        ...links.map((link: any) =>
+          fetch(`/api/spaces/${newSpaceId}/captures`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              kind: 'link',
+              title: link.title,
+              url: link.url,
+              description: link.description ?? '',
+            }),
+          }),
+        ),
+      ]);
+    }
+
+    router.push(`/spaces/${newSpaceId}`);
+  } catch (error) {
+    console.error('Failed to duplicate Space:', error);
+    alert(error instanceof Error ? error.message : 'Could not duplicate this Space.');
+  } finally {
+    setDuplicatingSpace(false);
+  }
+};
+
+const handleArchiveSpace = async () => {
+  if (!space) return;
+
+  const confirmed = window.confirm(
+    `Archive "${space.name}"? It will be hidden from My Spaces but kept in Archived.`,
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(`/api/spaces/${spaceId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        archivedAt: new Date().toISOString(),
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error('Could not archive Space.');
+    }
+
+    router.push('/spaces');
+  } catch (error) {
+    console.error('Failed to archive Space:', error);
+    alert('Could not archive this Space.');
+  }
+};
+
+const handleRestoreSpace = async () => {
+  if (!space) return;
+
+  try {
+    const res = await fetch(`/api/spaces/${spaceId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        archivedAt: null,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error('Could not restore Space.');
+    }
+
+    await fetchSpaceDetails();
+  } catch (error) {
+    console.error('Failed to restore Space:', error);
+    alert('Could not restore this Space.');
+  }
+};
+
+const handleDeleteSpace = async () => {
     if (
       !confirm(
         "Are you sure you want to delete this space? Conversations will remain but won't be listed here.",
@@ -623,15 +756,35 @@ const SpaceDetailPage = () => {
                 New Chat
               </Link>
 
+<button
+                type="button"
+                onClick={() => setEditingSpace((value) => !value)}
+                className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+              >
+                <Edit3 size={18} />
+                Edit
+              </button>
+
               <button
                 type="button"
-                onClick={handleExportSpace}
-                disabled={exportingSpace}
+                onClick={handleDuplicateSpace}
+                disabled={duplicatingSpace}
                 className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black disabled:opacity-50 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
               >
-                <Download size={18} />
-                {exportingSpace ? 'Exporting...' : 'Export Space'}
+                <Copy size={18} />
+                {duplicatingSpace ? 'Duplicating...' : 'Duplicate'}
               </button>
+
+              {!space.archivedAt && (
+                <button
+                  type="button"
+                  onClick={handleArchiveSpace}
+                  className="inline-flex items-center gap-2 rounded-full border border-orange-500/20 px-4 py-2.5 text-sm font-semibold text-orange-500 transition hover:bg-orange-500/10"
+                >
+                  <Archive size={18} />
+                  Archive
+                </button>
+              )}
 
               <button
                 type="button"
@@ -643,6 +796,76 @@ const SpaceDetailPage = () => {
               </button>
             </div>
           </div>
+
+          {space.archivedAt && (
+            <div className="mt-6 rounded-3xl border border-orange-500/20 bg-orange-500/10 p-5">
+              <p className="text-sm font-semibold text-orange-600 dark:text-orange-400">
+                This Space is archived.
+              </p>
+
+              <button
+                type="button"
+                onClick={handleRestoreSpace}
+                className="mt-3 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
+              >
+                Restore Space
+              </button>
+            </div>
+          )}
+
+          {editingSpace && (
+            <div className="mt-6 rounded-[2rem] border border-light-200 bg-light-secondary p-5 dark:border-dark-200 dark:bg-dark-secondary">
+              <h2 className="mb-4 text-lg font-semibold text-black dark:text-white">
+                Edit Space
+              </h2>
+
+              <div className="grid gap-3">
+                <input
+                  value={spaceNameDraft}
+                  onChange={(event) => setSpaceNameDraft(event.target.value)}
+                  placeholder="Space name"
+                  className="rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
+                />
+
+                <input
+                  value={spaceDescriptionDraft}
+                  onChange={(event) =>
+                    setSpaceDescriptionDraft(event.target.value)
+                  }
+                  placeholder="Description"
+                  className="rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
+                />
+
+                <textarea
+                  value={spaceInstructionDraft}
+                  onChange={(event) =>
+                    setSpaceInstructionDraft(event.target.value)
+                  }
+                  placeholder="Space instruction"
+                  rows={4}
+                  className="rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
+                />
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={handleUpdateSpace}
+                  className="rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
+                >
+                  Save changes
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setEditingSpace(false)}
+                  className="rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/60 transition hover:text-black dark:border-dark-200 dark:text-white/60 dark:hover:text-white"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           <nav className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {sections.map((section) => {
