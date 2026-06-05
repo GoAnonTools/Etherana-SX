@@ -33,6 +33,8 @@ import {
 } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
+  getAutomationStorageChangedEventName,
+  pullAutomationStorageFromDatabase,
   readAutomationOutputs as readVaultAutomationOutputs,
   readAutomationRunHistory as readVaultAutomationRunHistory,
   readCustomAutomations as readVaultCustomAutomations,
@@ -1222,6 +1224,43 @@ const AutomationDetail = ({
 };
 
 const AutomationsPage = () => {
+  const refreshAutomationStorageFromCache = () => {
+    setCustomAutomations(readCustomAutomations());
+    setHiddenTemplateIds(readHiddenTemplateIds());
+    setRunHistory(readAutomationRunHistory());
+    setAutomationOutputs(readAutomationOutputs());
+  };
+
+  useEffect(() => {
+    const automationStorageChangedEvent = getAutomationStorageChangedEventName();
+
+    const hydrateAutomationStorage = async () => {
+      try {
+        await pullAutomationStorageFromDatabase();
+      } catch (err) {
+        console.warn('Could not hydrate automation storage from database:', err);
+      } finally {
+        refreshAutomationStorageFromCache();
+      }
+    };
+
+    hydrateAutomationStorage();
+
+    window.addEventListener(
+      automationStorageChangedEvent,
+      refreshAutomationStorageFromCache,
+    );
+    window.addEventListener('focus', refreshAutomationStorageFromCache);
+
+    return () => {
+      window.removeEventListener(
+        automationStorageChangedEvent,
+        refreshAutomationStorageFromCache,
+      );
+      window.removeEventListener('focus', refreshAutomationStorageFromCache);
+    };
+  }, []);
+
   const [selectedAutomationId, setSelectedAutomationId] = useState<
     string | undefined
   >(undefined);
