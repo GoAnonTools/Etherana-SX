@@ -57,6 +57,11 @@ interface VaultConversationChat {
   messages: VaultConversationMessage[];
 }
 
+interface VaultUploadRecord {
+  record: Record<string, unknown>;
+  content: string;
+}
+
 interface VaultPayload {
   version: 1;
   exportedAt: string;
@@ -68,6 +73,7 @@ interface VaultPayload {
   }[];
   spaces: VaultSpace[];
   conversations: VaultConversationChat[];
+  uploads: VaultUploadRecord[];
   notes: string[];
 }
 
@@ -458,6 +464,20 @@ const VaultPage = () => {
     }
   };
 
+  const fetchUploads = async (): Promise<VaultUploadRecord[]> => {
+    try {
+      const res = await fetch('/api/vault/uploads');
+
+      if (!res.ok) return [];
+
+      const data = await res.json();
+
+      return Array.isArray(data.uploads) ? data.uploads : [];
+    } catch {
+      return [];
+    }
+  };
+
   const ensureVaultMeta = () => {
     const existing = readVaultMeta();
 
@@ -487,6 +507,7 @@ const VaultPage = () => {
       const meta = ensureVaultMeta();
       const spaces = await fetchSpaces();
       const conversations = await fetchConversations();
+      const uploads = await fetchUploads();
 
       const payload: VaultPayload = {
         version: 1,
@@ -496,10 +517,12 @@ const VaultPage = () => {
         localStorageRecords: readVaultStorageRecords(),
         spaces,
         conversations,
+        uploads,
         notes: [
           'This backup is end-to-end encrypted with your recovery phrase.',
           'Etherana cannot recover this vault if the recovery phrase is lost.',
-          'Uploaded file binaries are not included in this version.',
+          'Uploaded original file binaries are not included in this version.',
+          'Processed knowledge chunks and embeddings are included.',
           'Space conversations and messages are included.',
         ],
       };
@@ -607,6 +630,25 @@ const VaultPage = () => {
         }
       }
 
+      let importedUploads = 0;
+
+      if (Array.isArray(payload.uploads) && payload.uploads.length > 0) {
+        const uploadsRes = await fetch('/api/vault/uploads', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            uploads: payload.uploads,
+          }),
+        });
+
+        if (uploadsRes.ok) {
+          const uploadsData = await uploadsRes.json();
+          importedUploads = Number(uploadsData.imported ?? 0);
+        }
+      }
+
       const importedMeta: VaultMeta = {
         vaultId: payload.vaultId || backup.vaultId || generateVaultId(),
         createdAt: new Date().toISOString(),
@@ -617,7 +659,7 @@ const VaultPage = () => {
       setVaultMeta(importedMeta);
 
       setStatus(
-        `Vault imported. Restored ${payload.localStorageRecords.length} data groups, ${Object.keys(spaceIdMap).length} spaces, ${importedChats} conversations, and ${importedMessages} messages.`,
+        `Vault imported. Restored ${payload.localStorageRecords.length} data groups, ${Object.keys(spaceIdMap).length} spaces, ${importedChats} conversations, ${importedMessages} messages, and ${importedUploads} knowledge files.`,
       );
     } catch (error) {
       console.error(error);
