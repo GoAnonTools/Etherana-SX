@@ -44,7 +44,13 @@ import {
   writeCustomAutomations as writeVaultCustomAutomations,
   writeHiddenTemplateIds as writeVaultHiddenTemplateIds,
 } from '@/lib/vault/localVault';
+import { AUTOMATION_TEMPLATES } from '@/lib/automations/catalog';
+import { computeNextRunAt } from '@/lib/automations/schedule';
 
+
+type AutomationMode = 'manual' | 'auto';
+type AutomationStatus = 'active' | 'paused';
+type AutomationScheduleType = 'manual' | 'daily' | 'weekly' | 'monthly';
 
 interface AutomationTemplate {
   id: string;
@@ -59,6 +65,14 @@ interface AutomationTemplate {
   outputDestination?: string;
   outputDestinationLabel?: string;
   goodFor: string[];
+  mode?: AutomationMode;
+  status?: AutomationStatus;
+  scheduleType?: AutomationScheduleType;
+  scheduleTime?: string;
+  scheduleDays?: string[];
+  scheduleDayOfMonth?: number;
+  nextRunAt?: string;
+  lastRunAt?: string;
   isCustom?: boolean;
 }
 
@@ -74,6 +88,14 @@ interface StoredAutomation {
   outputDestination?: string;
   outputDestinationLabel?: string;
   goodFor: string[];
+  mode?: AutomationMode;
+  status?: AutomationStatus;
+  scheduleType?: AutomationScheduleType;
+  scheduleTime?: string;
+  scheduleDays?: string[];
+  scheduleDayOfMonth?: number;
+  nextRunAt?: string;
+  lastRunAt?: string;
   createdAt: string;
 }
 
@@ -82,7 +104,7 @@ interface AutomationRunHistoryItem {
   automationId: string;
   automationName: string;
   startedAt: string;
-  mode: 'manual';
+  mode: AutomationMode;
   status: 'started';
   prompt: string;
   expectedOutput: string;
@@ -134,6 +156,10 @@ const OUTPUT_TYPES = [
   'Presentation',
   'Task list',
   'Research brief',
+  'Newsletter',
+  'Content calendar',
+  'Action plan',
+  'Review',
   'Document',
 ];
 
@@ -152,126 +178,195 @@ const getAutomationOutputDestinationLabel = (
 };
 
 
-const AUTOMATIONS: AutomationTemplate[] = [
-  {
-    id: 'daily-priorities',
-    name: 'Daily Priorities',
-    icon: ClipboardList,
-    category: 'Planning',
-    purpose:
-      'Start the day with a clear list of the highest-impact actions to focus on.',
-    frequency: 'Every morning',
-    prompt:
-      'What are my top 3 high-impact priorities for today? Review my recent client work, operations, and active spaces before suggesting them.',
-    output:
-      'A short prioritized action plan with rationales and recommended next steps.',
-    goodFor: ['Daily focus', 'Execution', 'Decision clarity'],
-  },
-  {
-    id: 'weekly-planning',
-    name: 'Weekly Planning',
-    icon: Calendar,
-    category: 'Planning',
-    purpose:
-      'Turn your goals, open work, and recent progress into a structured weekly roadmap.',
-    frequency: 'Every Monday',
-    prompt:
-      'Plan my week. Review last week’s client work, sales goals, and open projects. What are the key milestones I should hit this week?',
-    output:
-      'A weekly roadmap with focus areas, priorities, and suggested execution order.',
-    goodFor: ['Weekly planning', 'Prioritization', 'Roadmapping'],
-  },
-  {
-    id: 'client-followups',
-    name: 'Client Follow-ups',
-    icon: Users,
-    category: 'Clients',
-    purpose:
-      'Identify client conversations that need attention and prepare professional follow-ups.',
-    frequency: 'Twice a week',
-    prompt:
-      'Review my client work. Who have I not heard from recently? Draft a short, professional follow-up message for each client who needs attention.',
-    output:
-      'A list of client follow-ups with ready-to-send message drafts.',
-    goodFor: ['Client management', 'Follow-ups', 'Retention'],
-  },
-  {
-    id: 'content-ideas',
-    name: 'Content Ideas',
-    icon: Lightbulb,
-    category: 'Marketing',
-    purpose:
-      'Generate fresh content ideas based on your current positioning, research, and business goals.',
-    frequency: 'Every Wednesday',
-    prompt:
-      'Based on my recent research and marketing space, suggest 3 content pillars and 5 specific content ideas for this week.',
-    output:
-      'Content pillars, post ideas, hooks, and short outlines.',
-    goodFor: ['Marketing', 'Content strategy', 'Audience growth'],
-  },
-  {
-    id: 'sales-checkins',
-    name: 'Sales Check-ins',
-    icon: DollarSign,
-    category: 'Sales',
-    purpose:
-      'Review your pipeline, detect stalled leads, and suggest ways to move deals forward.',
-    frequency: 'Every Friday',
-    prompt:
-      'Review my Sales space. Which leads are stuck, cold, or unclear? Give me a strategy to move each one to the next stage or re-engage them.',
-    output:
-      'A sales pipeline status report with recommended follow-up actions.',
-    goodFor: ['Sales pipeline', 'Lead follow-up', 'Revenue focus'],
-  },
-  {
-    id: 'business-review',
-    name: 'Business Review',
-    icon: TrendingUp,
-    category: 'Strategy',
-    purpose:
-      'Review the health of your business and identify what is working, blocked, or worth changing.',
-    frequency: 'Monthly',
-    prompt:
-      'Conduct a monthly business review. Compare my operations, sales, client work, and marketing activity from the last 30 days. What is working and what should I change?',
-    output:
-      'A business review with insights, risks, opportunities, and next-month priorities.',
-    goodFor: ['Strategy', 'Performance review', 'Business decisions'],
-  },
-  {
-    id: 'research-updates',
-    name: 'Market Monitoring',
-    icon: Search,
-    category: 'Research',
-    purpose:
-      'Monitor industry trends, competitor moves, and market signals that could affect your roadmap.',
-    frequency: 'Weekly',
-    prompt:
-      'Search for the latest important trends in my industry. Summarize what changed, why it matters, and how it should impact my roadmap.',
-    output:
-      'A market briefing with sources, implications, and recommended actions.',
-    goodFor: ['Research', 'Competitor monitoring', 'Market awareness'],
-  },
-  {
-    id: 'important-reminders',
-    name: 'Important Reminders',
-    icon: AlertCircle,
-    category: 'Operations',
-    purpose:
-      'Surface upcoming administrative, legal, financial, or operational deadlines.',
-    frequency: 'As needed',
-    prompt:
-      'Review my Operations space for upcoming administrative deadlines, renewals, invoices, taxes, or obligations in the next 14 days.',
-    output:
-      'A checklist of important reminders with deadlines and priority levels.',
-    goodFor: ['Operations', 'Deadlines', 'Admin follow-up'],
-  },
+const WEEKDAY_OPTIONS = [
+  { value: 'MO', label: 'Mon' },
+  { value: 'TU', label: 'Tue' },
+  { value: 'WE', label: 'Wed' },
+  { value: 'TH', label: 'Thu' },
+  { value: 'FR', label: 'Fri' },
+  { value: 'SA', label: 'Sat' },
+  { value: 'SU', label: 'Sun' },
 ];
+
+const getDefaultScheduleType = (frequency: string): AutomationScheduleType => {
+  const normalized = frequency.toLowerCase();
+
+  if (normalized.includes('daily')) return 'daily';
+
+  if (
+    normalized.includes('weekly') ||
+    normalized.includes('week') ||
+    normalized.includes('monday') ||
+    normalized.includes('tuesday') ||
+    normalized.includes('wednesday') ||
+    normalized.includes('thursday') ||
+    normalized.includes('friday') ||
+    normalized.includes('saturday') ||
+    normalized.includes('sunday')
+  ) {
+    return 'weekly';
+  }
+
+  if (normalized.includes('monthly') || normalized.includes('month')) return 'monthly';
+
+  return 'manual';
+};
+
+const normalizeScheduleType = (
+  value?: string,
+  fallbackFrequency = 'Manual',
+): AutomationScheduleType => {
+  const normalized = (value || '').toLowerCase();
+
+  if (normalized === 'daily') return 'daily';
+  if (normalized === 'weekly') return 'weekly';
+  if (normalized === 'monthly') return 'monthly';
+  if (normalized === 'manual') return 'manual';
+
+  return getDefaultScheduleType(fallbackFrequency);
+};
+
+const getDefaultScheduleDays = (frequency: string) => {
+  const normalized = frequency.toLowerCase();
+
+  if (normalized.includes('monday')) return ['MO'];
+  if (normalized.includes('tuesday')) return ['TU'];
+  if (normalized.includes('wednesday')) return ['WE'];
+  if (normalized.includes('thursday')) return ['TH'];
+  if (normalized.includes('friday')) return ['FR'];
+  if (normalized.includes('saturday')) return ['SA'];
+  if (normalized.includes('sunday')) return ['SU'];
+
+  return ['MO'];
+};
+
+const getAutomationScheduleType = (automation: AutomationTemplate): AutomationScheduleType => {
+  return normalizeScheduleType(automation.scheduleType, automation.frequency);
+};
+
+const getAutomationScheduleLabel = (automation: AutomationTemplate) => {
+  const scheduleType = getAutomationScheduleType(automation);
+  const time = automation.scheduleTime || '09:00';
+
+  if (scheduleType === 'daily') return `Daily at ${time}`;
+
+  if (scheduleType === 'weekly') {
+    const days =
+      automation.scheduleDays && automation.scheduleDays.length > 0
+        ? automation.scheduleDays
+        : getDefaultScheduleDays(automation.frequency);
+    const labels = days
+      .map((day) => WEEKDAY_OPTIONS.find((option) => option.value === day)?.label || day)
+      .join(', ');
+    return `Weekly on ${labels} at ${time}`;
+  }
+
+  if (scheduleType === 'monthly') {
+    return `Monthly on day ${automation.scheduleDayOfMonth || 1} at ${time}`;
+  }
+
+  return automation.frequency || 'Manual';
+};
+
+const getNextRunLabel = (automation: AutomationTemplate) => {
+  if (getAutomationMode(automation) !== 'auto') return 'Only when you run it';
+  if (getAutomationStatus(automation) === 'paused') return 'Paused';
+  return automation.nextRunAt ? new Date(automation.nextRunAt).toLocaleString() : 'Not calculated yet';
+};
+
+const getAutomationMode = (automation: AutomationTemplate): AutomationMode => {
+  return automation.mode || 'manual';
+};
+
+const getAutomationStatus = (automation: AutomationTemplate): AutomationStatus => {
+  return automation.status || 'active';
+};
+
+const getAutomationModeLabel = (automation: AutomationTemplate) => {
+  return getAutomationMode(automation) === 'auto' ? 'Auto-run' : 'Manual';
+};
+
+const getAutomationStatusLabel = (automation: AutomationTemplate) => {
+  return getAutomationStatus(automation) === 'paused' ? 'Paused' : 'Active';
+};
+
+const isAutomationPaused = (automation: AutomationTemplate) => {
+  return getAutomationStatus(automation) === 'paused';
+};
+
+const AUTOMATIONS: AutomationTemplate[] = AUTOMATION_TEMPLATES.map(
+  (automation) => ({
+    id: automation.id,
+    name: automation.name,
+    icon: automation.icon,
+    category: automation.category,
+    purpose: automation.description,
+    frequency: automation.defaultFrequency,
+    prompt: automation.prompt,
+    output: automation.outputDescription,
+    outputType: automation.outputType,
+    outputDestination: DEFAULT_OUTPUT_DESTINATION,
+    outputDestinationLabel:
+      automation.saveDestination === 'library-and-space'
+        ? 'Library + Space'
+        : automation.saveDestination === 'space'
+          ? 'Selected Space'
+          : 'Library',
+    goodFor: automation.goodFor,
+    mode: automation.defaultMode,
+    status: 'active',
+    scheduleType: getDefaultScheduleType(automation.defaultFrequency),
+    scheduleTime: '09:00',
+    scheduleDays: ['MO'],
+    scheduleDayOfMonth: 1,
+  }),
+);
 
 const getAutomationFromUrl = () => {
   if (typeof window === 'undefined') return undefined;
 
   const params = new URLSearchParams(window.location.search);
   return params.get('automation') ?? undefined;
+};
+
+const normalizeStoredAutomationForRuntime = (
+  automation: StoredAutomation,
+): StoredAutomation => {
+  const scheduleType = normalizeScheduleType(
+    automation.scheduleType,
+    automation.frequency,
+  );
+
+  const mode = automation.mode === 'auto' ? 'auto' : 'manual';
+  const status = automation.status === 'paused' ? 'paused' : 'active';
+  const scheduleTime =
+    scheduleType === 'manual' ? undefined : automation.scheduleTime ?? '09:00';
+  const scheduleDays =
+    scheduleType === 'weekly'
+      ? automation.scheduleDays && automation.scheduleDays.length > 0
+        ? automation.scheduleDays
+        : getDefaultScheduleDays(automation.frequency)
+      : [];
+  const scheduleDayOfMonth =
+    scheduleType === 'monthly' ? automation.scheduleDayOfMonth ?? 1 : undefined;
+
+  return {
+    ...automation,
+    mode,
+    status,
+    scheduleType,
+    scheduleTime,
+    scheduleDays,
+    scheduleDayOfMonth,
+    nextRunAt: computeNextRunAt({
+      mode,
+      status,
+      scheduleType,
+      scheduleTime,
+      scheduleDays,
+      scheduleDayOfMonth,
+    }),
+  };
 };
 
 const readCustomAutomations = (): StoredAutomation[] => {
@@ -354,7 +449,7 @@ ${getAutomationOutputType(automation)}
 Save destination:
 ${getAutomationOutputDestinationLabel(automation)}
 
-Suggested frequency:
+Schedule:
 ${automation.frequency}
 
 User request:
@@ -413,6 +508,16 @@ const AutomationBuilder = ({
   const [frequency, setFrequency] = useState(
     editingAutomation?.frequency ?? 'Every Tuesday',
   );
+  const [mode, setMode] = useState<AutomationMode>(editingAutomation?.mode ?? 'manual');
+  const [status, setStatus] = useState<AutomationStatus>(editingAutomation?.status ?? 'active');
+  const [scheduleType, setScheduleType] = useState<AutomationScheduleType>(
+    editingAutomation?.scheduleType ?? getDefaultScheduleType(editingAutomation?.frequency ?? 'Manual'),
+  );
+  const [scheduleTime, setScheduleTime] = useState(editingAutomation?.scheduleTime ?? '09:00');
+  const [scheduleDays, setScheduleDays] = useState<string[]>(editingAutomation?.scheduleDays ?? ['MO']);
+  const [scheduleDayOfMonth, setScheduleDayOfMonth] = useState(
+    editingAutomation?.scheduleDayOfMonth ?? 1,
+  );
   const [purpose, setPurpose] = useState(editingAutomation?.purpose ?? '');
   const [prompt, setPrompt] = useState(editingAutomation?.prompt ?? '');
   const [output, setOutput] = useState(editingAutomation?.output ?? '');
@@ -451,11 +556,19 @@ const AutomationBuilder = ({
       outputDestinationLabel = createdSpace.name;
     }
 
-    onSave({
+    onSave(normalizeStoredAutomationForRuntime({
       id: editingAutomation?.id ?? `custom-${Date.now()}`,
       name: name.trim(),
       category: category.trim() || 'Custom',
       frequency: frequency.trim() || 'Manual',
+      mode,
+      status,
+      scheduleType: normalizeScheduleType(scheduleType, frequency),
+      scheduleTime,
+      scheduleDays,
+      scheduleDayOfMonth,
+      lastRunAt: editingAutomation?.lastRunAt,
+      
       purpose:
         purpose.trim() ||
         `Run a repeatable ${category.toLowerCase()} workflow.`,
@@ -471,7 +584,7 @@ const AutomationBuilder = ({
           ? editingAutomation.goodFor
           : ['Custom workflow', 'Agent execution', 'Reusable output'],
       createdAt: editingAutomation?.createdAt ?? new Date().toISOString(),
-    });
+    }));
   };
 
   return (
@@ -544,6 +657,35 @@ const AutomationBuilder = ({
             className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
           />
         </label>
+        <div className="grid gap-5 md:grid-cols-2">
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-black dark:text-white">
+              Automation mode
+            </span>
+            <select
+              value={mode}
+              onChange={(event) => setMode(event.target.value as AutomationMode)}
+              className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
+            >
+              <option value="manual">Manual — user runs it when needed</option>
+              <option value="auto">Auto-run — runs when due if server is active</option>
+            </select>
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-black dark:text-white">
+              Status
+            </span>
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.target.value as AutomationStatus)}
+              className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
+            >
+              <option value="active">Active</option>
+              <option value="paused">Paused</option>
+            </select>
+          </label>
+        </div>
 
         <label className="space-y-2">
           <span className="text-sm font-medium text-black dark:text-white">
@@ -660,6 +802,25 @@ const AutomationBuilder = ({
   );
 };
 
+const AutomationModeStatusPills = ({ automation }: { automation: AutomationTemplate }) => {
+  const modeLabel = getAutomationModeLabel(automation);
+  const statusLabel = getAutomationStatusLabel(automation);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-medium text-black/45 dark:bg-dark-primary dark:text-white/45">
+        {modeLabel}
+      </span>
+      <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-medium text-black/45 dark:bg-dark-primary dark:text-white/45">
+        {statusLabel}
+      </span>
+      <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-medium text-black/45 dark:bg-dark-primary dark:text-white/45">
+        {getAutomationScheduleLabel(automation)}
+      </span>
+    </div>
+  );
+};
+
 const AutomationCard = ({
   automation,
   onSelect,
@@ -693,6 +854,7 @@ const AutomationCard = ({
                 Custom
               </span>
             )}
+              <AutomationModeStatusPills automation={automation} />
           </div>
         </div>
 
@@ -710,7 +872,7 @@ const AutomationCard = ({
           <div className="rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
             <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-black/40 dark:text-white/40">
               <Clock size={14} />
-              Suggested frequency
+              Schedule
             </div>
 
             <p className="text-sm text-black/75 dark:text-white/75">
@@ -940,6 +1102,7 @@ const AutomationDetail = ({
                     Custom
                   </span>
                 )}
+              <AutomationModeStatusPills automation={automation} />
               </div>
 
               <p className="mt-4 max-w-3xl text-base leading-relaxed text-black/60 dark:text-white/60 md:text-lg">
@@ -967,11 +1130,36 @@ const AutomationDetail = ({
             <Play size={16} />
             Run Automation
           </button>
+        <div className="mt-5 rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
+          <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-black/40 dark:text-white/40">
+            <CheckCircle2 size={14} />
+            Mode & status
+          </div>
+          <p className="text-sm font-medium text-black/75 dark:text-white/75">
+            {getAutomationModeLabel(automation)}
+          </p>
+          <p className="mt-1 text-sm text-black/55 dark:text-white/55">
+            {getAutomationStatusLabel(automation)}
+          </p>
+        </div>
+
+        <div className="mt-5 rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
+          <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-black/40 dark:text-white/40">
+            <Clock size={14} />
+            Schedule & next run
+          </div>
+          <p className="text-sm font-medium text-black/75 dark:text-white/75">
+            {getAutomationScheduleLabel(automation)}
+          </p>
+          <p className="mt-1 text-sm text-black/55 dark:text-white/55">
+            Next: {getNextRunLabel(automation)}
+          </p>
+        </div>
 
           <div className="mt-5 rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
             <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-black/40 dark:text-white/40">
               <Clock size={14} />
-              Suggested frequency
+              Schedule
             </div>
 
             <p className="text-sm text-black/75 dark:text-white/75">
@@ -1001,7 +1189,7 @@ const AutomationDetail = ({
               className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
             >
               <PencilLine size={16} />
-              {automation.isCustom ? 'Edit' : 'Edit Template'}
+              {automation.isCustom ? 'Edit Settings' : 'Customize Template'}
             </button>
 
             <button
@@ -1288,8 +1476,56 @@ const AutomationsPage = () => {
   }, [hiddenTemplateIds]);
 
   const allAutomations = useMemo(() => {
-    return [...visibleTemplates, ...customTemplates];
-  }, [visibleTemplates, customTemplates]);
+    const customByName = new Map<string, AutomationTemplate>();
+
+    customAutomations
+      .map(toAutomationTemplate)
+      .sort((a, b) => {
+        const aCreatedAt =
+          typeof (a as { createdAt?: unknown }).createdAt === 'string'
+            ? ((a as unknown) as { createdAt: string }).createdAt
+            : '';
+        const bCreatedAt =
+          typeof (b as { createdAt?: unknown }).createdAt === 'string'
+            ? ((b as unknown) as { createdAt: string }).createdAt
+            : '';
+
+        return bCreatedAt.localeCompare(aCreatedAt);
+      })
+      .forEach((automation) => {
+        const key = automation.name
+          .replace(/\s+Copy$/i, '')
+          .replace(/\s+Custom$/i, '')
+          .trim()
+          .toLowerCase();
+
+        if (!customByName.has(key)) {
+          customByName.set(key, automation);
+        }
+      });
+
+    const customTemplates = Array.from(customByName.values());
+
+    const customizedTemplateKeys = new Set(
+      customTemplates.map((automation) =>
+        automation.name
+          .replace(/\s+Copy$/i, '')
+          .replace(/\s+Custom$/i, '')
+          .trim()
+          .toLowerCase(),
+      ),
+    );
+
+    const visibleTemplates = AUTOMATIONS.filter((automation) => {
+      if (hiddenTemplateIds.includes(automation.id)) return false;
+
+      const templateKey = automation.name.trim().toLowerCase();
+
+      return !customizedTemplateKeys.has(templateKey);
+    });
+
+    return [...customTemplates, ...visibleTemplates];
+  }, [customAutomations, hiddenTemplateIds]);
 
   useEffect(() => {
     setCustomAutomations(readCustomAutomations());
@@ -1381,6 +1617,7 @@ const AutomationsPage = () => {
   };
 
   const saveAutomation = (automation: StoredAutomation) => {
+    automation = normalizeStoredAutomationForRuntime(automation);
     setCustomAutomations((current) => {
       const exists = current.some((item) => item.id === automation.id);
       const next = exists
@@ -1424,6 +1661,14 @@ const AutomationsPage = () => {
           category: automation.category,
           purpose: automation.purpose,
           frequency: automation.frequency,
+          mode: getAutomationMode(automation),
+          status: getAutomationStatus(automation),
+          scheduleType: getAutomationScheduleType(automation),
+          scheduleTime: automation.scheduleTime ?? '09:00',
+          scheduleDays: automation.scheduleDays ?? ['MO'],
+          scheduleDayOfMonth: automation.scheduleDayOfMonth ?? 1,
+          nextRunAt: automation.nextRunAt,
+          lastRunAt: automation.lastRunAt,
           prompt: automation.prompt,
           output: automation.output,
           outputType: getAutomationOutputType(automation),
@@ -1459,6 +1704,14 @@ const AutomationsPage = () => {
       outputDestination: getAutomationOutputDestination(automation),
       outputDestinationLabel: getAutomationOutputDestinationLabel(automation),
       goodFor: automation.goodFor,
+      mode: getAutomationMode(automation),
+      status: getAutomationStatus(automation),
+      scheduleType: getAutomationScheduleType(automation),
+      scheduleTime: automation.scheduleTime ?? '09:00',
+      scheduleDays: automation.scheduleDays ?? ['MO'],
+      scheduleDayOfMonth: automation.scheduleDayOfMonth ?? 1,
+      nextRunAt: automation.nextRunAt,
+      lastRunAt: automation.lastRunAt,
       createdAt: new Date().toISOString(),
     };
 
@@ -1519,6 +1772,10 @@ const AutomationsPage = () => {
   };
 
   const runAutomation = (automation: AutomationTemplate) => {
+    if (isAutomationPaused(automation)) {
+      window.alert('This automation is paused. Resume it before running.');
+      return;
+    }
     const prompt = buildAutomationRunPrompt(automation);
     const timestamp = Date.now();
     const runId = `run-${timestamp}`;

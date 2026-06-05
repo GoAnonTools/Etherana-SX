@@ -9,5 +9,10 @@ export const register = async () => {
     }
 
     await import('./lib/config/index');
+
+    if (process.env.ETHERANA_DISABLE_AUTOMATION_RUNNER !== 'true') {
+      const { startAutomationRunner } = await import('./lib/automations/runner');
+      startAutomationRunner();
+    }
   }
 };

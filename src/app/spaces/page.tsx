@@ -53,7 +53,7 @@ interface SpaceTemplate {
   starterLinks: StarterLink[];
 }
 
-type ActiveTab = 'spaces' | 'templates';
+type ActiveTab = 'spaces' | 'archived' | 'templates';
 
 const SPACE_TEMPLATES: SpaceTemplate[] = [
   {
@@ -276,6 +276,7 @@ const SpacesPage = () => {
   const router = useRouter();
 
   const [spaces, setSpaces] = useState<Space[]>([]);
+  const [archivedSpaces, setArchivedSpaces] = useState<Space[]>([]);
   const [activeTab, setActiveTab] = useState<ActiveTab>('spaces');
   const [loading, setLoading] = useState(true);
   const [creatingTemplateId, setCreatingTemplateId] = useState<string | null>(
@@ -292,15 +293,31 @@ const SpacesPage = () => {
     );
   }, [spaces]);
 
+  const sortedArchivedSpaces = useMemo(() => {
+    return [...archivedSpaces].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }, [archivedSpaces]);
+
   const fetchSpaces = async () => {
     try {
-      const res = await fetch('/api/spaces');
+      const [activeRes, archivedRes] = await Promise.all([
+        fetch('/api/spaces'),
+        fetch('/api/spaces?archived=true'),
+      ]);
 
-      if (!res.ok) return;
+      if (activeRes.ok) {
+        const activeData = await activeRes.json();
+        setSpaces(Array.isArray(activeData) ? activeData : activeData.spaces ?? []);
+      }
 
-      const data = await res.json();
-
-      setSpaces(Array.isArray(data) ? data : data.spaces ?? []);
+      if (archivedRes.ok) {
+        const archivedData = await archivedRes.json();
+        setArchivedSpaces(
+          Array.isArray(archivedData) ? archivedData : archivedData.spaces ?? [],
+        );
+      }
     } catch (error) {
       console.error('Failed to fetch Spaces:', error);
     } finally {
@@ -508,6 +525,18 @@ const SpacesPage = () => {
 
           <button
             type="button"
+            onClick={() => setActiveTab('archived')}
+            className={`rounded-full px-5 py-2.5 text-sm font-semibold transition ${
+              activeTab === 'archived'
+                ? 'bg-black text-white dark:bg-white dark:text-black'
+                : 'bg-light-secondary text-black/55 hover:text-black dark:bg-dark-secondary dark:text-white/55 dark:hover:text-white'
+            }`}
+          >
+            Archived · {archivedSpaces.length}
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab('templates')}
             className={`rounded-full px-5 py-2.5 text-sm font-semibold transition ${
               activeTab === 'templates'
@@ -586,6 +615,60 @@ const SpacesPage = () => {
 
                     <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
                       Open Space
+                      <ArrowRight
+                        size={16}
+                        className="transition group-hover:translate-x-1"
+                      />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeTab === 'archived' && (
+          <section className="mt-8">
+            {sortedArchivedSpaces.length === 0 ? (
+              <div className="rounded-[2rem] border border-dashed border-light-200 bg-light-secondary p-10 text-center dark:border-dark-200 dark:bg-dark-secondary">
+                <h2 className="text-xl font-semibold text-black dark:text-white">
+                  No archived Spaces
+                </h2>
+
+                <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-black/55 dark:text-white/55">
+                  Archived Spaces will appear here. They are hidden from My Spaces
+                  but can still be opened and restored.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {sortedArchivedSpaces.map((space) => (
+                  <Link
+                    key={space.id}
+                    href={`/spaces/${space.id}`}
+                    className="group flex min-h-[260px] flex-col rounded-[2rem] border border-light-200 bg-light-secondary p-6 opacity-80 shadow-sm transition hover:-translate-y-0.5 hover:opacity-100 hover:shadow-md dark:border-dark-200 dark:bg-dark-secondary"
+                  >
+                    <div className="mb-5 flex items-start justify-between gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-light-primary text-sm font-bold text-black dark:bg-dark-primary dark:text-white">
+                        {getSpaceInitials(space.name)}
+                      </div>
+
+                      <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-medium text-black/45 dark:bg-dark-primary dark:text-white/45">
+                        Archived
+                      </span>
+                    </div>
+
+                    <h2 className="text-xl font-bold text-black dark:text-white">
+                      {space.name}
+                    </h2>
+
+                    <p className="mt-3 line-clamp-3 flex-1 text-sm leading-relaxed text-black/55 dark:text-white/55">
+                      {space.description ||
+                        'Archived project Space.'}
+                    </p>
+
+                    <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
+                      Open archived Space
                       <ArrowRight
                         size={16}
                         className="transition group-hover:translate-x-1"

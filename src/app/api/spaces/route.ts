@@ -1,17 +1,33 @@
-import { spaces } from '@/lib/db/schema';
 import db from '@/lib/db';
-import { desc } from 'drizzle-orm';
+import { spaces } from '@/lib/db/schema';
 import crypto from 'crypto';
+import { desc, isNotNull, isNull } from 'drizzle-orm';
 
-export const GET = async () => {
+const generateId = () => crypto.randomBytes(20).toString('hex');
+
+const safeString = (value: unknown, fallback = '') => {
+  return typeof value === 'string' ? value : fallback;
+};
+
+export const GET = async (req: Request) => {
   try {
-    const allSpaces = await db.query.spaces.findMany({
-      orderBy: desc(spaces.createdAt),
-    });
+    const url = new URL(req.url);
+    const archived = url.searchParams.get('archived') === 'true';
+    const includeArchived = url.searchParams.get('includeArchived') === 'true';
 
-    return Response.json(allSpaces);
-  } catch (err) {
-    console.error('Failed to fetch spaces:', err);
+    const rows = includeArchived
+      ? await db.query.spaces.findMany({
+          orderBy: desc(spaces.createdAt),
+        })
+      : await db.query.spaces.findMany({
+          where: archived ? isNotNull(spaces.archivedAt) : isNull(spaces.archivedAt),
+          orderBy: desc(spaces.createdAt),
+        });
+
+    return Response.json(rows);
+  } catch (error) {
+    console.error('Failed to fetch spaces:', error);
+
     return Response.json(
       { message: 'Failed to fetch spaces' },
       { status: 500 },
@@ -21,26 +37,28 @@ export const GET = async () => {
 
 export const POST = async (req: Request) => {
   try {
-    const { name, description, instruction } = await req.json();
+    const body = await req.json();
+    const now = new Date().toISOString();
 
-    if (!name) {
-      return Response.json({ message: 'Name is required' }, { status: 400 });
-    }
+    const space = {
+      id: generateId(),
+      name: safeString(body.name, 'Untitled Space'),
+      description: safeString(body.description),
+      instruction: safeString(body.instruction),
+      files: Array.isArray(body.files) ? body.files : [],
+      createdAt: now,
+      archivedAt: null,
+    };
 
-    const id = crypto.randomBytes(16).toString('hex');
+    await db.insert(spaces).values(space);
 
-    await db.insert(spaces).values({
-      id,
-      name,
-      description: description || '',
-      instruction: instruction || '',
-      createdAt: new Date().toISOString(),
-      files: [],
-    });
+    return Response.json(space);
+  } catch (error) {
+    console.error('Failed to create space:', error);
 
-    return Response.json({ id });
-  } catch (err) {
-    console.error('Failed to create space:', err);
-    return Response.json({ message: 'Failed to create space' }, { status: 500 });
+    return Response.json(
+      { message: 'Failed to create space' },
+      { status: 500 },
+    );
   }
 };

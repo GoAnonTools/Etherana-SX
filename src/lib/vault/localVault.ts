@@ -1,3 +1,7 @@
+export type AutomationMode = 'manual' | 'auto';
+export type AutomationStatus = 'active' | 'paused';
+export type AutomationScheduleType = 'manual' | 'daily' | 'weekly' | 'monthly';
+
 export interface StoredAutomation {
   id: string;
   name: string;
@@ -10,6 +14,14 @@ export interface StoredAutomation {
   outputDestination?: string;
   outputDestinationLabel?: string;
   goodFor: string[];
+  mode?: AutomationMode;
+  status?: AutomationStatus;
+  scheduleType?: AutomationScheduleType;
+  scheduleTime?: string;
+  scheduleDays?: string[];
+  scheduleDayOfMonth?: number;
+  nextRunAt?: string;
+  lastRunAt?: string;
   createdAt: string;
 }
 
@@ -18,7 +30,7 @@ export interface AutomationRunHistoryItem {
   automationId: string;
   automationName: string;
   startedAt: string;
-  mode: 'manual';
+  mode: AutomationMode;
   status: 'started';
   prompt: string;
   expectedOutput: string;

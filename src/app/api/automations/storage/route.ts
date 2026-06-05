@@ -7,12 +7,24 @@ import {
 } from '@/lib/db/schema';
 import { desc } from 'drizzle-orm';
 
+type AutomationMode = 'manual' | 'auto';
+type AutomationStatus = 'active' | 'paused';
+type AutomationScheduleType = 'manual' | 'daily' | 'weekly' | 'monthly';
+
 interface StoredAutomation {
   id: string;
   name: string;
   category: string;
   purpose: string;
   frequency: string;
+  mode?: AutomationMode;
+  status?: AutomationStatus;
+  scheduleType?: AutomationScheduleType;
+  scheduleTime?: string;
+  scheduleDays?: string[];
+  scheduleDayOfMonth?: number;
+  nextRunAt?: string;
+  lastRunAt?: string;
   prompt: string;
   output: string;
   outputType?: string;
@@ -27,7 +39,7 @@ interface AutomationRunHistoryItem {
   automationId: string;
   automationName: string;
   startedAt: string;
-  mode: 'manual';
+  mode: AutomationMode;
   status: 'started';
   prompt: string;
   expectedOutput: string;
@@ -65,10 +77,86 @@ const safeString = (value: unknown, fallback = '') => {
   return typeof value === 'string' ? value : fallback;
 };
 
+const safeOptionalString = (value: unknown) => {
+  return typeof value === 'string' && value.trim().length > 0
+    ? value
+    : undefined;
+};
+
 const safeStringArray = (value: unknown) => {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === 'string')
     : [];
+};
+
+const safeOptionalNumber = (value: unknown) => {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value
+    : undefined;
+};
+
+const safeAutomationMode = (value: unknown): AutomationMode => {
+  return value === 'auto' ? 'auto' : 'manual';
+};
+
+const safeAutomationStatus = (value: unknown): AutomationStatus => {
+  return value === 'paused' ? 'paused' : 'active';
+};
+
+const inferScheduleTypeFromFrequency = (
+  frequency: string,
+): AutomationScheduleType => {
+  const normalized = frequency.toLowerCase();
+
+  if (normalized.includes('daily')) return 'daily';
+  if (
+    normalized.includes('weekly') ||
+    normalized.includes('week') ||
+    normalized.includes('monday') ||
+    normalized.includes('tuesday') ||
+    normalized.includes('wednesday') ||
+    normalized.includes('thursday') ||
+    normalized.includes('friday') ||
+    normalized.includes('saturday') ||
+    normalized.includes('sunday')
+  ) {
+    return 'weekly';
+  }
+  if (normalized.includes('monthly') || normalized.includes('month')) {
+    return 'monthly';
+  }
+
+  return 'manual';
+};
+
+const inferScheduleDaysFromFrequency = (frequency: string) => {
+  const normalized = frequency.toLowerCase();
+
+  if (normalized.includes('monday')) return ['MO'];
+  if (normalized.includes('tuesday')) return ['TU'];
+  if (normalized.includes('wednesday')) return ['WE'];
+  if (normalized.includes('thursday')) return ['TH'];
+  if (normalized.includes('friday')) return ['FR'];
+  if (normalized.includes('saturday')) return ['SA'];
+  if (normalized.includes('sunday')) return ['SU'];
+
+  return ['MO'];
+};
+
+const safeAutomationScheduleType = (
+  value: unknown,
+  frequency = 'Manual',
+): AutomationScheduleType => {
+  if (
+    value === 'manual' ||
+    value === 'daily' ||
+    value === 'weekly' ||
+    value === 'monthly'
+  ) {
+    return value;
+  }
+
+  return inferScheduleTypeFromFrequency(frequency);
 };
 
 const normalizeAutomation = (
@@ -86,12 +174,37 @@ const normalizeAutomation = (
     return null;
   }
 
+  const frequency = safeString(candidate.frequency, 'Manual');
+  const scheduleType = safeAutomationScheduleType(
+    candidate.scheduleType,
+    frequency,
+  );
+
   return {
     id: candidate.id,
     name: candidate.name,
     category: safeString(candidate.category, 'Custom'),
     purpose: safeString(candidate.purpose),
-    frequency: safeString(candidate.frequency, 'Manual'),
+    frequency,
+    mode: safeAutomationMode(candidate.mode),
+    status: safeAutomationStatus(candidate.status),
+    scheduleType,
+    scheduleTime:
+      scheduleType === 'manual'
+        ? undefined
+        : safeOptionalString(candidate.scheduleTime) ?? '09:00',
+    scheduleDays:
+      scheduleType === 'weekly'
+        ? safeStringArray(candidate.scheduleDays).length > 0
+          ? safeStringArray(candidate.scheduleDays)
+          : inferScheduleDaysFromFrequency(frequency)
+        : [],
+    scheduleDayOfMonth:
+      scheduleType === 'monthly'
+        ? safeOptionalNumber(candidate.scheduleDayOfMonth) ?? 1
+        : undefined,
+    nextRunAt: safeOptionalString(candidate.nextRunAt),
+    lastRunAt: safeOptionalString(candidate.lastRunAt),
     prompt: candidate.prompt,
     output: safeString(candidate.output, 'A reusable output.'),
     outputType: safeString(candidate.outputType, 'Document'),
@@ -125,7 +238,7 @@ const normalizeRun = (
     automationId: candidate.automationId,
     automationName: candidate.automationName,
     startedAt: safeString(candidate.startedAt, new Date().toISOString()),
-    mode: 'manual',
+    mode: safeAutomationMode(candidate.mode),
     status: 'started',
     prompt: safeString(candidate.prompt),
     expectedOutput: safeString(candidate.expectedOutput),
@@ -178,7 +291,7 @@ const normalizeOutput = (
 
 export const GET = async () => {
   try {
-    const [automations, hiddenTemplates, runs, outputs] = await Promise.all([
+    const [automationRows, hiddenTemplates, runs, outputs] = await Promise.all([
       db.query.automationRecords.findMany({
         orderBy: desc(automationRecords.createdAt),
       }),
@@ -192,12 +305,25 @@ export const GET = async () => {
     ]);
 
     return Response.json({
-      automations: automations.map((automation) => ({
+      automations: automationRows.map((automation) => ({
         id: automation.id,
         name: automation.name,
         category: automation.category,
         purpose: automation.purpose,
         frequency: automation.frequency,
+        mode: automation.mode === 'auto' ? 'auto' : 'manual',
+        status: automation.status === 'paused' ? 'paused' : 'active',
+        scheduleType:
+          automation.scheduleType === 'daily' ||
+          automation.scheduleType === 'weekly' ||
+          automation.scheduleType === 'monthly'
+            ? automation.scheduleType
+            : inferScheduleTypeFromFrequency(automation.frequency),
+        scheduleTime: automation.scheduleTime ?? undefined,
+        scheduleDays: automation.scheduleDays ?? [],
+        scheduleDayOfMonth: automation.scheduleDayOfMonth ?? undefined,
+        nextRunAt: automation.nextRunAt ?? undefined,
+        lastRunAt: automation.lastRunAt ?? undefined,
         prompt: automation.prompt,
         output: automation.output,
         outputType: automation.outputType ?? undefined,
@@ -213,7 +339,7 @@ export const GET = async () => {
         automationId: run.automationId,
         automationName: run.automationName,
         startedAt: run.startedAt,
-        mode: 'manual',
+        mode: run.mode === 'auto' ? 'auto' : 'manual',
         status: 'started',
         prompt: run.prompt,
         expectedOutput: run.expectedOutput,
@@ -283,12 +409,19 @@ export const PUT = async (req: Request) => {
           category: automation.category,
           purpose: automation.purpose,
           frequency: automation.frequency,
+          mode: automation.mode ?? 'manual',
+          status: automation.status ?? 'active',
+          scheduleType: automation.scheduleType ?? 'manual',
+          scheduleTime: automation.scheduleTime ?? null,
+          scheduleDays: automation.scheduleDays ?? [],
+          scheduleDayOfMonth: automation.scheduleDayOfMonth ?? null,
+          nextRunAt: automation.nextRunAt ?? null,
+          lastRunAt: automation.lastRunAt ?? null,
           prompt: automation.prompt,
           output: automation.output,
           outputType: automation.outputType ?? null,
           outputDestination: automation.outputDestination ?? null,
-          outputDestinationLabel:
-            automation.outputDestinationLabel ?? null,
+          outputDestinationLabel: automation.outputDestinationLabel ?? null,
           goodFor: automation.goodFor,
           createdAt: automation.createdAt,
           updatedAt: new Date().toISOString(),

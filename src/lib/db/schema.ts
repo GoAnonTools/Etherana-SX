@@ -29,6 +29,7 @@ export const spaces = sqliteTable('spaces', {
   description: text('description'),
   instruction: text('instruction'),
   createdAt: text('createdAt').notNull(),
+  archivedAt: text('archivedAt'),
   files: text('files', { mode: 'json' })
     .$type<DBFile[]>()
     .default(sql`'[]'`),
@@ -68,6 +69,14 @@ export const automationRecords = sqliteTable('automations', {
   category: text('category').notNull(),
   purpose: text('purpose').notNull(),
   frequency: text('frequency').notNull(),
+  mode: text('mode').notNull().default('manual'),
+  status: text('status').notNull().default('active'),
+  scheduleType: text('scheduleType').notNull().default('manual'),
+  scheduleTime: text('scheduleTime'),
+  scheduleDays: text('scheduleDays', { mode: 'json' }).$type<string[]>().default(sql`'[]'`),
+  scheduleDayOfMonth: integer('scheduleDayOfMonth'),
+  nextRunAt: text('nextRunAt'),
+  lastRunAt: text('lastRunAt'),
   prompt: text('prompt').notNull(),
   output: text('output').notNull(),
   outputType: text('outputType'),

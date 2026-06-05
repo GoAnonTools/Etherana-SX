@@ -121,6 +121,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       active: segments.includes('tasks'),
       label: 'Automations',
     },
+    {
+      icon: LayoutGrid,
+      href: '/apps',
+      active: segments.includes('apps'),
+      label: 'Apps',
+    },
   ];
 
   const vaultLinks: NavLink[] = [
