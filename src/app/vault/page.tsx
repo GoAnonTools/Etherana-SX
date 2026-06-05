@@ -26,6 +26,8 @@ import {
   getEncryptedVaultDbStats,
   isEncryptedVaultUnlocked,
   migrateLocalVaultToEncryptedDb,
+  pullEncryptedVaultFromSyncServer,
+  pushEncryptedVaultToSyncServer,
   restoreEncryptedDbToLocalVault,
   unlockEncryptedVaultStorage,
 } from '@/lib/vault/encryptedVaultDb';
@@ -373,6 +375,7 @@ const VaultPage = () => {
   const [status, setStatus] = useState<string | null>(null);
   const [encryptedStorageStatus, setEncryptedStorageStatus] =
     useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const [encryptedRecordCount, setEncryptedRecordCount] = useState(0);
   const [unlockPhrase, setUnlockPhrase] = useState('');
   const [working, setWorking] = useState(false);
@@ -743,6 +746,45 @@ const VaultPage = () => {
     }
   };
 
+  const pushEncryptedSync = async () => {
+    setWorking(true);
+    setSyncStatus(null);
+
+    try {
+      const result = await pushEncryptedVaultToSyncServer();
+      setVaultMeta(readVaultMeta());
+      setSyncStatus(
+        `Pushed encrypted records. Accepted ${result.accepted}, skipped ${result.skipped}.`,
+      );
+    } catch (error) {
+      console.error(error);
+      setSyncStatus(
+        'Could not push encrypted records. Unlock and migrate first.',
+      );
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const pullEncryptedSync = async () => {
+    setWorking(true);
+    setSyncStatus(null);
+
+    try {
+      const result = await pullEncryptedVaultFromSyncServer();
+      await refreshEncryptedStorageStats();
+      setVaultMeta(readVaultMeta());
+      setSyncStatus(
+        `Pulled encrypted records. Imported ${result.imported}, skipped ${result.skipped}. Use Restore to load them into the app.`,
+      );
+    } catch (error) {
+      console.error(error);
+      setSyncStatus('Could not pull encrypted records. Unlock first.');
+    } finally {
+      setWorking(false);
+    }
+  };
+
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     setBackupFile(event.target.files?.[0] ?? null);
   };
@@ -1068,6 +1110,91 @@ const VaultPage = () => {
               {encryptedStorageStatus}
             </div>
           )}
+        </section>
+
+        <section className="mt-8 rounded-[2rem] border border-light-200 bg-light-secondary p-6 shadow-sm dark:border-dark-200 dark:bg-dark-secondary">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-light-primary dark:bg-dark-primary">
+              <RefreshCw size={20} />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-semibold text-black dark:text-white">
+                Anonymous encrypted sync
+              </h2>
+
+              <p className="text-sm text-black/50 dark:text-white/50">
+                Push and pull encrypted vault records without an account. The
+                server stores ciphertext only.
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-5 grid gap-3 text-sm text-black/55 dark:text-white/55 md:grid-cols-3">
+            <div className="rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-black/35 dark:text-white/35">
+                Vault ID
+              </p>
+              <p className="mt-2 break-all font-mono text-xs">
+                {vaultMeta?.vaultId ?? 'No vault yet'}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-black/35 dark:text-white/35">
+                Last push
+              </p>
+              <p className="mt-2">
+                {vaultMeta?.lastSyncPushAt
+                  ? new Date(vaultMeta.lastSyncPushAt).toLocaleString()
+                  : 'Never'}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-black/35 dark:text-white/35">
+                Last pull
+              </p>
+              <p className="mt-2">
+                {vaultMeta?.lastSyncPullAt
+                  ? new Date(vaultMeta.lastSyncPullAt).toLocaleString()
+                  : 'Never'}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <button
+              type="button"
+              onClick={pushEncryptedSync}
+              disabled={working}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] disabled:opacity-40 dark:bg-white dark:text-black"
+            >
+              <Upload size={16} />
+              Push encrypted records
+            </button>
+
+            <button
+              type="button"
+              onClick={pullEncryptedSync}
+              disabled={working}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-3 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black disabled:opacity-40 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+            >
+              <Download size={16} />
+              Pull encrypted records
+            </button>
+          </div>
+
+          {syncStatus && (
+            <div className="mt-5 rounded-2xl bg-light-primary p-4 text-sm text-black/65 dark:bg-dark-primary dark:text-white/65">
+              {syncStatus}
+            </div>
+          )}
+
+          <p className="mt-5 text-sm leading-relaxed text-black/50 dark:text-white/50">
+            Recommended flow: unlock → migrate → push. On another device:
+            create/import the same vault → unlock → pull → restore.
+          </p>
         </section>
 
         <section className="mt-8 rounded-[2rem] border border-light-200 bg-light-secondary p-6 shadow-sm dark:border-dark-200 dark:bg-dark-secondary">

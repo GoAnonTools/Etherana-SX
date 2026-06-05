@@ -52,6 +52,8 @@ export interface VaultMeta {
   lastImportAt?: string;
   encryptedDbSalt?: string;
   encryptedDbMigratedAt?: string;
+  lastSyncPushAt?: string;
+  lastSyncPullAt?: string;
 }
 
 export const CUSTOM_AUTOMATIONS_STORAGE_KEY =

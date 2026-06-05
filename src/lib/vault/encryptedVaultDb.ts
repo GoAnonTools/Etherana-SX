@@ -348,3 +348,187 @@ export const restoreEncryptedDbToLocalVault = async () => {
     restored: records.length,
   };
 };
+
+interface VaultSyncServerRecord {
+  recordKey: string;
+  ciphertext: string;
+  iv: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+  deviceId?: string | null;
+}
+
+interface VaultSyncPushResponse {
+  vaultId: string;
+  accepted: number;
+  skipped: number;
+}
+
+interface VaultSyncPullResponse {
+  vaultId: string;
+  records: VaultSyncServerRecord[];
+}
+
+const getDeviceId = () => {
+  const key = 'etherana.privateVault.deviceId.v1';
+  const existing = localStorage.getItem(key);
+
+  if (existing) return existing;
+
+  const deviceId = `device_${Math.random()
+    .toString(36)
+    .slice(2)}_${Date.now().toString(36)}`;
+
+  localStorage.setItem(key, deviceId);
+
+  return deviceId;
+};
+
+const readAllEncryptedVaultRecordsRaw = async () => {
+  const db = await openVaultDb();
+
+  const records = await new Promise<EncryptedVaultRecord[]>(
+    (resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result ?? []);
+      request.onerror = () => reject(request.error);
+    },
+  );
+
+  db.close();
+
+  return records;
+};
+
+const writeEncryptedVaultRecordRaw = async (
+  record: EncryptedVaultRecord,
+) => {
+  const db = await openVaultDb();
+
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+
+    store.put(record);
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+
+  db.close();
+};
+
+export const pushEncryptedVaultToSyncServer = async () => {
+  const meta = getVaultMetaOrThrow();
+
+  if (!isEncryptedVaultUnlocked()) {
+    throw new Error('Unlock encrypted storage before pushing sync records.');
+  }
+
+  const records = await readAllEncryptedVaultRecordsRaw();
+  const deviceId = getDeviceId();
+
+  const res = await fetch('/api/vault/sync', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      vaultId: meta.vaultId,
+      records: records.map((record) => ({
+        recordKey: record.key,
+        ciphertext: record.ciphertext,
+        iv: record.iv,
+        updatedAt: record.updatedAt,
+        deviceId,
+      })),
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error('Could not push encrypted vault records.');
+  }
+
+  const data = (await res.json()) as VaultSyncPushResponse;
+
+  const updatedMeta: VaultMeta = {
+    ...meta,
+    lastSyncPushAt: new Date().toISOString(),
+  };
+
+  writeVaultMeta(updatedMeta);
+
+  return data;
+};
+
+export const pullEncryptedVaultFromSyncServer = async () => {
+  const meta = getVaultMetaOrThrow();
+
+  if (!isEncryptedVaultUnlocked()) {
+    throw new Error('Unlock encrypted storage before pulling sync records.');
+  }
+
+  const res = await fetch(
+    `/api/vault/sync?vaultId=${encodeURIComponent(meta.vaultId)}`,
+  );
+
+  if (!res.ok) {
+    throw new Error('Could not pull encrypted vault records.');
+  }
+
+  const data = (await res.json()) as VaultSyncPullResponse;
+  let imported = 0;
+  let skipped = 0;
+
+  const currentRecords = await readAllEncryptedVaultRecordsRaw();
+  const currentByKey = new Map(
+    currentRecords.map((record) => [record.key, record]),
+  );
+
+  for (const record of data.records ?? []) {
+    if (
+      !record.recordKey ||
+      !record.ciphertext ||
+      !record.iv ||
+      !record.updatedAt
+    ) {
+      skipped += 1;
+      continue;
+    }
+
+    const existing = currentByKey.get(record.recordKey);
+
+    if (
+      existing &&
+      Date.parse(existing.updatedAt) > Date.parse(record.updatedAt)
+    ) {
+      skipped += 1;
+      continue;
+    }
+
+    await writeEncryptedVaultRecordRaw({
+      key: record.recordKey,
+      ciphertext: record.ciphertext,
+      iv: record.iv,
+      updatedAt: record.updatedAt,
+    });
+
+    imported += 1;
+  }
+
+  const updatedMeta: VaultMeta = {
+    ...meta,
+    lastSyncPullAt: new Date().toISOString(),
+  };
+
+  writeVaultMeta(updatedMeta);
+
+  return {
+    vaultId: data.vaultId,
+    imported,
+    skipped,
+  };
+};
