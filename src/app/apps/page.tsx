@@ -669,7 +669,7 @@ const AppRunner = ({
                     }
                     className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
                   >
-                    <option value="">Choose...</option>
+                    <option value="">{t('sharedUi.choose')}</option>
                     {input.options?.map((option) => (
                       <option key={option} value={option}>
                         {option}
@@ -950,7 +950,7 @@ export default function AppsPage() {
             Open
           </p>
           <p className="mt-1 text-sm text-black/55 dark:text-white/55">
-            Choose a reusable mini-tool.
+            {t('appsPage.chooseReusableMiniTool')}
           </p>
         </div>
 

@@ -130,7 +130,7 @@ const AddProvider = ({
                     <div className="flex flex-col space-y-4">
                       <div className="flex flex-col items-start space-y-2">
                         <label className="text-xs text-black/70 dark:text-white/70">
-                          Select connection type
+                          {t('sharedUi.selectConnectionType')}
                         </label>
                         <Select
                           value={selectedProvider ?? ''}

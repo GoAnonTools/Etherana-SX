@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n/useI18n';
 /* eslint-disable @next/next/no-img-element */
 import { ImagesIcon, PlusIcon } from 'lucide-react';
 import { useState } from 'react';
@@ -20,6 +21,7 @@ const SearchImages = ({
   chatHistory: [string, string][];
   messageId: string;
 }) => {
+  const { t } = useI18n();
   const [images, setImages] = useState<Image[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -70,7 +72,7 @@ const SearchImages = ({
         >
           <div className="flex flex-row items-center space-x-2">
             <ImagesIcon size={17} />
-            <p>Search images</p>
+            <p>{t('sharedUi.searchImages')}</p>
           </div>
           <PlusIcon className="text-[#24A0ED]" size={17} />
         </button>

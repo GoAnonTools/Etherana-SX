@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ConfigModelProvider } from '@/lib/config/types';
 import { toast } from 'sonner';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 const DeleteProvider = ({
   modelProvider,
@@ -12,6 +13,7 @@ const DeleteProvider = ({
   modelProvider: ConfigModelProvider;
   setProviders: React.Dispatch<React.SetStateAction<ConfigModelProvider[]>>;
 }) => {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -37,7 +39,7 @@ const DeleteProvider = ({
       toast.success('Connection deleted successfully.');
     } catch (error) {
       console.error('Error deleting provider:', error);
-      toast.error('Failed to delete connection.');
+      toast.error(t('sharedUi.failedDeleteConnection'));
     } finally {
       setLoading(false);
     }
@@ -51,7 +53,7 @@ const DeleteProvider = ({
           setOpen(true);
         }}
         className="group p-1.5 rounded-md hover:bg-light-200 hover:dark:bg-dark-200 transition-colors group"
-        title="Delete connection"
+        title={t('sharedUi.deleteConnection')}
       >
         <Trash2
           size={14}
@@ -76,7 +78,7 @@ const DeleteProvider = ({
               <DialogPanel className="w-full mx-4 lg:w-[600px] max-h-[85vh] flex flex-col border bg-light-primary dark:bg-dark-primary border-light-secondary dark:border-dark-secondary rounded-lg">
                 <div className="px-6 pt-6 pb-4">
                   <h3 className="text-black/90 dark:text-white/90 font-medium">
-                    Delete connection
+                    {t('sharedUi.deleteConnection')}
                   </h3>
                 </div>
                 <div className="border-t border-light-200 dark:border-dark-200" />
@@ -93,7 +95,7 @@ const DeleteProvider = ({
                     onClick={() => setOpen(false)}
                     className="px-4 py-2 rounded-lg text-sm border border-light-200 dark:border-dark-200 text-black dark:text-white bg-light-secondary/50 dark:bg-dark-secondary/50 hover:bg-light-secondary hover:dark:bg-dark-secondary hover:border-light-300 hover:dark:border-dark-300 flex flex-row items-center space-x-1 active:scale-95 transition duration-200"
                   >
-                    Cancel
+                    {t('sharedUi.cancel')}
                   </button>
                   <button
                     disabled={loading}
@@ -103,7 +105,7 @@ const DeleteProvider = ({
                     {loading ? (
                       <Loader2 className="animate-spin" size={16} />
                     ) : (
-                      'Delete'
+                      t('sharedUi.delete')
                     )}
                   </button>
                 </div>

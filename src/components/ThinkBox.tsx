@@ -1,5 +1,6 @@
 'use client';
 
+import { useI18n } from '@/lib/i18n/useI18n';
 import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, BrainCircuit } from 'lucide-react';
 
@@ -9,6 +10,7 @@ interface ThinkBoxProps {
 }
 
 const ThinkBox = ({ content, thinkingEnded }: ThinkBoxProps) => {
+  const { t } = useI18n();
   const [isExpanded, setIsExpanded] = useState(true);
 
   useEffect(() => {
@@ -30,7 +32,7 @@ const ThinkBox = ({ content, thinkingEnded }: ThinkBoxProps) => {
             size={20}
             className="text-[#9C27B0] dark:text-[#CE93D8]"
           />
-          <p className="font-medium text-sm">Thinking Process</p>
+          <p className="font-medium text-sm">{t('sharedUi.thinkingProcess')}</p>
         </div>
         {isExpanded ? (
           <ChevronUp size={18} className="text-black/70 dark:text-white/70" />

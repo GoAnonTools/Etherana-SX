@@ -1,5 +1,6 @@
 'use client';
 
+import { useI18n } from '@/lib/i18n/useI18n';
 import { LayoutGrid, Loader2, Search, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
@@ -13,6 +14,7 @@ interface Space {
 }
 
 const SpaceSelector = () => {
+  const { t } = useI18n();
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -83,7 +85,7 @@ const SpaceSelector = () => {
                       />
                       <input
                         type="text"
-                        placeholder="Search spaces..."
+                        placeholder={t('sharedUi.searchSpaces')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-9 pr-3 py-1.5 bg-light-secondary dark:bg-dark-secondary rounded-xl text-xs text-black dark:text-white focus:outline-none border border-transparent transition"
@@ -106,7 +108,7 @@ const SpaceSelector = () => {
                             !spaceId ? "bg-blue-500/10 text-blue-500 font-bold" : "hover:bg-light-secondary dark:hover:bg-dark-secondary text-black/70 dark:text-white/70"
                           )}
                         >
-                          <span>No Space (Default)</span>
+                          <span>{t('sharedUi.noSpaceDefault')}</span>
                           {!spaceId && <Check size={14} />}
                         </button>
                         
@@ -134,7 +136,7 @@ const SpaceSelector = () => {
                       onClick={() => window.location.href = '/spaces'}
                       className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-blue-500/20"
                     >
-                      Manage Spaces
+                      {t('sharedUi.manageSpaces')}
                     </button>
                   </div>
                 </motion.div>

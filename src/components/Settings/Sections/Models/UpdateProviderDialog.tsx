@@ -8,6 +8,7 @@ import {
   UIConfigField,
 } from '@/lib/config/types';
 import { toast } from 'sonner';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 const UpdateProvider = ({
   modelProvider,
@@ -18,6 +19,7 @@ const UpdateProvider = ({
   modelProvider: ConfigModelProvider;
   setProviders: React.Dispatch<React.SetStateAction<ConfigModelProvider[]>>;
 }) => {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [config, setConfig] = useState<Record<string, any>>({});
   const [name, setName] = useState(modelProvider.name);
@@ -70,7 +72,7 @@ const UpdateProvider = ({
       toast.success('Connection updated successfully.');
     } catch (error) {
       console.error('Error updating provider:', error);
-      toast.error('Failed to update connection.');
+      toast.error(t('sharedUi.failedUpdateConnection'));
     } finally {
       setLoading(false);
       setOpen(false);

@@ -268,6 +268,7 @@ export const dictionaries = {
       smallAppFailedOutput: 'Small App failed to generate an output.',
       couldNotOpenPrintWindow:
         'Could not open the print window. Please allow pop-ups for Etherana SX.',
+      chooseReusableMiniTool: 'Choose a reusable mini-tool.',
     },
     automationsPage: {
       automation: 'Automation',
@@ -395,6 +396,15 @@ export const dictionaries = {
       couldNotCreateSpace: 'Could not create the Space. Please try again.',
       copySuffix: 'Copy',
       customSuffix: 'Custom',
+      automationNamePlaceholder: 'AI News Article',
+      categoryPlaceholder: 'Research, Marketing, Sales...',
+      frequencyPlaceholder: 'Every Tuesday, Every morning, Weekly...',
+      objectivePlaceholder:
+        'Track AI development news and turn the best stories into a weekly article.',
+      agentInstructionsPlaceholder:
+        'Every Tuesday, find and collect important news about AI development, analyze the most relevant stories, then write a clear article for entrepreneurs.',
+      expectedOutputPlaceholder:
+        'A structured article with title, intro, key news, analysis, and practical implications.',
     },
     vaultPage: {
       backToSearch: 'Back to Search',
@@ -490,6 +500,47 @@ export const dictionaries = {
         'Could not import the vault. Check the file and recovery phrase.',
       untitledSpace: 'Untitled Space',
     },
+    sharedUi: {
+      now: 'Now',
+      weatherDataUnavailable: 'Weather data unavailable for',
+      searchModels: 'Search models...',
+      noModelsFound: 'No models found',
+      noChatModelsConfigured: 'No chat models configured',
+      attachedFiles: 'Attached files',
+      selectEmbeddingBeforeUploading:
+        'Please select an embedding model before uploading.',
+      failedUpload: 'Failed to upload file(s).',
+      invalidUploadResponse: 'Invalid upload response from server.',
+      searchSpaces: 'Search spaces...',
+      noSpaceDefault: 'No Space (Default)',
+      manageSpaces: 'Manage Spaces',
+      deleteConfirmation: 'Delete Confirmation',
+      cancel: 'Cancel',
+      delete: 'Delete',
+      deleteConnection: 'Delete connection',
+      failedDeleteConnection: 'Failed to delete connection.',
+      failedUpdateConnection: 'Failed to update connection.',
+      selectConnectionType: 'Select connection type',
+      loadingProviders: 'Loading providers...',
+      selectModels: 'Select models',
+      selectModelsDescription: 'Select models which you wish to use.',
+      failedLoadProviders: 'Failed to load providers',
+      failedCompleteSetup: 'Failed to complete setup',
+      searchImages: 'Search images',
+      uploadedFile: 'Uploaded File',
+      add: 'Add',
+      clear: 'Clear',
+      next: 'Next',
+      newChat: 'New chat',
+      thinkingProcess: 'Thinking Process',
+      searchVideos: 'Search videos',
+      video: 'Video',
+      askFollowUp: 'Ask a follow-up',
+      choose: 'Choose...',
+      webSearch: 'Web search,',
+      chatModelDescription: 'Choose which model to use for generating responses',
+      embeddingModelDescription: 'Choose which model to use for generating embeddings',
+    },
     outputsPage: {
       outputLibrary: 'Output Library',
       title: 'Outputs',
@@ -563,6 +614,7 @@ export const dictionaries = {
         'This output is still a draft. Add content manually or rerun the automation to generate a new version.',
       couldNotOpenPrintWindow:
         'Could not open the print window. Please allow pop-ups for Etherana SX.',
+      chooseReusableMiniTool: 'Choose a reusable mini-tool.',
     },
     models: {
       selectModels: 'Select models',
@@ -857,6 +909,7 @@ export const dictionaries = {
       smallAppFailedOutput: 'La Small App n’a pas réussi à générer une sortie.',
       couldNotOpenPrintWindow:
         'Impossible d’ouvrir la fenêtre d’impression. Veuillez autoriser les fenêtres pop-up pour Etherana SX.',
+      chooseReusableMiniTool: 'Choisissez un mini-outil réutilisable.',
     },
     automationsPage: {
       automation: 'Automatisation',
@@ -984,6 +1037,15 @@ export const dictionaries = {
       couldNotCreateSpace: 'Impossible de créer l’espace. Veuillez réessayer.',
       copySuffix: 'Copie',
       customSuffix: 'Personnalisé',
+      automationNamePlaceholder: 'Article d’actualité IA',
+      categoryPlaceholder: 'Recherche, Marketing, Vente...',
+      frequencyPlaceholder: 'Tous les mardis, chaque matin, chaque semaine...',
+      objectivePlaceholder:
+        'Suivre l’actualité du développement IA et transformer les meilleures informations en article hebdomadaire.',
+      agentInstructionsPlaceholder:
+        'Chaque mardi, trouvez et collectez les informations importantes sur le développement IA, analysez les sujets les plus pertinents, puis rédigez un article clair pour des entrepreneurs.',
+      expectedOutputPlaceholder:
+        'Un article structuré avec titre, introduction, informations clés, analyse et implications pratiques.',
     },
     vaultPage: {
       backToSearch: 'Retour à la recherche',
@@ -1079,6 +1141,47 @@ export const dictionaries = {
         'Impossible d’importer le coffre. Vérifiez le fichier et la phrase de récupération.',
       untitledSpace: 'Espace sans titre',
     },
+    sharedUi: {
+      now: 'Maintenant',
+      weatherDataUnavailable: 'Données météo indisponibles pour',
+      searchModels: 'Rechercher des modèles...',
+      noModelsFound: 'Aucun modèle trouvé',
+      noChatModelsConfigured: 'Aucun modèle de chat configuré',
+      attachedFiles: 'Fichiers attachés',
+      selectEmbeddingBeforeUploading:
+        'Veuillez sélectionner un modèle d’embedding avant l’import.',
+      failedUpload: 'Échec de l’import des fichiers.',
+      invalidUploadResponse: 'Réponse d’import invalide du serveur.',
+      searchSpaces: 'Rechercher des espaces...',
+      noSpaceDefault: 'Aucun espace (par défaut)',
+      manageSpaces: 'Gérer les espaces',
+      deleteConfirmation: 'Confirmation de suppression',
+      cancel: 'Annuler',
+      delete: 'Supprimer',
+      deleteConnection: 'Supprimer la connexion',
+      failedDeleteConnection: 'Échec de la suppression de la connexion.',
+      failedUpdateConnection: 'Échec de la mise à jour de la connexion.',
+      selectConnectionType: 'Choisir le type de connexion',
+      loadingProviders: 'Chargement des fournisseurs...',
+      selectModels: 'Choisir les modèles',
+      selectModelsDescription: 'Choisissez les modèles que vous souhaitez utiliser.',
+      failedLoadProviders: 'Échec du chargement des fournisseurs',
+      failedCompleteSetup: 'Échec de la finalisation de la configuration',
+      searchImages: 'Rechercher des images',
+      uploadedFile: 'Fichier importé',
+      add: 'Ajouter',
+      clear: 'Effacer',
+      next: 'Suivant',
+      newChat: 'Nouveau chat',
+      thinkingProcess: 'Processus de réflexion',
+      searchVideos: 'Rechercher des vidéos',
+      video: 'Vidéo',
+      askFollowUp: 'Poser une question de suivi',
+      choose: 'Choisir...',
+      webSearch: 'Recherche web,',
+      chatModelDescription: 'Choisissez le modèle à utiliser pour générer les réponses',
+      embeddingModelDescription: 'Choisissez le modèle à utiliser pour générer les embeddings',
+    },
     outputsPage: {
       outputLibrary: 'Bibliothèque de sorties',
       title: 'Sorties',
@@ -1152,6 +1255,7 @@ export const dictionaries = {
         'Cette sortie est encore un brouillon. Ajoutez du contenu manuellement ou relancez l’automatisation pour générer une nouvelle version.',
       couldNotOpenPrintWindow:
         'Impossible d’ouvrir la fenêtre d’impression. Veuillez autoriser les fenêtres pop-up pour Etherana SX.',
+      chooseReusableMiniTool: 'Choisissez un mini-outil réutilisable.',
     },
     models: {
       selectModels: 'Choisir les modèles',
@@ -1201,6 +1305,7 @@ export type TranslationKey =
   | `appsPage.${keyof typeof dictionaries.en.appsPage}`
   | `automationsPage.${keyof typeof dictionaries.en.automationsPage}`
   | `vaultPage.${keyof typeof dictionaries.en.vaultPage}`
+  | `sharedUi.${keyof typeof dictionaries.en.sharedUi}`
   | `models.${keyof typeof dictionaries.en.models}`;
 
 export const getTranslation = (locale: Locale, key: TranslationKey) => {

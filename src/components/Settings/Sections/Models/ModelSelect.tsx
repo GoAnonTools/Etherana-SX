@@ -3,6 +3,7 @@ import { ConfigModelProvider } from '@/lib/config/types';
 import { useChat } from '@/lib/hooks/useChat';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 const ModelSelect = ({
   providers,
@@ -11,6 +12,7 @@ const ModelSelect = ({
   providers: ConfigModelProvider[];
   type: 'chat' | 'embedding';
 }) => {
+  const { t } = useI18n();
   const [selectedModel, setSelectedModel] = useState<string>(
     type === 'chat'
       ? `${localStorage.getItem('chatModelProviderId')}/${localStorage.getItem('chatModelKey')}`
@@ -64,8 +66,8 @@ const ModelSelect = ({
           </h4>
           <p className="text-[11px] lg:text-xs text-black/50 dark:text-white/50">
             {type === 'chat'
-              ? 'Choose which model to use for generating responses'
-              : 'Choose which model to use for generating embeddings'}
+              ? t('sharedUi.chatModelDescription')
+              : t('sharedUi.embeddingModelDescription')}
           </p>
         </div>
         <Select

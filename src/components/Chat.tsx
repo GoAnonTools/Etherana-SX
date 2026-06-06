@@ -1,5 +1,6 @@
 'use client';
 
+import { useI18n } from '@/lib/i18n/useI18n';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import MessageInput from './MessageInput';
@@ -8,6 +9,7 @@ import MessageBoxLoading from './MessageBoxLoading';
 import { useChat } from '@/lib/hooks/useChat';
 
 const Chat = () => {
+  const { t } = useI18n();
   const { sections, loading, messageAppeared, messages } = useChat();
 
   const [dividerWidth, setDividerWidth] = useState(0);
@@ -103,15 +105,15 @@ const Chat = () => {
             <div className="flex justify-end">
               <button
                 type="button"
-                aria-label="New chat"
-                title="New chat"
+                aria-label={t('sharedUi.newChat')}
+                title={t('sharedUi.newChat')}
                 onClick={() => {
                   window.location.assign('/');
                 }}
                 className="inline-flex items-center gap-2 rounded-full border border-light-200 dark:border-dark-200 bg-light-secondary/95 dark:bg-dark-secondary/95 px-3 py-1.5 text-xs font-semibold text-black/70 dark:text-white/70 shadow-sm shadow-light-200/10 dark:shadow-black/20 backdrop-blur transition hover:text-black dark:hover:text-white hover:border-sky-400/60 active:scale-95"
               >
                 <Plus size={14} />
-                <span>New chat</span>
+                <span>{t('sharedUi.newChat')}</span>
               </button>
             </div>
             <MessageInput />

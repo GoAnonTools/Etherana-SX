@@ -1,3 +1,4 @@
+import { useI18n } from '@/lib/i18n/useI18n';
 /* eslint-disable @next/next/no-img-element */
 import {
   Dialog,
@@ -11,6 +12,7 @@ import { Fragment, useState } from 'react';
 import { Chunk } from '@/lib/types';
 
 const MessageSources = ({ sources }: { sources: Chunk[] }) => {
+  const { t } = useI18n();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const closeModal = () => {
@@ -52,7 +54,7 @@ const MessageSources = ({ sources }: { sources: Chunk[] }) => {
               )}
               <p className="text-xs text-black/50 dark:text-white/50 overflow-hidden whitespace-nowrap text-ellipsis">
                 {source.metadata.url.includes('file_id://')
-                  ? 'Uploaded File'
+                  ? t('sharedUi.uploadedFile')
                   : source.metadata.url.replace(/.+\/\/|www.|\..+/g, '')}
               </p>
             </div>

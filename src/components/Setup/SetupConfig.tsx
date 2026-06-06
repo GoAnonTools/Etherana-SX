@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import AddProvider from '../Settings/Sections/Models/AddProviderDialog';
 import ModelProvider from '../Settings/Sections/Models/ModelProvider';
 import ModelSelect from '@/components/Settings/Sections/Models/ModelSelect';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 const SetupConfig = ({
   configSections,
@@ -20,6 +21,7 @@ const SetupConfig = ({
   setupState: number;
   setSetupState: (state: number) => void;
 }) => {
+  const { t } = useI18n();
   const [providers, setProviders] = useState<ConfigModelProvider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFinishing, setIsFinishing] = useState(false);
@@ -35,7 +37,7 @@ const SetupConfig = ({
         setProviders(data.providers || []);
       } catch (error) {
         console.error('Error fetching providers:', error);
-        toast.error('Failed to load providers');
+        toast.error(t('sharedUi.failedLoadProviders'));
       } finally {
         setIsLoading(false);
       }
@@ -58,7 +60,7 @@ const SetupConfig = ({
       window.location.reload();
     } catch (error) {
       console.error('Error completing setup:', error);
-      toast.error('Failed to complete setup');
+      toast.error(t('sharedUi.failedCompleteSetup'));
       setIsFinishing(false);
     }
   };
@@ -101,7 +103,7 @@ const SetupConfig = ({
               {isLoading ? (
                 <div className="flex items-center justify-center py-8 md:py-12">
                   <p className="text-xs sm:text-sm text-black/50 dark:text-white/50">
-                    Loading providers...
+                    {t('sharedUi.loadingProviders')}
                   </p>
                 </div>
               ) : visibleProviders.length === 0 ? (
@@ -146,10 +148,10 @@ const SetupConfig = ({
             <div className="flex flex-row justify-between items-center mb-4 md:mb-6 pb-3 md:pb-4 border-b border-light-200 dark:border-dark-200">
               <div>
                 <p className="text-xs sm:text-sm font-medium text-black dark:text-white">
-                  Select models
+                  {t('sharedUi.selectModels')}
                 </p>
                 <p className="text-[10px] sm:text-xs text-black/50 dark:text-white/50 mt-0.5">
-                  Select models which you wish to use.
+                  {t('sharedUi.selectModelsDescription')}
                 </p>
               </div>
             </div>
@@ -178,7 +180,7 @@ const SetupConfig = ({
             disabled={!hasProviders || isLoading}
             className="flex flex-row items-center gap-1.5 md:gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-lg bg-[#24A0ED] text-white hover:bg-[#1e8fd1] active:scale-95 transition-all duration-200 font-medium text-xs sm:text-sm disabled:bg-light-200 dark:disabled:bg-dark-200 disabled:text-black/40 dark:disabled:text-white/40 disabled:cursor-not-allowed disabled:active:scale-100"
           >
-            <span>Next</span>
+            <span>{t('sharedUi.next')}</span>
             <ArrowRight className="w-4 h-4 md:w-[18px] md:h-[18px]" />
           </motion.button>
         )}

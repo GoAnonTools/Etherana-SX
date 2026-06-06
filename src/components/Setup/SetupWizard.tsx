@@ -1,5 +1,6 @@
 'use client';
 
+import { useI18n } from '@/lib/i18n/useI18n';
 import { useEffect, useState } from 'react';
 import { UIConfigSections } from '@/lib/config/types';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -10,6 +11,7 @@ const SetupWizard = ({
 }: {
   configSections: UIConfigSections;
 }) => {
+  const { t } = useI18n();
   const [showWelcome, setShowWelcome] = useState(true);
   const [showSetup, setShowSetup] = useState(false);
   const [setupState, setSetupState] = useState(1);
@@ -57,7 +59,7 @@ const SetupWizard = ({
                 animate={{ opacity: 1 }}
                 className="text-black/70 dark:text-white/70 text-sm md:text-lg xl:text-2xl mt-2"
               >
-                <span className="font-light">Web search,</span>{' '}
+                <span className="font-light">{t('sharedUi.webSearch')}</span>{' '}
                 <span className="font-light font-['PP_Editorial'] italic">
                   reimagined
                 </span>

@@ -137,7 +137,7 @@ const ModelProvider = ({
                 .length === 0 && !hasError ? (
               <div className="flex flex-col items-center justify-center py-4 px-4 rounded-lg border-2 border-dashed border-light-200 dark:border-dark-200 bg-light-secondary/20 dark:bg-dark-secondary/20">
                 <p className="text-xs text-black/50 dark:text-white/50 text-center">
-                  No chat models configured
+                  {t('sharedUi.noChatModelsConfigured')}
                 </p>
               </div>
             ) : modelProvider.chatModels.filter((m) => m.key !== 'error')

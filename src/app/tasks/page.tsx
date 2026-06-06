@@ -689,7 +689,7 @@ const AutomationBuilder = ({
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="AI News Article"
+              placeholder={t('automationsPage.automationNamePlaceholder')}
               className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
             />
           </label>
@@ -701,7 +701,7 @@ const AutomationBuilder = ({
             <input
               value={category}
               onChange={(event) => setCategory(event.target.value)}
-              placeholder="Research, Marketing, Sales..."
+              placeholder={t('automationsPage.categoryPlaceholder')}
               className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
             />
           </label>
@@ -714,7 +714,7 @@ const AutomationBuilder = ({
           <input
             value={frequency}
             onChange={(event) => setFrequency(event.target.value)}
-            placeholder="Every Tuesday, Every morning, Weekly..."
+            placeholder={t('automationsPage.frequencyPlaceholder')}
             className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
           />
         </label>
@@ -865,7 +865,7 @@ const AutomationBuilder = ({
           <textarea
             value={purpose}
             onChange={(event) => setPurpose(event.target.value)}
-            placeholder="Track AI development news and turn the best stories into a weekly article."
+            placeholder={t('automationsPage.objectivePlaceholder')}
             rows={3}
             className="w-full resize-none rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
           />
@@ -878,7 +878,7 @@ const AutomationBuilder = ({
           <textarea
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
-            placeholder="Every Tuesday, find and collect important news about AI development, analyze the most relevant stories, then write a clear article for entrepreneurs."
+            placeholder={t('automationsPage.agentInstructionsPlaceholder')}
             rows={5}
             className="w-full resize-none rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
           />
@@ -891,7 +891,7 @@ const AutomationBuilder = ({
           <textarea
             value={output}
             onChange={(event) => setOutput(event.target.value)}
-            placeholder="A structured article with title, intro, key news, analysis, and practical implications."
+            placeholder={t('automationsPage.expectedOutputPlaceholder')}
             rows={3}
             className="w-full resize-none rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
           />

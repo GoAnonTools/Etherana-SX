@@ -1,4 +1,5 @@
 'use client';
+
 import { captureAutomationOutputContent } from '@/lib/vault/localVault';
 
 import { Message } from '@/components/ChatWindow';

@@ -1,5 +1,6 @@
 'use client';
 
+import { useI18n } from '@/lib/i18n/useI18n';
 import { Cpu, Loader2, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
@@ -9,6 +10,7 @@ import { useChat } from '@/lib/hooks/useChat';
 import { AnimatePresence, motion } from 'motion/react';
 
 const ModelSelector = () => {
+  const { t } = useI18n();
   const [providers, setProviders] = useState<MinimalProvider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -104,7 +106,7 @@ const ModelSelector = () => {
                       />
                       <input
                         type="text"
-                        placeholder="Search models..."
+                        placeholder={t('sharedUi.searchModels')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-8 pr-3 py-2 bg-light-secondary dark:bg-dark-secondary rounded-lg placeholder:text-xs placeholder:-translate-y-[1.5px] text-xs text-black dark:text-white placeholder:text-black/40 dark:placeholder:text-white/40 focus:outline-none border border-transparent transition duration-200"
@@ -123,8 +125,8 @@ const ModelSelector = () => {
                     ) : filteredProviders.length === 0 ? (
                       <div className="text-center py-16 px-4 text-black/60 dark:text-white/60 text-sm">
                         {searchQuery
-                          ? 'No models found'
-                          : 'No chat models configured'}
+                          ? t('sharedUi.noModelsFound')
+                          : t('sharedUi.noChatModelsConfigured')}
                       </div>
                     ) : (
                       <div className="flex flex-col">
