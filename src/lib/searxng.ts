@@ -5,6 +5,7 @@ export interface SearxngSearchOptions {
   engines?: string[];
   language?: string;
   pageno?: number;
+  time_range?: 'day' | 'week' | 'month' | 'year';
 }
 
 interface SearxngSearchResult {

@@ -1,31 +1,67 @@
-import { Discover } from '@/app/discover/page';
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import type { Discover } from '@/app/discover/page';
 
 const getSafeThumbnailUrl = (thumbnail?: string | null) => {
   if (!thumbnail || typeof thumbnail !== 'string') {
-    return '';
+    return null;
+  }
+
+  const value = thumbnail.trim();
+
+  if (!value) {
+    return null;
   }
 
   try {
-    const parsedUrl = new URL(thumbnail);
-    const id = parsedUrl.searchParams.get('id');
-
-    if (id) {
-      return `${parsedUrl.origin}${parsedUrl.pathname}?id=${id}`;
+    if (value.startsWith('/')) {
+      return value;
     }
 
-    return `${parsedUrl.origin}${parsedUrl.pathname}`;
+    const normalizedUrl = value.startsWith('//') ? `https:${value}` : value;
+    const parsedUrl = new URL(normalizedUrl);
+
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      return null;
+    }
+
+    return parsedUrl.href;
   } catch {
-    if (thumbnail.startsWith('/')) {
-      return thumbnail;
-    }
+    return null;
+  }
+};
 
-    return '';
+const getSourceLabel = (url?: string | null) => {
+  if (!url || typeof url !== 'string') {
+    return 'Discover';
+  }
+
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, '');
+
+    return hostname || 'Discover';
+  } catch {
+    return 'Discover';
   }
 };
 
 const SmallNewsCard = ({ item }: { item: Discover }) => {
-  const thumbnail = getSafeThumbnailUrl(item.thumbnail);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  const thumbnail = useMemo(
+    () => getSafeThumbnailUrl(item.thumbnail),
+    [item.thumbnail],
+  );
+
+  const sourceLabel = useMemo(() => getSourceLabel(item.url), [item.url]);
+  const imageUrl = imageFailed ? null : thumbnail;
+  const initial = item.title?.trim()?.charAt(0)?.toUpperCase() || 'E';
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [thumbnail]);
 
   return (
     <Link
@@ -34,37 +70,27 @@ const SmallNewsCard = ({ item }: { item: Discover }) => {
       target="_blank"
     >
       <div className="relative aspect-video overflow-hidden bg-light-200 dark:bg-dark-200">
-        {thumbnail ? (
+        {imageUrl ? (
           <img
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            src={thumbnail}
+            src={imageUrl}
             alt={item.title}
-            onError={(event) => {
-              const target = event.currentTarget;
-              target.style.display = 'none';
-
-              const placeholder = target.nextElementSibling as HTMLDivElement | null;
-
-              if (placeholder) {
-                placeholder.style.display = 'flex';
-              }
-            }}
+            loading="lazy"
+            onError={() => setImageFailed(true)}
           />
-        ) : null}
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-cyan-500/15 via-light-200 to-purple-500/15 dark:from-cyan-400/15 dark:via-dark-200 dark:to-purple-400/15">
+            <div className="flex max-w-[80%] flex-col items-center rounded-2xl border border-black/10 bg-white/35 px-5 py-4 text-center shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/50 text-2xl font-bold text-black/30 shadow-sm dark:bg-white/10 dark:text-white/30">
+                {initial}
+              </span>
 
-        <div
-          className="absolute inset-0 items-center justify-center bg-gradient-to-br from-cyan-500/15 via-light-200 to-purple-500/15 dark:from-cyan-400/15 dark:via-dark-200 dark:to-purple-400/15"
-          style={{ display: thumbnail ? 'none' : 'flex' }}
-        >
-          <div className="rounded-2xl border border-black/10 bg-white/20 px-4 py-3 text-center backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
-            <span className="block text-3xl font-bold text-black/25 dark:text-white/25">
-              {item.title?.charAt(0)?.toUpperCase() || '?'}
-            </span>
-            <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.16em] text-black/35 dark:text-white/35">
-              Discover
-            </span>
+              <span className="mt-3 max-w-full truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-black/40 dark:text-white/40">
+                {sourceLabel}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="p-4">

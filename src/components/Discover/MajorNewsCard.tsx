@@ -1,24 +1,109 @@
-import { Discover } from '@/app/discover/page';
-import Link from 'next/link';
+'use client';
 
-const ThumbnailImage = ({ thumbnail, title }: { thumbnail: string; title: string }) => {
-  // Try to use the thumbnail directly — avoid URL parsing that breaks on
-  // non-standard thumbnail URLs returned by SearXNG engines.
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import type { Discover } from '@/app/discover/page';
+
+const getSafeThumbnailUrl = (thumbnail?: string | null) => {
+  if (!thumbnail || typeof thumbnail !== 'string') {
+    return null;
+  }
+
+  const value = thumbnail.trim();
+
+  if (!value) {
+    return null;
+  }
+
+  try {
+    if (value.startsWith('/')) {
+      return value;
+    }
+
+    const normalizedUrl = value.startsWith('//') ? `https:${value}` : value;
+    const parsedUrl = new URL(normalizedUrl);
+
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      return null;
+    }
+
+    return parsedUrl.href;
+  } catch {
+    return null;
+  }
+};
+
+const getSourceLabel = (url?: string | null) => {
+  if (!url || typeof url !== 'string') {
+    return 'Discover';
+  }
+
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, '');
+
+    return hostname || 'Discover';
+  } catch {
+    return 'Discover';
+  }
+};
+
+const MajorThumbnail = ({ item }: { item: Discover }) => {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  const thumbnail = useMemo(
+    () => getSafeThumbnailUrl(item.thumbnail),
+    [item.thumbnail],
+  );
+
+  const sourceLabel = useMemo(() => getSourceLabel(item.url), [item.url]);
+  const imageUrl = imageFailed ? null : thumbnail;
+  const initial = item.title?.trim()?.charAt(0)?.toUpperCase() || 'E';
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [thumbnail]);
+
   return (
-    <img
-      className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
-      src={thumbnail}
-      alt={title}
-      onError={(e) => {
-        // If the image fails to load, replace with a placeholder
-        const target = e.target as HTMLImageElement;
-        target.style.display = 'none';
-        const placeholder = target.nextElementSibling as HTMLDivElement;
-        if (placeholder) placeholder.style.display = 'flex';
-      }}
-    />
+    <div className="relative h-full w-80 flex-shrink-0 overflow-hidden rounded-2xl bg-light-200 dark:bg-dark-200">
+      {imageUrl ? (
+        <img
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          src={imageUrl}
+          alt={item.title}
+          loading="lazy"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-cyan-500/15 via-light-200 to-purple-500/15 dark:from-cyan-400/15 dark:via-dark-200 dark:to-purple-400/15">
+          <div className="flex max-w-[80%] flex-col items-center rounded-3xl border border-black/10 bg-white/35 px-6 py-5 text-center shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+            <span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/50 text-4xl font-bold text-black/30 shadow-sm dark:bg-white/10 dark:text-white/30">
+              {initial}
+            </span>
+
+            <span className="mt-4 max-w-full truncate text-xs font-semibold uppercase tracking-[0.18em] text-black/40 dark:text-white/40">
+              {sourceLabel}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
+
+const MajorText = ({ item }: { item: Discover }) => (
+  <div className="flex flex-1 flex-col justify-center py-4">
+    <h2
+      className="mb-3 line-clamp-3 text-3xl font-light leading-tight transition duration-200 group-hover:text-cyan-500 dark:group-hover:text-cyan-300"
+      style={{ fontFamily: 'PP Editorial, serif' }}
+    >
+      {item.title}
+    </h2>
+
+    <p className="line-clamp-4 text-base leading-relaxed text-black/60 dark:text-white/60">
+      {item.content}
+    </p>
+  </div>
+);
 
 const MajorNewsCard = ({
   item,
@@ -28,73 +113,19 @@ const MajorNewsCard = ({
   isLeft?: boolean;
 }) => (
   <Link
-    href={`/?q=Summary: ${item.url}`}
-    className="w-full group flex flex-row items-stretch gap-6 h-60 py-3"
+    href={`/?q=${encodeURIComponent(`Summary: ${item.url}`)}`}
+    className="group flex h-60 w-full flex-row items-stretch gap-6 py-3"
     target="_blank"
   >
     {isLeft ? (
       <>
-        <div className="relative w-80 h-full overflow-hidden rounded-2xl flex-shrink-0">
-          {item.thumbnail ? (
-            <ThumbnailImage thumbnail={item.thumbnail} title={item.title} />
-          ) : null}
-          <div
-            className="absolute inset-0 bg-gradient-to-br from-cyan-500/15 via-light-200 to-purple-500/15 dark:from-cyan-400/15 dark:via-dark-200 dark:to-purple-400/15 items-center justify-center"
-            style={{ display: item.thumbnail ? 'none' : 'flex' }}
-          >
-            <div className="rounded-3xl border border-black/10 bg-white/20 px-5 py-4 text-center backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
-              <span className="block text-4xl font-bold text-black/25 dark:text-white/25">
-                {item.title?.charAt(0)?.toUpperCase() || '?'}
-              </span>
-              <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.18em] text-black/35 dark:text-white/35">
-                Discover
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-col justify-center flex-1 py-4">
-          <h2
-            className="text-3xl font-light mb-3 leading-tight line-clamp-3 group-hover:text-cyan-500 dark:group-hover:text-cyan-300 transition duration-200"
-            style={{ fontFamily: 'PP Editorial, serif' }}
-          >
-            {item.title}
-          </h2>
-          <p className="text-black/60 dark:text-white/60 text-base leading-relaxed line-clamp-4">
-            {item.content}
-          </p>
-        </div>
+        <MajorThumbnail item={item} />
+        <MajorText item={item} />
       </>
     ) : (
       <>
-        <div className="flex flex-col justify-center flex-1 py-4">
-          <h2
-            className="text-3xl font-light mb-3 leading-tight line-clamp-3 group-hover:text-cyan-500 dark:group-hover:text-cyan-300 transition duration-200"
-            style={{ fontFamily: 'PP Editorial, serif' }}
-          >
-            {item.title}
-          </h2>
-          <p className="text-black/60 dark:text-white/60 text-base leading-relaxed line-clamp-4">
-            {item.content}
-          </p>
-        </div>
-        <div className="relative w-80 h-full overflow-hidden rounded-2xl flex-shrink-0">
-          {item.thumbnail ? (
-            <ThumbnailImage thumbnail={item.thumbnail} title={item.title} />
-          ) : null}
-          <div
-            className="absolute inset-0 bg-gradient-to-br from-cyan-500/15 via-light-200 to-purple-500/15 dark:from-cyan-400/15 dark:via-dark-200 dark:to-purple-400/15 items-center justify-center"
-            style={{ display: item.thumbnail ? 'none' : 'flex' }}
-          >
-            <div className="rounded-3xl border border-black/10 bg-white/20 px-5 py-4 text-center backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
-              <span className="block text-4xl font-bold text-black/25 dark:text-white/25">
-                {item.title?.charAt(0)?.toUpperCase() || '?'}
-              </span>
-              <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.18em] text-black/35 dark:text-white/35">
-                Discover
-              </span>
-            </div>
-          </div>
-        </div>
+        <MajorText item={item} />
+        <MajorThumbnail item={item} />
       </>
     )}
   </Link>
