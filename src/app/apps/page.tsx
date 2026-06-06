@@ -26,6 +26,12 @@ import {
 
 type AppInputValues = Record<string, string>;
 
+type AppSpace = {
+  id: string;
+  name: string;
+  description?: string;
+};
+
 const buildPromptFromTemplate = (
   app: SmallAppTemplate,
   values: AppInputValues,
@@ -285,6 +291,26 @@ const AppRunner = ({
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [savedOutputId, setSavedOutputId] = useState('');
+  const [spaces, setSpaces] = useState<AppSpace[]>([]);
+  const [outputDestination, setOutputDestination] = useState('automation');
+
+  useEffect(() => {
+    const fetchSpacesForApps = async () => {
+      try {
+        const res = await fetch('/api/spaces');
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        setSpaces(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Failed to fetch Spaces for Apps:', err);
+      }
+    };
+
+    fetchSpacesForApps();
+  }, []);
 
   const canRun = useMemo(() => {
     return app.inputs.every((input) => {
@@ -519,6 +545,19 @@ const AppRunner = ({
     }, 250);
   };
 
+  const getSelectedOutputDestinationLabel = () => {
+    if (outputDestination === 'automation') {
+      return 'App outputs';
+    }
+
+    if (outputDestination.startsWith('space:')) {
+      const spaceId = outputDestination.replace('space:', '');
+      return spaces.find((space) => space.id === spaceId)?.name ?? 'Space';
+    }
+
+    return 'App outputs';
+  };
+
   const handleSaveOutput = () => {
     if (!generatedOutput.trim()) return;
 
@@ -531,8 +570,8 @@ const AppRunner = ({
       automationName: app.name,
       title: `${app.name} — ${app.outputType}`,
       outputType: app.outputType,
-      outputDestination: 'automation',
-      outputDestinationLabel: 'App outputs',
+      outputDestination,
+      outputDestinationLabel: getSelectedOutputDestinationLabel(),
       status: 'ready',
       createdAt: now,
       updatedAt: now,
@@ -694,6 +733,34 @@ const AppRunner = ({
               {app.outputType}
             </p>
           </div>
+
+          <div className="rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-black/40 dark:text-white/40">
+                Save destination
+              </span>
+
+              <select
+                value={outputDestination}
+                onChange={(event) => {
+                  setOutputDestination(event.target.value);
+                  setSavedOutputId('');
+                }}
+                className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
+              >
+                <option value="automation">App outputs</option>
+                {spaces.map((space) => (
+                  <option key={space.id} value={`space:${space.id}`}>
+                    {space.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <p className="mt-3 text-xs leading-relaxed text-black/45 dark:text-white/45">
+              Saved App outputs can stay in the general output library or be attached directly to a Space.
+            </p>
+          </div>
         </aside>
       </section>
 
@@ -770,7 +837,11 @@ const AppRunner = ({
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black disabled:cursor-not-allowed disabled:opacity-40 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
               >
                 <Save size={16} />
-                {savedOutputId ? 'Saved' : 'Save to Outputs'}
+                {savedOutputId
+                  ? 'Saved'
+                  : outputDestination === 'automation'
+                    ? 'Save to Outputs'
+                    : 'Save to Space'}
               </button>
 
               {savedOutputId && (
@@ -779,6 +850,15 @@ const AppRunner = ({
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
                 >
                   Open Output
+                </a>
+              )}
+
+              {savedOutputId && outputDestination.startsWith('space:') && (
+                <a
+                  href={`/spaces/${outputDestination.replace('space:', '')}`}
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+                >
+                  Open Space
                 </a>
               )}
             </div>

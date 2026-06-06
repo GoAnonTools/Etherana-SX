@@ -238,7 +238,6 @@ const SpaceDetailPage = () => {
     useState<SpaceSection>('outputs');
 
   const refreshLocalWorkspaceData = () => {
-    setOutputs(readAutomationOutputs());
     setCustomAutomations(readCustomAutomations());
   };
 
@@ -363,6 +362,49 @@ const SpaceDetailPage = () => {
       window.removeEventListener(automationStorageChangedEvent, refresh);
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const refreshSpaceOutputsFromStorageApi = async () => {
+      try {
+        const res = await fetch('/api/automations/storage');
+
+        if (!res.ok) {
+          throw new Error('Could not load automation storage.');
+        }
+
+        const data = await res.json();
+        const apiOutputs = Array.isArray(data.outputs) ? data.outputs : [];
+
+        if (!cancelled) {
+          setOutputs(apiOutputs);
+        }
+      } catch (err) {
+        console.warn(
+          'Could not load outputs from storage API, using local fallback:',
+          err,
+        );
+
+        if (!cancelled) {
+          setOutputs(readAutomationOutputs());
+        }
+      }
+    };
+
+    refreshSpaceOutputsFromStorageApi();
+
+    const eventName = getAutomationStorageChangedEventName();
+
+    window.addEventListener(eventName, refreshSpaceOutputsFromStorageApi);
+    window.addEventListener('focus', refreshSpaceOutputsFromStorageApi);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener(eventName, refreshSpaceOutputsFromStorageApi);
+      window.removeEventListener('focus', refreshSpaceOutputsFromStorageApi);
+    };
+  }, [spaceId]);
 
 const handleUpdateSpace = async () => {
   if (!space) return;
@@ -620,13 +662,16 @@ const handleDeleteSpace = async () => {
     }
   };
 
-  const spaceOutputs = useMemo(() => {
-    if (!space) return [];
+  const currentSpaceOutputDestination = `space:${spaceId}`;
 
+  const spaceKnowledgeCount =
+    (space?.files.length ?? 0) + notes.length + savedLinks.length;
+
+  const spaceOutputs = useMemo(() => {
     return outputs.filter(
-      (output) => output.outputDestination === `space:${space.id}`,
+      (output) => output.outputDestination === currentSpaceOutputDestination,
     );
-  }, [outputs, space]);
+  }, [currentSpaceOutputDestination, outputs]);
 
   const relatedAutomations = useMemo(() => {
     if (!space) return [];
@@ -638,7 +683,7 @@ const handleDeleteSpace = async () => {
     const customRelated = customAutomations
       .filter((automation) => {
         return (
-          automation.outputDestination === `space:${space.id}` ||
+          automation.outputDestination === currentSpaceOutputDestination ||
           outputAutomationIds.has(automation.id)
         );
       })
@@ -679,7 +724,7 @@ const handleDeleteSpace = async () => {
       });
 
     return [...customRelated, ...outputOnlyAutomations];
-  }, [customAutomations, space, spaceOutputs]);
+  }, [customAutomations, currentSpaceOutputDestination, space, spaceOutputs]);
 
   const sections = [
     {
@@ -692,7 +737,7 @@ const handleDeleteSpace = async () => {
       id: 'knowledge' as const,
       label: 'Knowledge',
       icon: BookOpen,
-      count: (space?.files.length ?? 0) + notes.length + savedLinks.length,
+      count: spaceKnowledgeCount,
     },
     {
       id: 'outputs' as const,
@@ -916,13 +961,13 @@ const handleDeleteSpace = async () => {
               {spaceOutputs.length === 0 ? (
                 <EmptyState
                   title="No outputs saved in this Space yet."
-                  description="Run an automation and choose this Space as the save destination. Generated articles, reports, summaries, and other deliverables will appear here."
+                  description="Run an automation or Small App and choose this Space as the save destination. Generated articles, proposals, reports, summaries, and other deliverables will appear here."
                   action={
                     <Link
-                      href="/tasks"
+                      href="/apps"
                       className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
                     >
-                      Open Automations
+                      Open Apps
                       <ArrowRight size={16} />
                     </Link>
                   }
@@ -1356,7 +1401,7 @@ const handleDeleteSpace = async () => {
 
               <div className="rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
                 <p className="text-2xl font-bold text-black dark:text-white">
-                  {space.files.length}
+                  {spaceKnowledgeCount}
                 </p>
                 <p className="text-xs text-black/45 dark:text-white/45">
                   Knowledge
