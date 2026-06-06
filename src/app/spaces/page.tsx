@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useI18n } from '@/lib/i18n/useI18n';
 import { useEffect, useMemo, useState } from 'react';
 
 interface Space {
@@ -260,7 +261,7 @@ const getSpaceInitials = (name: string) => {
   return words.map((word) => word[0]?.toUpperCase()).join('') || 'S';
 };
 
-const formatDate = (date: string) => {
+const formatDate = (date: string, unknownDateLabel: string) => {
   try {
     return new Date(date).toLocaleDateString(undefined, {
       month: 'short',
@@ -268,12 +269,13 @@ const formatDate = (date: string) => {
       year: 'numeric',
     });
   } catch {
-    return 'Unknown date';
+    return unknownDateLabel;
   }
 };
 
 const SpacesPage = () => {
   const router = useRouter();
+  const { t } = useI18n();
 
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [archivedSpaces, setArchivedSpaces] = useState<Space[]>([]);
@@ -406,7 +408,7 @@ const SpacesPage = () => {
       router.push(`/spaces/${spaceId}`);
     } catch (error) {
       console.error('Failed to create Space:', error);
-      alert('Could not create this Space.');
+      alert(t('spacesPage.couldNotCreateSpace'));
     } finally {
       setCreatingSpace(false);
     }
@@ -443,7 +445,7 @@ const SpacesPage = () => {
       router.push(`/spaces/${spaceId}`);
     } catch (error) {
       console.error('Failed to use Space template:', error);
-      alert('Could not create a Space from this template.');
+      alert(t('spacesPage.couldNotCreateFromTemplate'));
     } finally {
       setCreatingTemplateId(null);
     }
@@ -455,31 +457,30 @@ const SpacesPage = () => {
         <header className="rounded-[2rem] border border-light-200 bg-light-secondary p-7 shadow-sm dark:border-dark-200 dark:bg-dark-secondary">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-light-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-black/45 dark:border-dark-200 dark:text-white/45">
             <LayoutGrid size={14} />
-            Spaces
+            {t('spacesPage.badge')}
           </div>
 
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h1 className="text-4xl font-bold tracking-tight text-black dark:text-white md:text-5xl">
-                Project workspaces
+                {t('spacesPage.title')}
               </h1>
 
               <p className="mt-4 max-w-3xl text-base leading-relaxed text-black/60 dark:text-white/60">
-                Use Spaces to keep conversations, files, notes, links, outputs,
-                and automations together for each project.
+                {t('spacesPage.subtitle')}
               </p>
             </div>
 
             <div className="rounded-3xl bg-light-primary p-4 dark:bg-dark-primary lg:w-[360px]">
               <p className="mb-3 text-sm font-semibold text-black dark:text-white">
-                Create blank Space
+                {t('spacesPage.createBlankSpace')}
               </p>
 
               <div className="space-y-3">
                 <input
                   value={newSpaceName}
                   onChange={(event) => setNewSpaceName(event.target.value)}
-                  placeholder="Space name"
+                  placeholder={t('spacesPage.spaceName')}
                   className="w-full rounded-2xl border border-light-200 bg-light-secondary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-secondary dark:text-white dark:focus:border-white"
                 />
 
@@ -488,7 +489,7 @@ const SpacesPage = () => {
                   onChange={(event) =>
                     setNewSpaceDescription(event.target.value)
                   }
-                  placeholder="Short description"
+                  placeholder={t('spacesPage.shortDescription')}
                   className="w-full rounded-2xl border border-light-200 bg-light-secondary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-secondary dark:text-white dark:focus:border-white"
                 />
 
@@ -503,7 +504,7 @@ const SpacesPage = () => {
                   ) : (
                     <Plus size={16} />
                   )}
-                  Create Space
+                  {t('spacesPage.createSpace')}
                 </button>
               </div>
             </div>
@@ -520,7 +521,7 @@ const SpacesPage = () => {
                 : 'bg-light-secondary text-black/55 hover:text-black dark:bg-dark-secondary dark:text-white/55 dark:hover:text-white'
             }`}
           >
-            My Spaces · {spaces.length}
+            {t('spacesPage.mySpaces')} · {spaces.length}
           </button>
 
           <button
@@ -532,7 +533,7 @@ const SpacesPage = () => {
                 : 'bg-light-secondary text-black/55 hover:text-black dark:bg-dark-secondary dark:text-white/55 dark:hover:text-white'
             }`}
           >
-            Archived · {archivedSpaces.length}
+            {t('spacesPage.archived')} · {archivedSpaces.length}
           </button>
 
           <button
@@ -544,7 +545,7 @@ const SpacesPage = () => {
                 : 'bg-light-secondary text-black/55 hover:text-black dark:bg-dark-secondary dark:text-white/55 dark:hover:text-white'
             }`}
           >
-            Templates · {SPACE_TEMPLATES.length}
+            {t('spacesPage.templates')} · {SPACE_TEMPLATES.length}
           </button>
         </div>
 
@@ -562,12 +563,11 @@ const SpacesPage = () => {
                 />
 
                 <h2 className="text-xl font-semibold text-black dark:text-white">
-                  No Spaces yet
+                  {t('spacesPage.noSpacesYet')}
                 </h2>
 
                 <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-black/55 dark:text-white/55">
-                  Create a blank Space or use a template to start with a real
-                  project structure.
+                  {t('spacesPage.noSpacesDescription')}
                 </p>
 
                 <button
@@ -575,7 +575,7 @@ const SpacesPage = () => {
                   onClick={() => setActiveTab('templates')}
                   className="mt-5 inline-flex items-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
                 >
-                  Browse templates
+                  {t('spacesPage.browseTemplates')}
                   <ArrowRight size={16} />
                 </button>
               </div>
@@ -593,7 +593,7 @@ const SpacesPage = () => {
                       </div>
 
                       <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-medium text-black/45 dark:bg-dark-primary dark:text-white/45">
-                        {formatDate(space.createdAt)}
+                        {formatDate(space.createdAt, t('spacesPage.unknownDate'))}
                       </span>
                     </div>
 
@@ -603,18 +603,18 @@ const SpacesPage = () => {
 
                     <p className="mt-3 line-clamp-3 flex-1 text-sm leading-relaxed text-black/55 dark:text-white/55">
                       {space.description ||
-                        'A project Space for conversations, knowledge, notes, links, outputs, and automations.'}
+                        t('spacesPage.defaultSpaceDescription')}
                     </p>
 
                     <div className="mt-5 flex flex-wrap gap-2">
                       <span className="inline-flex items-center gap-1 rounded-full bg-light-primary px-3 py-1 text-xs text-black/45 dark:bg-dark-primary dark:text-white/45">
                         <BookOpen size={12} />
-                        {space.files?.length ?? 0} files
+                        {space.files?.length ?? 0} {(space.files?.length ?? 0) === 1 ? t('spacesPage.fileSingular') : t('spacesPage.filePlural')}
                       </span>
                     </div>
 
                     <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
-                      Open Space
+                      {t('spacesPage.openSpace')}
                       <ArrowRight
                         size={16}
                         className="transition group-hover:translate-x-1"
@@ -632,12 +632,11 @@ const SpacesPage = () => {
             {sortedArchivedSpaces.length === 0 ? (
               <div className="rounded-[2rem] border border-dashed border-light-200 bg-light-secondary p-10 text-center dark:border-dark-200 dark:bg-dark-secondary">
                 <h2 className="text-xl font-semibold text-black dark:text-white">
-                  No archived Spaces
+                  {t('spacesPage.noArchivedSpaces')}
                 </h2>
 
                 <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-black/55 dark:text-white/55">
-                  Archived Spaces will appear here. They are hidden from My Spaces
-                  but can still be opened and restored.
+                  {t('spacesPage.noArchivedDescription')}
                 </p>
               </div>
             ) : (
@@ -654,7 +653,7 @@ const SpacesPage = () => {
                       </div>
 
                       <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-medium text-black/45 dark:bg-dark-primary dark:text-white/45">
-                        Archived
+                        {t('spacesPage.archived')}
                       </span>
                     </div>
 
@@ -664,11 +663,11 @@ const SpacesPage = () => {
 
                     <p className="mt-3 line-clamp-3 flex-1 text-sm leading-relaxed text-black/55 dark:text-white/55">
                       {space.description ||
-                        'Archived project Space.'}
+                        t('spacesPage.archivedProjectSpace')}
                     </p>
 
                     <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-black dark:text-white">
-                      Open archived Space
+                      {t('spacesPage.openArchivedSpace')}
                       <ArrowRight
                         size={16}
                         className="transition group-hover:translate-x-1"
@@ -685,12 +684,11 @@ const SpacesPage = () => {
           <section className="mt-8">
             <div className="mb-5">
               <h2 className="text-2xl font-bold text-black dark:text-white">
-                Space templates
+                {t('spacesPage.spaceTemplates')}
               </h2>
 
               <p className="mt-2 max-w-3xl text-sm leading-relaxed text-black/55 dark:text-white/55">
-                Templates are starter blueprints. Using one creates a real,
-                editable Space with default instructions and starter notes.
+                {t('spacesPage.templatesDescription')}
               </p>
             </div>
 
@@ -710,7 +708,7 @@ const SpacesPage = () => {
                       </div>
 
                       <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-medium text-black/45 dark:bg-dark-primary dark:text-white/45">
-                        Template
+                        {t('spacesPage.template')}
                       </span>
                     </div>
 
@@ -736,12 +734,12 @@ const SpacesPage = () => {
                     <div className="mt-5 grid grid-cols-2 gap-2 text-xs text-black/45 dark:text-white/45">
                       <span className="inline-flex items-center gap-1 rounded-full bg-light-primary px-3 py-2 dark:bg-dark-primary">
                         <FileText size={12} />
-                        {template.starterNotes.length} notes
+                        {template.starterNotes.length} {template.starterNotes.length === 1 ? t('spacesPage.noteSingular') : t('spacesPage.notePlural')}
                       </span>
 
                       <span className="inline-flex items-center gap-1 rounded-full bg-light-primary px-3 py-2 dark:bg-dark-primary">
                         <LinkIcon size={12} />
-                        {template.starterLinks.length} links
+                        {template.starterLinks.length} {template.starterLinks.length === 1 ? t('spacesPage.linkSingular') : t('spacesPage.linkPlural')}
                       </span>
                     </div>
 
@@ -756,7 +754,7 @@ const SpacesPage = () => {
                       ) : (
                         <Compass size={16} />
                       )}
-                      {isCreating ? 'Creating Space...' : 'Use template'}
+                      {isCreating ? t('spacesPage.creatingSpace') : t('spacesPage.useTemplate')}
                     </button>
                   </article>
                 );

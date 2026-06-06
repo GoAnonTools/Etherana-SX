@@ -32,6 +32,7 @@ import {
   readAutomationOutputs,
   readCustomAutomations,
 } from '@/lib/vault/localVault';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 interface Space {
   id: string;
@@ -210,6 +211,7 @@ const encryptSpaceVaultPayload = async (
 };
 
 const SpaceDetailPage = () => {
+  const { t } = useI18n();
   const params = useParams<{ id: string }>();
   const router = useRouter();
 
@@ -266,7 +268,7 @@ const SpaceDetailPage = () => {
       },
       body: JSON.stringify({
         kind: 'note',
-        title: noteTitle.trim() || 'Untitled note',
+        title: noteTitle.trim() || t('spaceDetail.untitledNote'),
         content: noteContent.trim(),
       }),
     });
@@ -423,14 +425,14 @@ const handleUpdateSpace = async () => {
     });
 
     if (!res.ok) {
-      throw new Error('Could not update Space.');
+      throw new Error(t('spaceDetail.updateFailed'));
     }
 
     await fetchSpaceDetails();
     setEditingSpace(false);
   } catch (error) {
     console.error('Failed to update Space:', error);
-    alert('Could not update this Space.');
+    alert(t('spaceDetail.updateFailed'));
   }
 };
 
@@ -446,7 +448,7 @@ const handleDuplicateSpace = async () => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name: `${space.name} Copy`,
+        name: `${space.name} ${t('spaceDetail.copySuffix')}`,
         description: space.description ?? '',
         instruction: space.instruction ?? '',
         files: space.files ?? [],
@@ -455,14 +457,14 @@ const handleDuplicateSpace = async () => {
 
     if (!createRes.ok) {
       const errorData = await createRes.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Could not duplicate Space.');
+      throw new Error(errorData.message || t('spaceDetail.duplicateFailed'));
     }
 
     const created = await createRes.json();
     const newSpaceId = String(created.id ?? created.space?.id ?? '');
 
     if (!newSpaceId) {
-      throw new Error('Duplicate Space was created without an id.');
+      throw new Error(t('spaceDetail.duplicateNoId'));
     }
 
     const capturesRes = await fetch(`/api/spaces/${spaceId}/captures`);
@@ -506,7 +508,7 @@ const handleDuplicateSpace = async () => {
     router.push(`/spaces/${newSpaceId}`);
   } catch (error) {
     console.error('Failed to duplicate Space:', error);
-    alert(error instanceof Error ? error.message : 'Could not duplicate this Space.');
+    alert(error instanceof Error ? error.message : t('spaceDetail.duplicateFailed'));
   } finally {
     setDuplicatingSpace(false);
   }
@@ -516,7 +518,7 @@ const handleArchiveSpace = async () => {
   if (!space) return;
 
   const confirmed = window.confirm(
-    `Archive "${space.name}"? It will be hidden from My Spaces but kept in Archived.`,
+    `${t('spaceDetail.archive')} "${space.name}"? ${t('spaceDetail.archiveConfirm')}`,
   );
 
   if (!confirmed) return;
@@ -533,13 +535,13 @@ const handleArchiveSpace = async () => {
     });
 
     if (!res.ok) {
-      throw new Error('Could not archive Space.');
+      throw new Error(t('spaceDetail.archiveFailed'));
     }
 
     router.push('/spaces');
   } catch (error) {
     console.error('Failed to archive Space:', error);
-    alert('Could not archive this Space.');
+    alert(t('spaceDetail.archiveFailed'));
   }
 };
 
@@ -558,22 +560,18 @@ const handleRestoreSpace = async () => {
     });
 
     if (!res.ok) {
-      throw new Error('Could not restore Space.');
+      throw new Error(t('spaceDetail.restoreFailed'));
     }
 
     await fetchSpaceDetails();
   } catch (error) {
     console.error('Failed to restore Space:', error);
-    alert('Could not restore this Space.');
+    alert(t('spaceDetail.restoreFailed'));
   }
 };
 
 const handleDeleteSpace = async () => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this space? Conversations will remain but won't be listed here.",
-      )
-    ) {
+    if (!confirm(t('spaceDetail.deleteConfirm'))) {
       return;
     }
 
@@ -605,7 +603,7 @@ const handleDeleteSpace = async () => {
       const embeddingModel = localStorage.getItem('embeddingModelKey');
 
       if (!embeddingModelProvider || !embeddingModel) {
-        alert('Please select an embedding model in settings before uploading.');
+        alert(t('spaceDetail.embeddingModelRequired'));
         return;
       }
 
@@ -620,7 +618,7 @@ const handleDeleteSpace = async () => {
       const resData = await res.json();
 
       if (!res.ok) {
-        throw new Error(resData.message || 'Upload failed');
+        throw new Error(resData.message || t('spaceDetail.uploadFailed'));
       }
 
       const uploadedFiles = resData.files.map((file: any) => ({
@@ -690,9 +688,9 @@ const handleDeleteSpace = async () => {
       .map((automation) => ({
         id: automation.id,
         name: automation.name,
-        category: automation.category || 'Custom',
-        frequency: automation.frequency || 'Manual',
-        outputType: automation.outputType || 'Document',
+        category: automation.category || t('spaceDetail.custom'),
+        frequency: automation.frequency || t('spaceDetail.manual'),
+        outputType: automation.outputType || t('spaceDetail.document'),
         runCount: spaceOutputs.filter(
           (output) => output.automationId === automation.id,
         ).length,
@@ -712,10 +710,10 @@ const handleDeleteSpace = async () => {
 
         return {
           id: automationId,
-          name: firstOutput?.automationName ?? 'Automation',
-          category: 'Template',
-          frequency: 'Manual',
-          outputType: firstOutput?.outputType ?? 'Document',
+          name: firstOutput?.automationName ?? t('spaceDetail.automations'),
+          category: t('spaceDetail.template'),
+          frequency: t('spaceDetail.manual'),
+          outputType: firstOutput?.outputType ?? t('spaceDetail.document'),
           runCount: spaceOutputs.filter(
             (output) => output.automationId === automationId,
           ).length,
@@ -729,25 +727,25 @@ const handleDeleteSpace = async () => {
   const sections = [
     {
       id: 'conversations' as const,
-      label: 'Conversations',
+      label: t('spaceDetail.conversations'),
       icon: MessageSquare,
       count: chats.length,
     },
     {
       id: 'knowledge' as const,
-      label: 'Knowledge',
+      label: t('spaceDetail.knowledge'),
       icon: BookOpen,
       count: spaceKnowledgeCount,
     },
     {
       id: 'outputs' as const,
-      label: 'Outputs',
+      label: t('spaceDetail.outputs'),
       icon: FileText,
       count: spaceOutputs.length,
     },
     {
       id: 'automations' as const,
-      label: 'Automations',
+      label: t('spaceDetail.automations'),
       icon: Bot,
       count: relatedAutomations.length,
     },
@@ -779,7 +777,7 @@ const handleDeleteSpace = async () => {
               <div>
                 <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-light-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-black/40 dark:border-dark-200 dark:text-white/40">
                   <LayoutGrid size={14} />
-                  Space
+                  {t('spaceDetail.badge')}
                 </div>
 
                 <h1 className="text-3xl font-bold tracking-tight text-black dark:text-white">
@@ -787,7 +785,7 @@ const handleDeleteSpace = async () => {
                 </h1>
 
                 <p className="mt-2 max-w-2xl text-sm leading-relaxed text-black/50 dark:text-white/50">
-                  {space.description || 'No description provided.'}
+                  {space.description || t('spaceDetail.noDescription')}
                 </p>
               </div>
             </div>
@@ -798,7 +796,7 @@ const handleDeleteSpace = async () => {
                 className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] active:scale-[0.99] dark:bg-white dark:text-black"
               >
                 <Plus size={18} />
-                New Chat
+                {t('spaceDetail.newChat')}
               </Link>
 
 <button
@@ -807,7 +805,7 @@ const handleDeleteSpace = async () => {
                 className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
               >
                 <Edit3 size={18} />
-                Edit
+                {t('spaceDetail.edit')}
               </button>
 
               <button
@@ -817,7 +815,7 @@ const handleDeleteSpace = async () => {
                 className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black disabled:opacity-50 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
               >
                 <Copy size={18} />
-                {duplicatingSpace ? 'Duplicating...' : 'Duplicate'}
+                {duplicatingSpace ? t('spaceDetail.duplicating') : t('spaceDetail.duplicate')}
               </button>
 
               {!space.archivedAt && (
@@ -827,7 +825,7 @@ const handleDeleteSpace = async () => {
                   className="inline-flex items-center gap-2 rounded-full border border-orange-500/20 px-4 py-2.5 text-sm font-semibold text-orange-500 transition hover:bg-orange-500/10"
                 >
                   <Archive size={18} />
-                  Archive
+                  {t('spaceDetail.archive')}
                 </button>
               )}
 
@@ -837,7 +835,7 @@ const handleDeleteSpace = async () => {
                 className="inline-flex items-center gap-2 rounded-full border border-red-500/20 px-4 py-2.5 text-sm font-semibold text-red-500 transition hover:bg-red-500/10"
               >
                 <Trash2 size={18} />
-                Delete
+                {t('spaceDetail.delete')}
               </button>
             </div>
           </div>
@@ -845,7 +843,7 @@ const handleDeleteSpace = async () => {
           {space.archivedAt && (
             <div className="mt-6 rounded-3xl border border-orange-500/20 bg-orange-500/10 p-5">
               <p className="text-sm font-semibold text-orange-600 dark:text-orange-400">
-                This Space is archived.
+                {t('spaceDetail.archivedNotice')}
               </p>
 
               <button
@@ -853,7 +851,7 @@ const handleDeleteSpace = async () => {
                 onClick={handleRestoreSpace}
                 className="mt-3 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
               >
-                Restore Space
+                {t('spaceDetail.restoreSpace')}
               </button>
             </div>
           )}
@@ -861,14 +859,14 @@ const handleDeleteSpace = async () => {
           {editingSpace && (
             <div className="mt-6 rounded-[2rem] border border-light-200 bg-light-secondary p-5 dark:border-dark-200 dark:bg-dark-secondary">
               <h2 className="mb-4 text-lg font-semibold text-black dark:text-white">
-                Edit Space
+                {t('spaceDetail.edit')} Space
               </h2>
 
               <div className="grid gap-3">
                 <input
                   value={spaceNameDraft}
                   onChange={(event) => setSpaceNameDraft(event.target.value)}
-                  placeholder="Space name"
+                  placeholder={t('spaceDetail.spaceName')}
                   className="rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
                 />
 
@@ -877,7 +875,7 @@ const handleDeleteSpace = async () => {
                   onChange={(event) =>
                     setSpaceDescriptionDraft(event.target.value)
                   }
-                  placeholder="Description"
+                  placeholder={t('spaceDetail.description')}
                   className="rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
                 />
 
@@ -886,7 +884,7 @@ const handleDeleteSpace = async () => {
                   onChange={(event) =>
                     setSpaceInstructionDraft(event.target.value)
                   }
-                  placeholder="Space instruction"
+                  placeholder={t('spaceDetail.spaceInstruction')}
                   rows={4}
                   className="rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
                 />
@@ -898,7 +896,7 @@ const handleDeleteSpace = async () => {
                   onClick={handleUpdateSpace}
                   className="rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
                 >
-                  Save changes
+                  {t('spaceDetail.saveChanges')}
                 </button>
 
                 <button
@@ -906,7 +904,7 @@ const handleDeleteSpace = async () => {
                   onClick={() => setEditingSpace(false)}
                   className="rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/60 transition hover:text-black dark:border-dark-200 dark:text-white/60 dark:hover:text-white"
                 >
-                  Cancel
+                  {t('spaceDetail.cancel')}
                 </button>
               </div>
             </div>
@@ -950,7 +948,7 @@ const handleDeleteSpace = async () => {
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-2xl font-bold text-black dark:text-white">
                   <FileText size={22} className="text-purple-500" />
-                  Outputs
+                  {t('spaceDetail.outputs')}
                 </h2>
 
                 <span className="rounded-full bg-light-secondary px-3 py-1 text-sm text-black/45 dark:bg-dark-secondary dark:text-white/45">
@@ -960,14 +958,14 @@ const handleDeleteSpace = async () => {
 
               {spaceOutputs.length === 0 ? (
                 <EmptyState
-                  title="No outputs saved in this Space yet."
-                  description="Run an automation or Small App and choose this Space as the save destination. Generated articles, proposals, reports, summaries, and other deliverables will appear here."
+                  title={t('spaceDetail.noOutputsTitle')}
+                  description={t('spaceDetail.noOutputsDescription')}
                   action={
                     <Link
                       href="/apps"
                       className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
                     >
-                      Open Apps
+                      {t('spaceDetail.openApps')}
                       <ArrowRight size={16} />
                     </Link>
                   }
@@ -999,14 +997,14 @@ const handleDeleteSpace = async () => {
 
                       <div className="mt-5 flex items-center justify-between gap-4">
                         <p className="text-xs text-black/40 dark:text-white/40">
-                          {formatTimeDifference(new Date(), output.createdAt)} Ago
+                          {formatTimeDifference(new Date(), output.createdAt)} {t('spaceDetail.ago')}
                         </p>
 
                         <Link
                           href={`/outputs/${output.id}`}
                           className="inline-flex items-center gap-2 text-sm font-semibold text-purple-500 hover:underline"
                         >
-                          Open output
+                          {t('spaceDetail.openOutput')}
                           <ExternalLink size={14} />
                         </Link>
                       </div>
@@ -1022,7 +1020,7 @@ const handleDeleteSpace = async () => {
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-2xl font-bold text-black dark:text-white">
                   <MessageSquare size={22} className="text-blue-500" />
-                  Conversations
+                  {t('spaceDetail.conversations')}
                 </h2>
 
                 <span className="rounded-full bg-light-secondary px-3 py-1 text-sm text-black/45 dark:bg-dark-secondary dark:text-white/45">
@@ -1032,14 +1030,14 @@ const handleDeleteSpace = async () => {
 
               {chats.length === 0 ? (
                 <EmptyState
-                  title="No conversations in this Space yet."
-                  description="Start a Space conversation to keep research and decisions attached to this business context."
+                  title={t('spaceDetail.noConversationsTitle')}
+                  description={t('spaceDetail.noConversationsDescription')}
                   action={
                     <Link
                       href={`/search?spaceId=${space.id}`}
                       className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
                     >
-                      Start a conversation
+                      {t('spaceDetail.startConversation')}
                       <ArrowRight size={16} />
                     </Link>
                   }
@@ -1069,20 +1067,20 @@ const handleDeleteSpace = async () => {
                       <div className="flex flex-wrap items-center gap-4 text-xs text-black/45 dark:text-white/45">
                         <span className="flex items-center gap-1">
                           <Clock size={12} />
-                          {formatTimeDifference(new Date(), chat.createdAt)} Ago
+                          {formatTimeDifference(new Date(), chat.createdAt)} {t('spaceDetail.ago')}
                         </span>
 
                         {chat.sources.length > 0 && (
                           <span className="flex items-center gap-1">
                             <Globe2 size={12} />
-                            {chat.sources.length} Sources
+                            {chat.sources.length} {t('spaceDetail.sources')}
                           </span>
                         )}
 
                         {chat.files.length > 0 && (
                           <span className="flex items-center gap-1">
                             <FileText size={12} />
-                            {chat.files.length} Files
+                            {chat.files.length} {chat.files.length === 1 ? t('spaceDetail.fileSingular') : t('spaceDetail.filePlural')}
                           </span>
                         )}
                       </div>
@@ -1098,12 +1096,12 @@ const handleDeleteSpace = async () => {
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-2xl font-bold text-black dark:text-white">
                   <BookOpen size={22} className="text-green-500" />
-                  Knowledge
+                  {t('spaceDetail.knowledge')}
                 </h2>
 
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black">
                   <Upload size={16} />
-                  Upload files
+                  {t('spaceDetail.uploadFiles')}
                   <input
                     type="file"
                     className="hidden"
@@ -1119,14 +1117,13 @@ const handleDeleteSpace = async () => {
                   <div className="mb-4 flex items-center gap-2">
                     <FileText size={18} className="text-green-500" />
                     <h3 className="font-semibold text-black dark:text-white">
-                      Files
+                      {t('spaceDetail.files')}
                     </h3>
                   </div>
 
                   {space.files.length === 0 ? (
                     <p className="text-sm text-black/45 dark:text-white/45">
-                      No files yet. Upload documents that Etherana should use as
-                      knowledge for this Space.
+                      {t('spaceDetail.noFilesDescription')}
                     </p>
                   ) : (
                     <div className="space-y-3">
@@ -1141,7 +1138,7 @@ const handleDeleteSpace = async () => {
                             </p>
 
                             <p className="mt-1 text-xs text-black/40 dark:text-white/40">
-                              Knowledge source
+                              {t('spaceDetail.knowledge')} source
                             </p>
                           </div>
 
@@ -1162,7 +1159,7 @@ const handleDeleteSpace = async () => {
                   <div className="mb-4 flex items-center gap-2">
                     <NotebookPen size={18} className="text-blue-500" />
                     <h3 className="font-semibold text-black dark:text-white">
-                      Personal notes
+                      {t('spaceDetail.personalNotes')}
                     </h3>
                   </div>
 
@@ -1170,14 +1167,14 @@ const handleDeleteSpace = async () => {
                     <input
                       value={noteTitle}
                       onChange={(event) => setNoteTitle(event.target.value)}
-                      placeholder="Note title"
+                      placeholder={t('spaceDetail.noteTitle')}
                       className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
                     />
 
                     <textarea
                       value={noteContent}
                       onChange={(event) => setNoteContent(event.target.value)}
-                      placeholder="Write a quick note for this Space..."
+                      placeholder={t('spaceDetail.notePlaceholder')}
                       rows={4}
                       className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
                     />
@@ -1188,7 +1185,7 @@ const handleDeleteSpace = async () => {
                       className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
                     >
                       <Plus size={16} />
-                      Save note
+                      {t('spaceDetail.saveNote')}
                     </button>
                   </div>
 
@@ -1224,7 +1221,7 @@ const handleDeleteSpace = async () => {
                   <div className="mb-4 flex items-center gap-2">
                     <LinkIcon size={18} className="text-purple-500" />
                     <h3 className="font-semibold text-black dark:text-white">
-                      Saved links
+                      {t('spaceDetail.savedLinks')}
                     </h3>
                   </div>
 
@@ -1232,7 +1229,7 @@ const handleDeleteSpace = async () => {
                     <input
                       value={linkTitle}
                       onChange={(event) => setLinkTitle(event.target.value)}
-                      placeholder="Link title"
+                      placeholder={t('spaceDetail.linkTitle')}
                       className="rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
                     />
 
@@ -1248,7 +1245,7 @@ const handleDeleteSpace = async () => {
                       onChange={(event) =>
                         setLinkDescription(event.target.value)
                       }
-                      placeholder="Why this link matters"
+                      placeholder={t('spaceDetail.linkDescription')}
                       className="rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
                     />
                   </div>
@@ -1259,7 +1256,7 @@ const handleDeleteSpace = async () => {
                     className="mt-3 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
                   >
                     <Plus size={16} />
-                    Save link
+                    {t('spaceDetail.saveLink')}
                   </button>
 
                   <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -1311,28 +1308,28 @@ const handleDeleteSpace = async () => {
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-2xl font-bold text-black dark:text-white">
                   <Bot size={22} className="text-orange-500" />
-                  Automations
+                  {t('spaceDetail.automations')}
                 </h2>
 
                 <Link
                   href="/tasks"
                   className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
                 >
-                  Manage Automations
+                  {t('spaceDetail.manageAutomations')}
                   <ArrowRight size={16} />
                 </Link>
               </div>
 
               {relatedAutomations.length === 0 ? (
                 <EmptyState
-                  title="No automations connected to this Space yet."
-                  description="Create an automation and choose this Space as the save destination. It will appear here once it creates an output."
+                  title={t('spaceDetail.noAutomationsTitle')}
+                  description={t('spaceDetail.noAutomationsDescription')}
                   action={
                     <Link
                       href="/tasks"
                       className="inline-flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
                     >
-                      Create automation
+                      {t('spaceDetail.createAutomation')}
                       <ArrowRight size={16} />
                     </Link>
                   }
@@ -1364,14 +1361,14 @@ const handleDeleteSpace = async () => {
 
                       <div className="mt-5 flex items-center justify-between">
                         <p className="text-xs text-black/40 dark:text-white/40">
-                          {automation.runCount} outputs
+                          {automation.runCount} {automation.runCount === 1 ? t('spaceDetail.outputSingular') : t('spaceDetail.outputPlural')}
                         </p>
 
                         <Link
                           href={`/tasks?automation=${automation.id}`}
                           className="inline-flex items-center gap-2 text-sm font-semibold text-orange-500 hover:underline"
                         >
-                          Open automation
+                          {t('spaceDetail.openAutomation')}
                           <ExternalLink size={14} />
                         </Link>
                       </div>
@@ -1386,7 +1383,7 @@ const handleDeleteSpace = async () => {
         <aside className="space-y-6">
           <section className="rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-black/40 dark:text-white/40">
-              Space summary
+              {t('spaceDetail.spaceSummary')}
             </p>
 
             <div className="grid grid-cols-2 gap-3">
@@ -1395,7 +1392,7 @@ const handleDeleteSpace = async () => {
                   {chats.length}
                 </p>
                 <p className="text-xs text-black/45 dark:text-white/45">
-                  Conversations
+                  {t('spaceDetail.conversations')}
                 </p>
               </div>
 
@@ -1404,7 +1401,7 @@ const handleDeleteSpace = async () => {
                   {spaceKnowledgeCount}
                 </p>
                 <p className="text-xs text-black/45 dark:text-white/45">
-                  Knowledge
+                  {t('spaceDetail.knowledge')}
                 </p>
               </div>
 
@@ -1413,7 +1410,7 @@ const handleDeleteSpace = async () => {
                   {spaceOutputs.length}
                 </p>
                 <p className="text-xs text-black/45 dark:text-white/45">
-                  Outputs
+                  {t('spaceDetail.outputs')}
                 </p>
               </div>
 
@@ -1422,7 +1419,7 @@ const handleDeleteSpace = async () => {
                   {relatedAutomations.length}
                 </p>
                 <p className="text-xs text-black/45 dark:text-white/45">
-                  Automations
+                  {t('spaceDetail.automations')}
                 </p>
               </div>
             </div>
@@ -1430,7 +1427,7 @@ const handleDeleteSpace = async () => {
 
           <section className="rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-black/40 dark:text-white/40">
-              Quick actions
+              {t('spaceDetail.quickActions')}
             </p>
 
             <div className="grid gap-3">
@@ -1439,7 +1436,7 @@ const handleDeleteSpace = async () => {
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
               >
                 <Plus size={16} />
-                New Space Chat
+                {t('spaceDetail.newSpaceChat')}
               </Link>
 
               <Link
