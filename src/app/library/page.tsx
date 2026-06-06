@@ -15,6 +15,7 @@ import {
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 export interface Chat {
   id: string;
@@ -25,6 +26,7 @@ export interface Chat {
 }
 
 const Page = () => {
+  const { t } = useI18n();
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedChatIds, setSelectedChatIds] = useState<string[]>([]);
@@ -38,11 +40,17 @@ const Page = () => {
     [selectedChatIds],
   );
 
+  const getChatLabel = (count: number) =>
+    count === 1 ? t('libraryPage.chatSingular') : t('libraryPage.chatPlural');
+
+  const getFileLabel = (count: number) =>
+    count === 1 ? t('libraryPage.fileSingular') : t('libraryPage.filePlural');
+
   useEffect(() => {
     const fetchChats = async () => {
       setLoading(true);
 
-      const res = await fetch(`/api/chats`, {
+      const res = await fetch('/api/chats', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -51,7 +59,7 @@ const Page = () => {
 
       const data = await res.json();
 
-      setChats(data.chats);
+      setChats(Array.isArray(data.chats) ? data.chats : []);
       setLoading(false);
     };
 
@@ -79,9 +87,9 @@ const Page = () => {
     if (selectedChatIds.length === 0 || bulkDeleting) return;
 
     const confirmed = window.confirm(
-      `Delete ${selectedChatIds.length} selected ${
-        selectedChatIds.length === 1 ? 'chat' : 'chats'
-      }? This cannot be undone.`,
+      `${t('libraryPage.deleteSelected')} ${selectedChatIds.length} ${getChatLabel(
+        selectedChatIds.length,
+      )}? ${t('libraryPage.deleteConfirmSuffix')}`,
     );
 
     if (!confirmed) return;
@@ -108,9 +116,7 @@ const Page = () => {
 
       if (failed.length > 0) {
         throw new Error(
-          `Failed to delete ${failed.length} ${
-            failed.length === 1 ? 'chat' : 'chats'
-          }.`,
+          `${t('libraryPage.failedDeleteSelected')} (${failed.length})`,
         );
       }
 
@@ -120,12 +126,12 @@ const Page = () => {
       setSelectedChatIds([]);
 
       toast.success(
-        `${selectedChatIds.length} ${
-          selectedChatIds.length === 1 ? 'chat' : 'chats'
-        } deleted.`,
+        `${selectedChatIds.length} ${getChatLabel(selectedChatIds.length)} ${t(
+          'libraryPage.deleted',
+        )}`,
       );
     } catch (err: any) {
-      toast.error(err.message || 'Failed to delete selected chats.');
+      toast.error(err.message || t('libraryPage.failedDeleteSelected'));
     } finally {
       setBulkDeleting(false);
     }
@@ -133,39 +139,41 @@ const Page = () => {
 
   return (
     <div>
-      <div className="flex flex-col pt-10 border-b border-light-200/20 dark:border-dark-200/20 pb-6 px-2">
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
+      <div className="flex flex-col border-b border-light-200/20 px-2 pb-6 pt-10 dark:border-dark-200/20">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex items-center justify-center">
             <BookOpenText size={45} className="mb-2.5" />
             <div className="flex flex-col">
               <h1
-                className="text-5xl font-normal p-2 pb-0"
+                className="p-2 pb-0 text-5xl font-normal"
                 style={{ fontFamily: 'PP Editorial, serif' }}
               >
-                Library
+                {t('libraryPage.title')}
               </h1>
-              <div className="px-2 text-sm text-black/60 dark:text-white/60 text-center lg:text-left">
-                Past chats, sources, and uploads.
+              <div className="px-2 text-center text-sm text-black/60 dark:text-white/60 lg:text-left">
+                {t('libraryPage.subtitle')}
               </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2 text-xs text-black/60 dark:text-white/60">
-            <span className="inline-flex items-center gap-1 rounded-full border border-black/20 dark:border-white/20 px-2 py-0.5">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-black/60 dark:text-white/60 lg:justify-end">
+            <span className="inline-flex items-center gap-1 rounded-full border border-black/20 px-2 py-0.5 dark:border-white/20">
               <BookOpenText size={14} />
               {loading
-                ? 'Loading…'
-                : `${chats.length} ${chats.length === 1 ? 'chat' : 'chats'}`}
+                ? t('libraryPage.loading')
+                : `${chats.length} ${getChatLabel(chats.length)}`}
             </span>
 
             {!loading && chats.length > 0 && (
               <button
                 type="button"
                 onClick={toggleSelectAll}
-                className="inline-flex items-center gap-1 rounded-full border border-black/20 dark:border-white/20 px-2 py-0.5 hover:text-black dark:hover:text-white transition"
+                className="inline-flex items-center gap-1 rounded-full border border-black/20 px-2 py-0.5 transition hover:text-black dark:border-white/20 dark:hover:text-white"
               >
                 {allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
-                {allSelected ? 'Unselect all' : 'Select all'}
+                {allSelected
+                  ? t('libraryPage.unselectAll')
+                  : t('libraryPage.selectAll')}
               </button>
             )}
           </div>
@@ -173,9 +181,12 @@ const Page = () => {
       </div>
 
       {selectedCount > 0 && (
-        <div className="sticky top-0 z-30 mt-4 mx-2 rounded-2xl border border-red-400/30 bg-red-50/95 dark:bg-red-950/30 backdrop-blur px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="sticky top-0 z-30 mx-2 mt-4 flex flex-col gap-3 rounded-2xl border border-red-400/30 bg-red-50/95 px-4 py-3 backdrop-blur dark:bg-red-950/30 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm text-red-700 dark:text-red-200">
-            {selectedCount} {selectedCount === 1 ? 'chat selected' : 'chats selected'}
+            {selectedCount}{' '}
+            {selectedCount === 1
+              ? t('libraryPage.chatSelected')
+              : t('libraryPage.chatsSelected')}
           </div>
 
           <div className="flex items-center gap-2">
@@ -183,10 +194,10 @@ const Page = () => {
               type="button"
               onClick={() => setSelectedChatIds([])}
               disabled={bulkDeleting}
-              className="inline-flex items-center gap-1 rounded-full border border-red-300/50 px-3 py-1.5 text-xs text-red-700 dark:text-red-200 hover:bg-red-100 dark:hover:bg-red-900/40 disabled:opacity-60"
+              className="inline-flex items-center gap-1 rounded-full border border-red-300/50 px-3 py-1.5 text-xs text-red-700 hover:bg-red-100 disabled:opacity-60 dark:text-red-200 dark:hover:bg-red-900/40"
             >
               <X size={14} />
-              Clear
+              {t('libraryPage.clear')}
             </button>
 
             <button
@@ -196,17 +207,19 @@ const Page = () => {
               className="inline-flex items-center gap-1 rounded-full bg-red-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-60"
             >
               <Trash2 size={14} />
-              {bulkDeleting ? 'Deleting…' : 'Delete selected'}
+              {bulkDeleting
+                ? t('libraryPage.deleting')
+                : t('libraryPage.deleteSelected')}
             </button>
           </div>
         </div>
       )}
 
       {loading ? (
-        <div className="flex flex-row items-center justify-center min-h-[60vh]">
+        <div className="flex min-h-[60vh] flex-row items-center justify-center">
           <svg
             aria-hidden="true"
-            className="w-8 h-8 text-light-200 fill-light-secondary dark:text-[#202020] animate-spin dark:fill-[#ffffff3b]"
+            className="h-8 w-8 animate-spin fill-light-secondary text-light-200 dark:fill-[#ffffff3b] dark:text-[#202020]"
             viewBox="0 0 100 101"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -222,23 +235,23 @@ const Page = () => {
           </svg>
         </div>
       ) : chats.length === 0 ? (
-        <div className="flex flex-col items-center justify-center min-h-[70vh] px-2 text-center">
-          <div className="flex items-center justify-center w-12 h-12 rounded-2xl border border-light-200 dark:border-dark-200 bg-light-secondary dark:bg-dark-secondary">
+        <div className="flex min-h-[70vh] flex-col items-center justify-center px-2 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-light-200 bg-light-secondary dark:border-dark-200 dark:bg-dark-secondary">
             <BookOpenText className="text-black/70 dark:text-white/70" />
           </div>
-          <p className="mt-2 text-black/70 dark:text-white/70 text-sm">
-            No chats found.
+          <p className="mt-2 text-sm text-black/70 dark:text-white/70">
+            {t('libraryPage.noChatsFound')}
           </p>
-          <p className="mt-1 text-black/70 dark:text-white/70 text-sm">
+          <p className="mt-1 text-sm text-black/70 dark:text-white/70">
             <Link href="/" className="text-sky-400">
-              Start a new chat
+              {t('libraryPage.startNewChat')}
             </Link>{' '}
-            to see it listed here.
+            {t('libraryPage.emptySuffix')}
           </p>
         </div>
       ) : (
-        <div className="pt-6 pb-28 px-2">
-          <div className="rounded-2xl border border-light-200 dark:border-dark-200 overflow-hidden bg-light-primary dark:bg-dark-primary">
+        <div className="px-2 pb-28 pt-6">
+          <div className="overflow-hidden rounded-2xl border border-light-200 bg-light-primary dark:border-dark-200 dark:bg-dark-primary">
             {chats.map((chat, index) => {
               const isSelected = selectedChatIdsSet.has(chat.id);
 
@@ -247,11 +260,15 @@ const Page = () => {
                   ? null
                   : chat.sources.length <= 2
                     ? chat.sources
-                        .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+                        .map((source) =>
+                          source.charAt(0).toUpperCase() + source.slice(1),
+                        )
                         .join(', ')
                     : `${chat.sources
                         .slice(0, 2)
-                        .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+                        .map((source) =>
+                          source.charAt(0).toUpperCase() + source.slice(1),
+                        )
                         .join(', ')} + ${chat.sources.length - 2}`;
 
               return (
@@ -271,9 +288,11 @@ const Page = () => {
                     <button
                       type="button"
                       onClick={() => toggleChatSelection(chat.id)}
-                      className="mt-1 shrink-0 text-black/50 dark:text-white/50 hover:text-sky-500 transition"
+                      className="mt-1 shrink-0 text-black/50 transition hover:text-sky-500 dark:text-white/50"
                       aria-label={
-                        isSelected ? 'Unselect chat' : 'Select chat'
+                        isSelected
+                          ? t('libraryPage.unselectChat')
+                          : t('libraryPage.selectChat')
                       }
                     >
                       {isSelected ? (
@@ -285,13 +304,13 @@ const Page = () => {
 
                     <Link
                       href={`/c/${chat.id}`}
-                      className="flex-1 text-black dark:text-white text-base lg:text-lg font-medium leading-snug line-clamp-2 group-hover:text-[#24A0ED] transition duration-200"
+                      className="line-clamp-2 flex-1 text-base font-medium leading-snug text-black transition duration-200 group-hover:text-[#24A0ED] dark:text-white lg:text-lg"
                       title={chat.title}
                     >
                       {chat.title}
                     </Link>
 
-                    <div className="pt-0.5 shrink-0">
+                    <div className="shrink-0 pt-0.5">
                       <DeleteChat
                         chatId={chat.id}
                         chats={chats}
@@ -300,23 +319,24 @@ const Page = () => {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 text-black/70 dark:text-white/70 pl-7">
+                  <div className="flex flex-wrap items-center gap-2 pl-7 text-black/70 dark:text-white/70">
                     <span className="inline-flex items-center gap-1 text-xs">
                       <ClockIcon size={14} />
-                      {formatTimeDifference(new Date(), chat.createdAt)} Ago
+                      {formatTimeDifference(new Date(), chat.createdAt)}{' '}
+                      {t('libraryPage.ago')}
                     </span>
 
                     {sourcesLabel && (
-                      <span className="inline-flex items-center gap-1 text-xs border border-black/20 dark:border-white/20 rounded-full px-2 py-0.5">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-black/20 px-2 py-0.5 text-xs dark:border-white/20">
                         <Globe2Icon size={14} />
                         {sourcesLabel}
                       </span>
                     )}
+
                     {chat.files.length > 0 && (
-                      <span className="inline-flex items-center gap-1 text-xs border border-black/20 dark:border-white/20 rounded-full px-2 py-0.5">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-black/20 px-2 py-0.5 text-xs dark:border-white/20">
                         <FileText size={14} />
-                        {chat.files.length}{' '}
-                        {chat.files.length === 1 ? 'file' : 'files'}
+                        {chat.files.length} {getFileLabel(chat.files.length)}
                       </span>
                     )}
                   </div>

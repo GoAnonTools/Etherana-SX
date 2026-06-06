@@ -21,6 +21,7 @@ import {
   readAutomationOutputs,
   writeAutomationOutputs,
 } from '@/lib/vault/localVault';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 
 type OutputSpace = {
@@ -726,6 +727,7 @@ const markdownToHtml = (content: string, title: string) => {
 
 
 const OutputDetailPage = () => {
+  const { t } = useI18n();
   const params = useParams<{ id: string }>();
   const router = useRouter();
 
@@ -792,15 +794,15 @@ const OutputDetailPage = () => {
 
   const getSelectedOutputDestinationLabel = () => {
     if (outputDestination === 'automation') {
-      return 'General Outputs';
+      return t('outputsPage.generalOutputs');
     }
 
     if (outputDestination.startsWith('space:')) {
       const spaceId = outputDestination.replace('space:', '');
-      return spaces.find((space) => space.id === spaceId)?.name ?? 'Space';
+      return spaces.find((space) => space.id === spaceId)?.name ?? t('outputsPage.space');
     }
 
-    return 'General Outputs';
+    return t('outputsPage.generalOutputs');
   };
 
   const saveOutput = () => {
@@ -887,7 +889,7 @@ const OutputDetailPage = () => {
     const printableWindow = window.open('', '_blank');
 
     if (!printableWindow) {
-      window.alert('Could not open the print window. Please allow pop-ups for Etherana SX.');
+      window.alert(t('outputsPage.couldNotOpenPrintWindow'));
       return;
     }
 
@@ -1060,7 +1062,7 @@ const OutputDetailPage = () => {
     if (!output) return;
 
     const confirmed = window.confirm(
-      `Delete "${output.title}"? This cannot be undone.`,
+      `${t('outputsPage.deleteOutputConfirmPrefix')} "${output.title}"? ${t('outputsPage.deleteConfirm')}`,
     );
 
     if (!confirmed) return;
@@ -1078,16 +1080,16 @@ const OutputDetailPage = () => {
           className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-black/55 transition hover:text-black dark:text-white/55 dark:hover:text-white"
         >
           <ArrowLeft size={16} />
-          Back to Automations
+          {t('outputsPage.backToAutomations')}
         </Link>
 
         <div className="rounded-3xl border border-light-200 bg-light-secondary p-8 dark:border-dark-200 dark:bg-dark-secondary">
           <h1 className="text-3xl font-bold text-black dark:text-white">
-            Output not found
+            {t('outputsPage.outputNotFound')}
           </h1>
 
           <p className="mt-3 text-black/60 dark:text-white/60">
-            This output may have been deleted or created in another browser.
+            {t('outputsPage.thisOutputMayHaveBeenDeleted')}
           </p>
         </div>
       </div>
@@ -1108,7 +1110,7 @@ const OutputDetailPage = () => {
             className="inline-flex w-fit items-center gap-2 text-sm font-medium text-black/55 transition hover:text-black dark:text-white/55 dark:hover:text-white"
           >
             <ArrowLeft size={16} />
-            Back
+            {t('outputsPage.back')}
           </button>
 
           <div className="flex flex-wrap gap-3">
@@ -1118,7 +1120,7 @@ const OutputDetailPage = () => {
                 className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
               >
                 <ExternalLink size={15} />
-                Space
+                {t('outputsPage.space')}
               </Link>
             )}
 
@@ -1127,7 +1129,7 @@ const OutputDetailPage = () => {
               className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
             >
               <ExternalLink size={15} />
-              Automation
+              {t('outputsPage.automation')}
             </Link>
 
             {!isEditing ? (
@@ -1137,7 +1139,7 @@ const OutputDetailPage = () => {
                 className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
               >
                 <PencilLine size={15} />
-                Edit output
+                {t('outputsPage.editOutput')}
               </button>
             ) : (
               <>
@@ -1147,7 +1149,7 @@ const OutputDetailPage = () => {
                   className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
                 >
                   <Save size={15} />
-                  Save changes
+                  {t('outputsPage.saveChanges')}
                 </button>
 
                 <button
@@ -1155,13 +1157,13 @@ const OutputDetailPage = () => {
                   onClick={cancelOutputEdit}
                   className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
                 >
-                  Cancel
+                  {t('outputsPage.cancel')}
                 </button>
               </>
             )}
 
             <label className="inline-flex items-center gap-2 rounded-full border border-light-200 bg-light-secondary px-4 py-2 text-sm font-semibold text-black/65 dark:border-dark-200 dark:bg-dark-secondary dark:text-white/65">
-              <span className="whitespace-nowrap">Save location</span>
+              <span className="whitespace-nowrap">{t('outputsPage.saveLocation')}</span>
               <select
                 value={outputDestination}
                 onChange={(event) => {
@@ -1171,7 +1173,7 @@ const OutputDetailPage = () => {
                 className="max-w-[220px] rounded-xl border border-light-200 bg-light-primary px-3 py-1.5 text-sm font-semibold text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
               >
                 <option className="bg-white text-black" value="automation">
-                  General Outputs
+                  {t('outputsPage.generalOutputs')}
                 </option>
                 {spaces.map((space) => (
                   <option
@@ -1192,7 +1194,7 @@ const OutputDetailPage = () => {
               className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black disabled:cursor-not-allowed disabled:opacity-40 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
             >
               <Clipboard size={15} />
-              {copied ? 'Copied' : 'Copy formatted'}
+              {copied ? t('outputsPage.copied') : t('outputsPage.copyFormatted')}
             </button>
 
             <button
@@ -1202,7 +1204,7 @@ const OutputDetailPage = () => {
               className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black disabled:cursor-not-allowed disabled:opacity-40 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
             >
               <Download size={15} />
-              Download .md
+              {t('outputsPage.downloadMd')}
             </button>
 
             <button
@@ -1212,7 +1214,7 @@ const OutputDetailPage = () => {
               className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black disabled:cursor-not-allowed disabled:opacity-40 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
             >
               <FileText size={15} />
-              Print / Save PDF
+              {t('outputsPage.printSavePdf')}
             </button>
 
             {outputDestination.startsWith('space:') && (
@@ -1221,7 +1223,7 @@ const OutputDetailPage = () => {
                 className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
               >
                 <ExternalLink size={15} />
-                Open saved Space
+                {t('outputsPage.openSavedSpace')}
               </Link>
             )}
 
@@ -1231,7 +1233,7 @@ const OutputDetailPage = () => {
               className="inline-flex items-center gap-2 rounded-full border border-red-500/20 px-4 py-2 text-sm font-semibold text-red-500 transition hover:bg-red-500/10"
             >
               <Trash2 size={15} />
-              Delete
+              {t('outputsPage.delete')}
             </button>
           </div>
         </div>
@@ -1248,17 +1250,17 @@ const OutputDetailPage = () => {
             </span>
 
             <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-semibold text-black/50 dark:bg-dark-primary dark:text-white/50">
-              Save to {output.outputDestinationLabel}
+              {t('outputsPage.saveTo')} {output.outputDestinationLabel}
             </span>
 
             {content.trim() && (
               <>
                 <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-semibold text-black/50 dark:bg-dark-primary dark:text-white/50">
-                  {wordCount} words
+                  {wordCount} {t('outputsPage.words')}
                 </span>
 
                 <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-semibold text-black/50 dark:bg-dark-primary dark:text-white/50">
-                  {readingTime} min read
+                  {readingTime} {t('outputsPage.minRead')}
                 </span>
               </>
             )}
@@ -1277,10 +1279,14 @@ const OutputDetailPage = () => {
           )}
 
           <p className="mt-5 text-sm leading-relaxed text-black/55 dark:text-white/55">
-            Created from <strong>{output.automationName}</strong> on{' '}
-            {new Date(output.createdAt).toLocaleString()}.
+            {t('outputsPage.createdFrom')} <strong>{output.automationName}</strong>{' '}
+            {t('outputsPage.on')} {new Date(output.createdAt).toLocaleString()}.
             {output.updatedAt && (
-              <> Last updated {new Date(output.updatedAt).toLocaleString()}.</>
+              <>
+                {' '}
+                {t('outputsPage.lastUpdated')}{' '}
+                {new Date(output.updatedAt).toLocaleString()}.
+              </>
             )}
           </p>
         </header>
@@ -1290,11 +1296,11 @@ const OutputDetailPage = () => {
             <div className="mb-6 flex items-center justify-between gap-4">
               <div>
                 <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-black/40 dark:text-white/40">
-                  Output content
+                  {t('outputsPage.outputContent')}
                 </p>
 
                 <h2 className="text-xl font-semibold text-black dark:text-white">
-                  {isEditing ? 'Editor' : 'Preview'}
+                  {isEditing ? t('outputsPage.editor') : t('outputsPage.preview')}
                 </h2>
               </div>
 
@@ -1306,7 +1312,7 @@ const OutputDetailPage = () => {
                   className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black disabled:cursor-not-allowed disabled:opacity-40 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
                 >
                   <Clipboard size={15} />
-                  {copied ? 'Copied' : 'Copy formatted'}
+                  {copied ? t('outputsPage.copied') : t('outputsPage.copyFormatted')}
                 </button>
 
                 <button
@@ -1316,7 +1322,7 @@ const OutputDetailPage = () => {
                   className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black disabled:cursor-not-allowed disabled:opacity-40 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
                 >
                   <Download size={15} />
-                  Download
+                  {t('outputsPage.download')}
                 </button>
 
                 <button
@@ -1325,7 +1331,7 @@ const OutputDetailPage = () => {
                   className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
                 >
                   <PencilLine size={15} />
-                  {isEditing ? 'Preview' : 'Edit'}
+                  {isEditing ? t('outputsPage.preview') : t('outputsPage.editOutput')}
                 </button>
               </div>
             </div>
@@ -1335,7 +1341,7 @@ const OutputDetailPage = () => {
                 <textarea
                   value={content}
                   onChange={(event) => setContent(event.target.value)}
-                  placeholder="Paste, edit, or refine the final generated article/report here..."
+                  placeholder={t('outputsPage.pastePlaceholder')}
                   rows={22}
                   className="w-full resize-none rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm leading-relaxed text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
                 />
@@ -1346,7 +1352,7 @@ const OutputDetailPage = () => {
                   className="mt-4 inline-flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] active:scale-[0.99] dark:bg-white dark:text-black"
                 >
                   <Save size={16} />
-                  Save changes
+                  {t('outputsPage.saveChanges')}
                 </button>
               </div>
             ) : content.trim().length > 0 ? (
@@ -1361,13 +1367,11 @@ const OutputDetailPage = () => {
                 />
 
                 <h3 className="text-lg font-semibold text-black dark:text-white">
-                  Output draft created
+                  {t('outputsPage.outputDraftCreated')}
                 </h3>
 
                 <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-black/55 dark:text-white/55">
-                  Etherana created this output record. Once the Agent response
-                  is captured, the final content will appear here. You can also
-                  add or edit the content manually.
+{t('outputsPage.outputDraftDescription')}
                 </p>
 
                 <button
@@ -1376,7 +1380,7 @@ const OutputDetailPage = () => {
                   className="mt-5 inline-flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] active:scale-[0.99] dark:bg-white dark:text-black"
                 >
                   <PencilLine size={16} />
-                  Add content
+                  {t('outputsPage.addContent')}
                 </button>
               </div>
             )}
@@ -1385,7 +1389,7 @@ const OutputDetailPage = () => {
           <aside className="space-y-6">
             <section className="rounded-[2rem] border border-light-200 bg-light-secondary p-6 shadow-sm dark:border-dark-200 dark:bg-dark-secondary">
               <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-black/40 dark:text-white/40">
-                Expected output
+                {t('outputsPage.expectedOutput')}
               </p>
 
               <p className="text-sm leading-relaxed text-black/65 dark:text-white/65">
@@ -1395,7 +1399,7 @@ const OutputDetailPage = () => {
 
             <section className="rounded-[2rem] border border-light-200 bg-light-secondary p-6 shadow-sm dark:border-dark-200 dark:bg-dark-secondary">
               <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-black/40 dark:text-white/40">
-                Original agent prompt
+                {t('outputsPage.originalAgentPrompt')}
               </p>
 
               <p className="max-h-[520px] overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-black/65 dark:text-white/65">
@@ -1405,7 +1409,7 @@ const OutputDetailPage = () => {
 
             <section className="rounded-[2rem] border border-light-200 bg-light-secondary p-6 shadow-sm dark:border-dark-200 dark:bg-dark-secondary">
               <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-black/40 dark:text-white/40">
-                Output status
+                {t('outputsPage.outputStatus')}
               </p>
 
               <div className="flex items-start gap-3">
@@ -1420,8 +1424,8 @@ const OutputDetailPage = () => {
 
                 <p className="text-sm leading-relaxed text-black/60 dark:text-white/60">
                   {output.status === 'ready'
-                    ? 'This output has saved content and can be reused, copied, downloaded, or edited.'
-                    : 'This output is still a draft. Add content manually or rerun the automation to generate a new version.'}
+                    ? t('outputsPage.readyStatusDescription')
+                    : t('outputsPage.draftStatusDescription')}
                 </p>
               </div>
             </section>
