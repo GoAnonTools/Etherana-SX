@@ -23,6 +23,7 @@ import {
   readAutomationOutputs,
   writeAutomationOutputs,
 } from '@/lib/vault/localVault';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 type AppInputValues = Record<string, string>;
 
@@ -227,6 +228,7 @@ const AppCard = ({
   app: SmallAppTemplate;
   onSelect: (app: SmallAppTemplate) => void;
 }) => {
+  const { t } = useI18n();
   const Icon = app.icon;
 
   return (
@@ -252,7 +254,7 @@ const AppCard = ({
 
         <div className="mt-5 rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
           <p className="text-xs font-semibold uppercase tracking-wide text-black/40 dark:text-white/40">
-            Output
+            {t('appsPage.output')}
           </p>
           <p className="mt-1 text-sm text-black/75 dark:text-white/75">
             {app.outputType}
@@ -281,6 +283,7 @@ const AppRunner = ({
   app: SmallAppTemplate;
   onBack: () => void;
 }) => {
+  const { t } = useI18n();
   const Icon = app.icon;
   const [values, setValues] = useState<AppInputValues>({});
   const [preparedPrompt, setPreparedPrompt] = useState('');
@@ -351,7 +354,7 @@ const AppRunner = ({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data?.message || 'Small App failed.');
+        throw new Error(data?.message || t('appsPage.smallAppFailed'));
       }
 
       const output = data.content || '';
@@ -361,7 +364,7 @@ const AppRunner = ({
       setError(
         err instanceof Error
           ? err.message
-          : 'Small App failed to generate an output.',
+          : t('appsPage.smallAppFailedOutput'),
       );
     } finally {
       setIsRunning(false);
@@ -411,7 +414,7 @@ const AppRunner = ({
     const printableWindow = window.open('', '_blank');
 
     if (!printableWindow) {
-      window.alert('Could not open the print window. Please allow pop-ups for Etherana SX.');
+      window.alert(t('appsPage.couldNotOpenPrintWindow'));
       return;
     }
 
@@ -547,15 +550,15 @@ const AppRunner = ({
 
   const getSelectedOutputDestinationLabel = () => {
     if (outputDestination === 'automation') {
-      return 'App outputs';
+      return t('appsPage.appOutputs');
     }
 
     if (outputDestination.startsWith('space:')) {
       const spaceId = outputDestination.replace('space:', '');
-      return spaces.find((space) => space.id === spaceId)?.name ?? 'Space';
+      return spaces.find((space) => space.id === spaceId)?.name ?? t('appsPage.space');
     }
 
-    return 'App outputs';
+    return t('appsPage.appOutputs');
   };
 
   const handleSaveOutput = () => {
@@ -593,7 +596,7 @@ const AppRunner = ({
         className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-black/55 transition hover:text-black dark:text-white/55 dark:hover:text-white"
       >
         <ArrowLeft size={16} />
-        Back to Apps
+        {t('appsPage.backToApps')}
       </button>
 
       <header className="mb-8 rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
@@ -604,7 +607,7 @@ const AppRunner = ({
 
           <div>
             <div className="mb-2 inline-flex rounded-full border border-light-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-black/45 dark:border-dark-200 dark:text-white/45">
-              {app.category} App
+              {app.category} {t('appsPage.app')}
             </div>
 
             <h1 className="text-4xl font-bold tracking-tight text-black dark:text-white">
@@ -703,7 +706,7 @@ const AppRunner = ({
             className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-black"
           >
             {isRunning ? <Loader2 className="animate-spin" size={16} /> : <Play size={16} />}
-            {isRunning ? 'Generating...' : 'Generate Output'}
+            {isRunning ? t('appsPage.generating') : t('appsPage.generateOutput')}
           </button>
 
           {error && (
@@ -716,18 +719,18 @@ const AppRunner = ({
         <aside className="space-y-5">
           <div className="rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
             <h2 className="text-sm font-semibold text-black dark:text-white">
-              How Apps work
+              {t('appsPage.howAppsWork')}
             </h2>
 
             <p className="mt-2 text-sm leading-relaxed text-black/55 dark:text-white/55">
-              Apps are reusable mini-tools. They are not scheduled. You open one,
+              {t('appsPage.howAppsWorkDescription')}
               fill the inputs, run it, then save the result if useful.
             </p>
           </div>
 
           <div className="rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
             <p className="text-xs font-semibold uppercase tracking-wide text-black/40 dark:text-white/40">
-              Output type
+              {t('appsPage.outputType')}
             </p>
             <p className="mt-1 text-sm font-medium text-black/75 dark:text-white/75">
               {app.outputType}
@@ -737,7 +740,7 @@ const AppRunner = ({
           <div className="rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
             <label className="block space-y-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-black/40 dark:text-white/40">
-                Save destination
+                {t('appsPage.saveDestination')}
               </span>
 
               <select
@@ -748,7 +751,7 @@ const AppRunner = ({
                 }}
                 className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
               >
-                <option value="automation">App outputs</option>
+                <option value="automation">{t('appsPage.appOutputs')}</option>
                 {spaces.map((space) => (
                   <option key={space.id} value={`space:${space.id}`}>
                     {space.name}
@@ -758,7 +761,7 @@ const AppRunner = ({
             </label>
 
             <p className="mt-3 text-xs leading-relaxed text-black/45 dark:text-white/45">
-              Saved App outputs can stay in the general output library or be attached directly to a Space.
+              {t('appsPage.saveDestinationDescription')}
             </p>
           </div>
         </aside>
@@ -769,11 +772,11 @@ const AppRunner = ({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-black dark:text-white">
-                {generatedOutput ? 'Generated Output' : 'Prepared App Instructions'}
+                {generatedOutput ? t('appsPage.generatedOutput') : t('appsPage.preparedInstructions')}
               </h2>
               <p className="mt-1 text-sm text-black/55 dark:text-white/55">
                 {generatedOutput
-                  ? 'This output was generated by the Small App.'
+                  ? t('appsPage.generatedDescription')
                   : 'These instructions are ready to run once the app generates.'}
               </p>
             </div>
@@ -786,7 +789,7 @@ const AppRunner = ({
                   className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
                 >
                   <PencilLine size={16} />
-                  Edit output
+                  {t('appsPage.editOutput')}
                 </button>
               )}
 
@@ -797,7 +800,7 @@ const AppRunner = ({
                     onClick={handleSaveEditedOutput}
                     className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
                   >
-                    Save edits
+                    {t('appsPage.saveEdits')}
                   </button>
 
                   <button
@@ -805,7 +808,7 @@ const AppRunner = ({
                     onClick={handleCancelEditingOutput}
                     className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
                   >
-                    Cancel
+                    {t('appsPage.cancel')}
                   </button>
                 </>
               )}
@@ -817,7 +820,7 @@ const AppRunner = ({
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black disabled:cursor-not-allowed disabled:opacity-40 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
               >
                 <Copy size={16} />
-                {copied ? 'Copied' : 'Copy'}
+                {copied ? t('appsPage.copied') : t('appsPage.copy')}
               </button>
 
               <button
@@ -827,7 +830,7 @@ const AppRunner = ({
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black disabled:cursor-not-allowed disabled:opacity-40 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
               >
                 <FileText size={16} />
-                Print / Save PDF
+                {t('appsPage.printSavePdf')}
               </button>
 
               <button
@@ -838,10 +841,10 @@ const AppRunner = ({
               >
                 <Save size={16} />
                 {savedOutputId
-                  ? 'Saved'
+                  ? t('appsPage.saved')
                   : outputDestination === 'automation'
-                    ? 'Save to Outputs'
-                    : 'Save to Space'}
+                    ? t('appsPage.saveToOutputs')
+                    : t('appsPage.saveToSpace')}
               </button>
 
               {savedOutputId && (
@@ -849,7 +852,7 @@ const AppRunner = ({
                   href={`/outputs/${savedOutputId}`}
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
                 >
-                  Open Output
+                  {t('appsPage.openOutput')}
                 </a>
               )}
 
@@ -858,7 +861,7 @@ const AppRunner = ({
                   href={`/spaces/${outputDestination.replace('space:', '')}`}
                   className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
                 >
-                  Open Space
+                  {t('appsPage.openSpace')}
                 </a>
               )}
             </div>
@@ -886,6 +889,7 @@ const AppRunner = ({
 };
 
 export default function AppsPage() {
+  const { t } = useI18n();
   const [selectedApp, setSelectedApp] = useState<SmallAppTemplate | null>(null);
 
   const [appOutputs, setAppOutputs] = useState<AutomationOutputItem[]>([]);
@@ -926,16 +930,16 @@ export default function AppsPage() {
         <div className="max-w-3xl">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-light-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-black/45 dark:border-dark-200 dark:text-white/45">
             <Sparkles size={14} />
-            Small Apps
+            {t('appsPage.smallApps')}
           </div>
 
           <h1 className="text-4xl font-bold tracking-tight text-black dark:text-white md:text-5xl">
-            Apps
+            {t('appsPage.title')}
           </h1>
 
           <p className="mt-4 text-base leading-relaxed text-black/60 dark:text-white/60 md:text-lg">
-            Reusable mini-tools you open when you need them. Apps are not
-            scheduled; they help you transform inputs into useful outputs.
+            {t('appsPage.subtitle')}
+
           </p>
         </div>
       </header>
@@ -964,7 +968,7 @@ export default function AppsPage() {
             Produce
           </p>
           <p className="mt-1 text-sm text-black/55 dark:text-white/55">
-            Generate a reusable output.
+            {t('appsPage.generateReusableOutput')}
           </p>
         </div>
       </section>
@@ -987,10 +991,10 @@ export default function AppsPage() {
           <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-black dark:text-white">
-                Recent App Outputs
+                {t('appsPage.recentOutputs')}
               </h2>
               <p className="mt-1 text-sm text-black/55 dark:text-white/55">
-                Saved outputs generated from your Small Apps.
+                {t('appsPage.recentOutputsDescription')}
               </p>
             </div>
 
