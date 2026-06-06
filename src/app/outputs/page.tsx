@@ -37,6 +37,23 @@ const getOutputKind = (output: AutomationOutputItem) => {
   return 'automations';
 };
 
+const getOutputSourceLabel = (output: AutomationOutputItem) => {
+  if (output.automationId.startsWith('app:')) return 'App';
+  return 'Automation';
+};
+
+const getOutputLocationLabel = (output: AutomationOutputItem) => {
+  if (output.outputDestination?.startsWith('space:')) {
+    return output.outputDestinationLabel || 'Space';
+  }
+
+  return 'General Outputs';
+};
+
+const getOutputSourceName = (output: AutomationOutputItem) => {
+  return output.automationName || 'Unknown source';
+};
+
 const filterOptions: Array<{
   value: OutputFilter;
   label: string;
@@ -302,22 +319,47 @@ export default function OutputsPage() {
 
                 <Link href={`/outputs/${output.id}`} className="block">
                   <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-semibold capitalize text-black/45 dark:bg-dark-primary dark:text-white/45">
-                      {kind}
+                    <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-semibold text-black/45 dark:bg-dark-primary dark:text-white/45">
+                      {getOutputSourceLabel(output)}
                     </span>
 
                     <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-semibold text-black/45 dark:bg-dark-primary dark:text-white/45">
                       {output.outputType}
                     </span>
+
+                    {kind === 'spaces' && (
+                      <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-semibold text-black/45 dark:bg-dark-primary dark:text-white/45">
+                        Space
+                      </span>
+                    )}
                   </div>
 
                   <h2 className="line-clamp-2 text-lg font-semibold text-black dark:text-white">
                     {output.title}
                   </h2>
 
-                  <p className="mt-2 text-xs text-black/45 dark:text-white/45">
-                    {new Date(output.createdAt).toLocaleString()}
-                  </p>
+                  <div className="mt-3 space-y-1 rounded-2xl bg-light-primary p-3 text-xs text-black/50 dark:bg-dark-primary dark:text-white/50">
+                    <p>
+                      <span className="font-semibold text-black/65 dark:text-white/65">
+                        From:
+                      </span>{' '}
+                      {getOutputSourceName(output)}
+                    </p>
+
+                    <p>
+                      <span className="font-semibold text-black/65 dark:text-white/65">
+                        Location:
+                      </span>{' '}
+                      {getOutputLocationLabel(output)}
+                    </p>
+
+                    <p>
+                      <span className="font-semibold text-black/65 dark:text-white/65">
+                        Created:
+                      </span>{' '}
+                      {new Date(output.createdAt).toLocaleString()}
+                    </p>
+                  </div>
 
                   <p className="mt-4 line-clamp-5 text-sm leading-relaxed text-black/55 dark:text-white/55">
                     {preview}
