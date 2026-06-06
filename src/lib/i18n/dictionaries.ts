@@ -396,6 +396,100 @@ export const dictionaries = {
       copySuffix: 'Copy',
       customSuffix: 'Custom',
     },
+    vaultPage: {
+      backToSearch: 'Back to Search',
+      badge: 'Encrypted Backup Vault',
+      title: 'Back up or move your workspace',
+      subtitle:
+        'Export your Etherana workspace as an encrypted .goanon vault file. Store it anywhere you want, then import it on another machine with your recovery phrase.',
+      privateVaultIdentity: 'Private vault identity',
+      linkedBrowser: 'This browser is linked to a local private vault.',
+      vaultId: 'Vault ID',
+      created: 'Created:',
+      lastExport: 'Last export:',
+      lastImport: 'Last import:',
+      never: 'Never',
+      createVaultDescription:
+        'Create a private vault to generate a vault ID and recovery phrase. The phrase is shown once and is not stored by Etherana.',
+      createNewVault: 'Create new vault',
+      createPrivateVault: 'Create private vault',
+      saveRecoveryPhraseNow: 'Save this recovery phrase now',
+      copied: 'Copied',
+      copyPhrase: 'Copy phrase',
+      exportEncryptedVault: 'Export encrypted vault',
+      exportDescription: 'Create a portable backup for another device.',
+      exportScope: 'Export scope',
+      entireWorkspace: 'Entire workspace',
+      entireWorkspaceDescription: 'Export all Spaces and workspace data.',
+      selectedSpace: 'Selected Space',
+      selectedSpaceDescription: 'Export only one project Space.',
+      spaceToExport: 'Space to export',
+      recoveryPhrase: 'Recovery phrase',
+      enterRecoveryPhrase: 'Enter your recovery phrase',
+      exportVault: 'Export vault',
+      importEncryptedVault: 'Import encrypted vault',
+      importDescription: 'Restore workspace data on this device.',
+      goanonVaultFile: '.goanon vault file',
+      enterImportPhrase: 'Enter the phrase used during export',
+      importVault: 'Import vault',
+      restoreChecklist: 'Vault restore checklist',
+      restored: 'Restored',
+      restoredForSearch: 'Restored for search',
+      notIncludedYet: 'Not included yet',
+      spacesMetadata: 'Spaces metadata',
+      conversations: 'Conversations',
+      messages: 'Messages',
+      customAutomations: 'Custom automations',
+      automationOutputs: 'Automation outputs',
+      runHistory: 'Run history',
+      knowledgeFileNames: 'Knowledge file names',
+      processedChunks: 'Processed chunks',
+      embeddings: 'Embeddings',
+      uploadedFileSearchIndex: 'Uploaded-file search index',
+      originalBinaries: 'Original PDF/DOCX/TXT binaries',
+      crossDeviceSync: 'Cross-device live sync',
+      qrPairing: 'QR device pairing',
+      cloudEncryptedSync: 'Cloud encrypted blob sync',
+      checklistNote:
+        'This vault is already useful for restoring workspaces and searchable knowledge. Original uploaded files will require a dedicated encrypted file-blob layer.',
+      privacyGuarantees: 'Privacy guarantees',
+      privacyLocal:
+        'The vault is encrypted locally using AES-GCM before it is downloaded.',
+      privacyRecovery:
+        'Etherana cannot recover the vault if the recovery phrase is lost.',
+      privacyTransfer:
+        'This is designed for encrypted backup and transfer between machines. Daily workspace data should be stored automatically by Etherana.',
+      shortPhraseWarning:
+        'Use a longer recovery phrase. Short phrases are easier to guess.',
+      privateVaultCreated:
+        'Private vault created. Save the recovery phrase now. Etherana will not store it.',
+      enterPhraseBeforeExporting:
+        'Enter a recovery phrase before exporting.',
+      chooseSpaceToExport: 'Choose a Space to export.',
+      couldNotPrepareSpaceExport:
+        'Could not prepare selected Space export.',
+      encryptedSpaceExported:
+        'Encrypted Space vault exported successfully.',
+      encryptedWorkspaceExported:
+        'Encrypted workspace vault exported successfully.',
+      couldNotExport: 'Could not export the vault.',
+      chooseBackupFile:
+        'Choose an encrypted vault backup file first.',
+      enterPhraseForBackup:
+        'Enter the recovery phrase for this backup.',
+      importConfirm:
+        'Importing this vault will merge encrypted backup data into this browser. Continue?',
+      importedPrefix: 'Vault imported. Restored',
+      dataGroups: 'data groups',
+      spaces: 'spaces',
+      knowledgeFiles: 'knowledge files',
+      notes: 'notes',
+      links: 'links',
+      and: 'and',
+      couldNotImport:
+        'Could not import the vault. Check the file and recovery phrase.',
+      untitledSpace: 'Untitled Space',
+    },
     outputsPage: {
       outputLibrary: 'Output Library',
       title: 'Outputs',
@@ -891,6 +985,100 @@ export const dictionaries = {
       copySuffix: 'Copie',
       customSuffix: 'Personnalisé',
     },
+    vaultPage: {
+      backToSearch: 'Retour à la recherche',
+      badge: 'Coffre de sauvegarde chiffré',
+      title: 'Sauvegarder ou déplacer votre espace de travail',
+      subtitle:
+        'Exportez votre espace de travail Etherana sous forme de fichier coffre chiffré .goanon. Stockez-le où vous voulez, puis importez-le sur une autre machine avec votre phrase de récupération.',
+      privateVaultIdentity: 'Identité du coffre privé',
+      linkedBrowser: 'Ce navigateur est lié à un coffre privé local.',
+      vaultId: 'ID du coffre',
+      created: 'Créé :',
+      lastExport: 'Dernier export :',
+      lastImport: 'Dernier import :',
+      never: 'Jamais',
+      createVaultDescription:
+        'Créez un coffre privé pour générer un ID de coffre et une phrase de récupération. La phrase est affichée une seule fois et n’est pas stockée par Etherana.',
+      createNewVault: 'Créer un nouveau coffre',
+      createPrivateVault: 'Créer un coffre privé',
+      saveRecoveryPhraseNow: 'Sauvegardez cette phrase de récupération maintenant',
+      copied: 'Copié',
+      copyPhrase: 'Copier la phrase',
+      exportEncryptedVault: 'Exporter le coffre chiffré',
+      exportDescription: 'Créer une sauvegarde portable pour un autre appareil.',
+      exportScope: 'Périmètre d’export',
+      entireWorkspace: 'Espace de travail complet',
+      entireWorkspaceDescription: 'Exporter tous les Espaces et données de travail.',
+      selectedSpace: 'Espace sélectionné',
+      selectedSpaceDescription: 'Exporter un seul Espace de projet.',
+      spaceToExport: 'Espace à exporter',
+      recoveryPhrase: 'Phrase de récupération',
+      enterRecoveryPhrase: 'Entrez votre phrase de récupération',
+      exportVault: 'Exporter le coffre',
+      importEncryptedVault: 'Importer un coffre chiffré',
+      importDescription: 'Restaurer les données de travail sur cet appareil.',
+      goanonVaultFile: 'Fichier coffre .goanon',
+      enterImportPhrase: 'Entrez la phrase utilisée lors de l’export',
+      importVault: 'Importer le coffre',
+      restoreChecklist: 'Checklist de restauration du coffre',
+      restored: 'Restauré',
+      restoredForSearch: 'Restauré pour la recherche',
+      notIncludedYet: 'Pas encore inclus',
+      spacesMetadata: 'Métadonnées des Espaces',
+      conversations: 'Conversations',
+      messages: 'Messages',
+      customAutomations: 'Automatisations personnalisées',
+      automationOutputs: 'Sorties des automatisations',
+      runHistory: 'Historique d’exécution',
+      knowledgeFileNames: 'Noms des fichiers de connaissance',
+      processedChunks: 'Chunks traités',
+      embeddings: 'Embeddings',
+      uploadedFileSearchIndex: 'Index de recherche des fichiers importés',
+      originalBinaries: 'Binaires PDF/DOCX/TXT originaux',
+      crossDeviceSync: 'Synchronisation live entre appareils',
+      qrPairing: 'Appairage par QR code',
+      cloudEncryptedSync: 'Synchronisation cloud de blob chiffré',
+      checklistNote:
+        'Ce coffre est déjà utile pour restaurer les espaces de travail et les connaissances recherchables. Les fichiers originaux importés nécessiteront une couche dédiée de blobs de fichiers chiffrés.',
+      privacyGuarantees: 'Garanties de confidentialité',
+      privacyLocal:
+        'Le coffre est chiffré localement avec AES-GCM avant d’être téléchargé.',
+      privacyRecovery:
+        'Etherana ne peut pas récupérer le coffre si la phrase de récupération est perdue.',
+      privacyTransfer:
+        'Ce système est conçu pour la sauvegarde chiffrée et le transfert entre machines. Les données quotidiennes de l’espace de travail doivent être stockées automatiquement par Etherana.',
+      shortPhraseWarning:
+        'Utilisez une phrase de récupération plus longue. Les phrases courtes sont plus faciles à deviner.',
+      privateVaultCreated:
+        'Coffre privé créé. Sauvegardez la phrase de récupération maintenant. Etherana ne la stockera pas.',
+      enterPhraseBeforeExporting:
+        'Entrez une phrase de récupération avant l’export.',
+      chooseSpaceToExport: 'Choisissez un Espace à exporter.',
+      couldNotPrepareSpaceExport:
+        'Impossible de préparer l’export de l’Espace sélectionné.',
+      encryptedSpaceExported:
+        'Coffre d’Espace chiffré exporté avec succès.',
+      encryptedWorkspaceExported:
+        'Coffre de l’espace de travail chiffré exporté avec succès.',
+      couldNotExport: 'Impossible d’exporter le coffre.',
+      chooseBackupFile:
+        'Choisissez d’abord un fichier coffre chiffré.',
+      enterPhraseForBackup:
+        'Entrez la phrase de récupération de cette sauvegarde.',
+      importConfirm:
+        'Importer ce coffre fusionnera les données de sauvegarde chiffrées dans ce navigateur. Continuer ?',
+      importedPrefix: 'Coffre importé. Restauré',
+      dataGroups: 'groupes de données',
+      spaces: 'espaces',
+      knowledgeFiles: 'fichiers de connaissance',
+      notes: 'notes',
+      links: 'liens',
+      and: 'et',
+      couldNotImport:
+        'Impossible d’importer le coffre. Vérifiez le fichier et la phrase de récupération.',
+      untitledSpace: 'Espace sans titre',
+    },
     outputsPage: {
       outputLibrary: 'Bibliothèque de sorties',
       title: 'Sorties',
@@ -1012,6 +1200,7 @@ export type TranslationKey =
   | `spaceDetail.${keyof typeof dictionaries.en.spaceDetail}`
   | `appsPage.${keyof typeof dictionaries.en.appsPage}`
   | `automationsPage.${keyof typeof dictionaries.en.automationsPage}`
+  | `vaultPage.${keyof typeof dictionaries.en.vaultPage}`
   | `models.${keyof typeof dictionaries.en.models}`;
 
 export const getTranslation = (locale: Locale, key: TranslationKey) => {

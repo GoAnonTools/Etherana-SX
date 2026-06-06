@@ -22,6 +22,7 @@ import {
   writeVaultMeta,
   writeVaultStorageRecord,
 } from '@/lib/vault/localVault';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 interface VaultSpace {
   id: string;
@@ -395,6 +396,7 @@ const rewriteSpaceDestinations = (
 };
 
 const VaultPage = () => {
+  const { t } = useI18n();
   const [vaultMeta, setVaultMeta] = useState<VaultMeta | null>(null);
   const [generatedPhrase, setGeneratedPhrase] = useState('');
   const [exportPhrase, setExportPhrase] = useState('');
@@ -429,7 +431,7 @@ const VaultPage = () => {
     if (!exportPhrase) return null;
 
     if (exportPhrase.length < 16) {
-      return 'Use a longer recovery phrase. Short phrases are easier to guess.';
+      return t('vaultPage.shortPhraseWarning');
     }
 
     return null;
@@ -448,7 +450,7 @@ const VaultPage = () => {
     setGeneratedPhrase(phrase);
     setExportPhrase(phrase);
     setStatus(
-      'Private vault created. Save the recovery phrase now. Etherana will not store it.',
+      t('vaultPage.privateVaultCreated'),
     );
   };
 
@@ -473,7 +475,7 @@ const VaultPage = () => {
 
       return data.map((space) => ({
         id: String(space.id),
-        name: String(space.name ?? 'Untitled Space'),
+        name: String(space.name ?? t('vaultPage.untitledSpace')),
         description: String(space.description ?? ''),
         instruction: String(space.instruction ?? ''),
         createdAt: String(space.createdAt ?? ''),
@@ -562,12 +564,12 @@ const VaultPage = () => {
 
   const exportVault = async () => {
     if (!exportPhrase.trim()) {
-      setStatus('Enter a recovery phrase before exporting.');
+      setStatus(t('vaultPage.enterPhraseBeforeExporting'));
       return;
     }
 
     if (exportScope === 'space' && !selectedExportSpaceId) {
-      setStatus('Choose a Space to export.');
+      setStatus(t('vaultPage.chooseSpaceToExport'));
       return;
     }
 
@@ -588,7 +590,7 @@ const VaultPage = () => {
         const res = await fetch(`/api/vault/spaces/${selectedExportSpaceId}`);
 
         if (!res.ok) {
-          throw new Error('Could not prepare selected Space export.');
+          throw new Error(t('vaultPage.couldNotPrepareSpaceExport'));
         }
 
         payload = (await res.json()) as VaultPayload;
@@ -637,12 +639,12 @@ const VaultPage = () => {
 
       setStatus(
         exportScope === 'space'
-          ? 'Encrypted Space vault exported successfully.'
-          : 'Encrypted workspace vault exported successfully.',
+          ? t('vaultPage.encryptedSpaceExported')
+          : t('vaultPage.encryptedWorkspaceExported'),
       );
     } catch (error) {
       console.error(error);
-      setStatus('Could not export the vault.');
+      setStatus(t('vaultPage.couldNotExport'));
     } finally {
       setWorking(false);
     }
@@ -710,17 +712,17 @@ const VaultPage = () => {
 
   const importVault = async () => {
     if (!backupFile) {
-      setStatus('Choose an encrypted vault backup file first.');
+      setStatus(t('vaultPage.chooseBackupFile'));
       return;
     }
 
     if (!importPhrase.trim()) {
-      setStatus('Enter the recovery phrase for this backup.');
+      setStatus(t('vaultPage.enterPhraseForBackup'));
       return;
     }
 
     const confirmed = window.confirm(
-      'Importing this vault will merge encrypted backup data into this browser. Continue?',
+      t('vaultPage.importConfirm'),
     );
 
     if (!confirmed) return;
@@ -829,12 +831,24 @@ const VaultPage = () => {
       setVaultMeta(importedMeta);
 
       setStatus(
-        `Vault imported. Restored ${payload.localStorageRecords.length} data groups, ${Object.keys(spaceIdMap).length} spaces, ${importedChats} conversations, ${importedMessages} messages, ${importedUploads} knowledge files, ${importedNotes} notes, and ${importedLinks} links.`,
+        `${t('vaultPage.importedPrefix')} ${
+          payload.localStorageRecords.length
+        } ${t('vaultPage.dataGroups')}, ${
+          Object.keys(spaceIdMap).length
+        } ${t('vaultPage.spaces')}, ${importedChats} ${t(
+          'vaultPage.conversations',
+        ).toLowerCase()}, ${importedMessages} ${t(
+          'vaultPage.messages',
+        ).toLowerCase()}, ${importedUploads} ${t(
+          'vaultPage.knowledgeFiles',
+        )}, ${importedNotes} ${t('vaultPage.notes')}, ${t(
+          'vaultPage.and',
+        )} ${importedLinks} ${t('vaultPage.links')}.`,
       );
     } catch (error) {
       console.error(error);
       setStatus(
-        'Could not import the vault. Check the file and recovery phrase.',
+        t('vaultPage.couldNotImport'),
       );
     } finally {
       setWorking(false);
@@ -858,23 +872,21 @@ const VaultPage = () => {
           className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-black/55 transition hover:text-black dark:text-white/55 dark:hover:text-white"
         >
           <ArrowLeft size={16} />
-          Back to Search
+          {t('vaultPage.backToSearch')}
         </Link>
 
         <header className="rounded-[2rem] border border-light-200 bg-light-secondary p-7 shadow-sm dark:border-dark-200 dark:bg-dark-secondary">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-light-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-black/45 dark:border-dark-200 dark:text-white/45">
             <ShieldCheck size={14} />
-            Encrypted Backup Vault
+            {t('vaultPage.badge')}
           </div>
 
           <h1 className="text-4xl font-bold tracking-tight text-black dark:text-white md:text-5xl">
-            Back up or move your workspace
+            {t('vaultPage.title')}
           </h1>
 
           <p className="mt-4 max-w-3xl text-base leading-relaxed text-black/60 dark:text-white/60">
-            Export your Etherana workspace as an encrypted .goanon vault file.
-            Store it anywhere you want, then import it on another machine with
-            your recovery phrase.
+            {t('vaultPage.subtitle')}
           </p>
         </header>
 
@@ -884,19 +896,19 @@ const VaultPage = () => {
               <div className="mb-3 flex items-center gap-2">
                 <Lock size={18} className="text-green-500" />
                 <h2 className="text-xl font-semibold text-black dark:text-white">
-                  Private vault identity
+                  {t('vaultPage.privateVaultIdentity')}
                 </h2>
               </div>
 
               {vaultMeta ? (
                 <div>
                   <p className="text-sm text-black/55 dark:text-white/55">
-                    This browser is linked to a local private vault.
+                    {t('vaultPage.linkedBrowser')}
                   </p>
 
                   <div className="mt-4 rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-black/35 dark:text-white/35">
-                      Vault ID
+                      {t('vaultPage.vaultId')}
                     </p>
 
                     <p className="mt-2 break-all font-mono text-sm text-black/70 dark:text-white/70">
@@ -905,25 +917,24 @@ const VaultPage = () => {
                   </div>
 
                   <div className="mt-4 grid gap-3 text-sm text-black/55 dark:text-white/55 sm:grid-cols-3">
-                    <p>Created: {new Date(vaultMeta.createdAt).toLocaleString()}</p>
+                    <p>{t('vaultPage.created')} {new Date(vaultMeta.createdAt).toLocaleString()}</p>
                     <p>
-                      Last export:{' '}
+                      {t('vaultPage.lastExport')}{' '}
                       {vaultMeta.lastExportAt
                         ? new Date(vaultMeta.lastExportAt).toLocaleString()
-                        : 'Never'}
+                        : t('vaultPage.never')}
                     </p>
                     <p>
-                      Last import:{' '}
+                      {t('vaultPage.lastImport')}{' '}
                       {vaultMeta.lastImportAt
                         ? new Date(vaultMeta.lastImportAt).toLocaleString()
-                        : 'Never'}
+                        : t('vaultPage.never')}
                     </p>
                   </div>
                 </div>
               ) : (
                 <p className="max-w-2xl text-sm leading-relaxed text-black/55 dark:text-white/55">
-                  Create a private vault to generate a vault ID and recovery
-                  phrase. The phrase is shown once and is not stored by Etherana.
+                  {t('vaultPage.createVaultDescription')}
                 </p>
               )}
             </div>
@@ -934,7 +945,7 @@ const VaultPage = () => {
               className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
             >
               <ShieldCheck size={16} />
-              {vaultMeta ? 'Create new vault' : 'Create private vault'}
+              {vaultMeta ? t('vaultPage.createNewVault') : t('vaultPage.createPrivateVault')}
             </button>
           </div>
 
@@ -942,7 +953,7 @@ const VaultPage = () => {
             <div className="mt-6 rounded-3xl border border-orange-500/20 bg-orange-500/10 p-5">
               <div className="mb-3 flex items-center gap-2 text-orange-600 dark:text-orange-400">
                 <AlertTriangle size={18} />
-                <p className="font-semibold">Save this recovery phrase now</p>
+                <p className="font-semibold">{t('vaultPage.saveRecoveryPhraseNow')}</p>
               </div>
 
               <p className="rounded-2xl bg-light-primary p-4 font-mono text-sm leading-relaxed text-black dark:bg-dark-primary dark:text-white">
@@ -955,7 +966,7 @@ const VaultPage = () => {
                 className="mt-4 inline-flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
               >
                 <Copy size={16} />
-                {copied ? 'Copied' : 'Copy phrase'}
+                {copied ? t('vaultPage.copied') : t('vaultPage.copyPhrase')}
               </button>
             </div>
           )}
@@ -970,18 +981,18 @@ const VaultPage = () => {
 
               <div>
                 <h2 className="text-xl font-semibold text-black dark:text-white">
-                  Export encrypted vault
+                  {t('vaultPage.exportEncryptedVault')}
                 </h2>
 
                 <p className="text-sm text-black/50 dark:text-white/50">
-                  Create a portable backup for another device.
+                  {t('vaultPage.exportDescription')}
                 </p>
               </div>
             </div>
 
             <div className="mb-5 rounded-3xl bg-light-primary p-4 dark:bg-dark-primary">
               <p className="mb-3 text-sm font-semibold text-black dark:text-white">
-                Export scope
+                {t('vaultPage.exportScope')}
               </p>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -994,9 +1005,9 @@ const VaultPage = () => {
                       : 'border-light-200 text-black/60 hover:text-black dark:border-dark-200 dark:text-white/60 dark:hover:text-white'
                   }`}
                 >
-                  <span className="block font-semibold">Entire workspace</span>
+                  <span className="block font-semibold">{t('vaultPage.entireWorkspace')}</span>
                   <span className="mt-1 block text-xs opacity-70">
-                    Export all Spaces and workspace data.
+                    {t('vaultPage.entireWorkspaceDescription')}
                   </span>
                 </button>
 
@@ -1009,9 +1020,9 @@ const VaultPage = () => {
                       : 'border-light-200 text-black/60 hover:text-black dark:border-dark-200 dark:text-white/60 dark:hover:text-white'
                   }`}
                 >
-                  <span className="block font-semibold">Selected Space</span>
+                  <span className="block font-semibold">{t('vaultPage.selectedSpace')}</span>
                   <span className="mt-1 block text-xs opacity-70">
-                    Export only one project Space.
+                    {t('vaultPage.selectedSpaceDescription')}
                   </span>
                 </button>
               </div>
@@ -1019,7 +1030,7 @@ const VaultPage = () => {
               {exportScope === 'space' && (
                 <label className="mt-4 block space-y-2">
                   <span className="text-sm font-medium text-black dark:text-white">
-                    Space to export
+                    {t('vaultPage.spaceToExport')}
                   </span>
 
                   <select
@@ -1041,14 +1052,14 @@ const VaultPage = () => {
 
             <label className="space-y-2">
               <span className="text-sm font-medium text-black dark:text-white">
-                Recovery phrase
+                {t('vaultPage.recoveryPhrase')}
               </span>
 
               <input
                 value={exportPhrase}
                 onChange={(event) => setExportPhrase(event.target.value)}
                 type="password"
-                placeholder="Enter your recovery phrase"
+                placeholder={t('vaultPage.enterRecoveryPhrase')}
                 className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
               />
             </label>
@@ -1067,7 +1078,7 @@ const VaultPage = () => {
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 dark:bg-white dark:text-black"
             >
               {working ? <RefreshCw size={16} /> : <FileKey2 size={16} />}
-              Export vault
+              {t('vaultPage.exportVault')}
             </button>
           </div>
 
@@ -1079,23 +1090,23 @@ const VaultPage = () => {
 
               <div>
                 <h2 className="text-xl font-semibold text-black dark:text-white">
-                  Import encrypted vault
+                  {t('vaultPage.importEncryptedVault')}
                 </h2>
 
                 <p className="text-sm text-black/50 dark:text-white/50">
-                  Restore workspace data on this device.
+                  {t('vaultPage.importDescription')}
                 </p>
               </div>
             </div>
 
             <label className="space-y-2">
               <span className="text-sm font-medium text-black dark:text-white">
-                .goanon vault file
+                {t('vaultPage.goanonVaultFile')}
               </span>
 
               <input
                 type="file"
-                accept=".json,application/json"
+                accept=".goanon,.json,application/json,application/vnd.etherana.goanon+json"
                 onChange={handleFileChange}
                 className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-black file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:file:bg-white dark:file:text-black"
               />
@@ -1103,14 +1114,14 @@ const VaultPage = () => {
 
             <label className="mt-4 block space-y-2">
               <span className="text-sm font-medium text-black dark:text-white">
-                Recovery phrase
+                {t('vaultPage.recoveryPhrase')}
               </span>
 
               <input
                 value={importPhrase}
                 onChange={(event) => setImportPhrase(event.target.value)}
                 type="password"
-                placeholder="Enter the phrase used during export"
+                placeholder={t('vaultPage.enterImportPhrase')}
                 className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
               />
             </label>
@@ -1122,7 +1133,7 @@ const VaultPage = () => {
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] active:scale-[0.99] disabled:opacity-40 dark:bg-white dark:text-black"
             >
               {working ? <RefreshCw size={16} /> : <KeyRound size={16} />}
-              Import vault
+              {t('vaultPage.importVault')}
             </button>
           </div>
         </section>
@@ -1137,57 +1148,55 @@ const VaultPage = () => {
           <div className="mb-5 flex items-center gap-2">
             <ShieldCheck size={18} className="text-blue-500" />
             <h2 className="text-lg font-semibold text-black dark:text-white">
-              Vault restore checklist
+              {t('vaultPage.restoreChecklist')}
             </h2>
           </div>
 
           <div className="grid gap-5 md:grid-cols-3">
             <div className="rounded-2xl bg-light-primary p-5 dark:bg-dark-primary">
               <p className="mb-3 text-sm font-semibold text-green-600 dark:text-green-400">
-                Restored
+                {t('vaultPage.restored')}
               </p>
 
               <ul className="space-y-2 text-sm leading-relaxed text-black/60 dark:text-white/60">
-                <li>Spaces metadata</li>
-                <li>Conversations</li>
-                <li>Messages</li>
-                <li>Custom automations</li>
-                <li>Automation outputs</li>
-                <li>Run history</li>
+                <li>{t('vaultPage.spacesMetadata')}</li>
+                <li>{t('vaultPage.conversations')}</li>
+                <li>{t('vaultPage.messages')}</li>
+                <li>{t('vaultPage.customAutomations')}</li>
+                <li>{t('vaultPage.automationOutputs')}</li>
+                <li>{t('vaultPage.runHistory')}</li>
               </ul>
             </div>
 
             <div className="rounded-2xl bg-light-primary p-5 dark:bg-dark-primary">
               <p className="mb-3 text-sm font-semibold text-orange-600 dark:text-orange-400">
-                Restored for search
+                {t('vaultPage.restored')} for search
               </p>
 
               <ul className="space-y-2 text-sm leading-relaxed text-black/60 dark:text-white/60">
-                <li>Knowledge file names</li>
-                <li>Processed chunks</li>
-                <li>Embeddings</li>
-                <li>Uploaded-file search index</li>
+                <li>{t('vaultPage.knowledgeFileNames')}</li>
+                <li>{t('vaultPage.processedChunks')}</li>
+                <li>{t('vaultPage.embeddings')}</li>
+                <li>{t('vaultPage.uploadedFileSearchIndex')}</li>
               </ul>
             </div>
 
             <div className="rounded-2xl bg-light-primary p-5 dark:bg-dark-primary">
               <p className="mb-3 text-sm font-semibold text-black/55 dark:text-white/55">
-                Not included yet
+                {t('vaultPage.notIncludedYet')}
               </p>
 
               <ul className="space-y-2 text-sm leading-relaxed text-black/60 dark:text-white/60">
-                <li>Original PDF/DOCX/TXT binaries</li>
-                <li>Cross-device live sync</li>
-                <li>QR device pairing</li>
-                <li>Cloud encrypted blob sync</li>
+                <li>{t('vaultPage.originalBinaries')}</li>
+                <li>{t('vaultPage.crossDeviceSync')}</li>
+                <li>{t('vaultPage.qrPairing')}</li>
+                <li>{t('vaultPage.cloudEncryptedSync')}</li>
               </ul>
             </div>
           </div>
 
           <p className="mt-5 text-sm leading-relaxed text-black/50 dark:text-white/50">
-            This vault is already useful for restoring workspaces and searchable
-            knowledge. Original uploaded files will require a dedicated encrypted
-            file-blob layer.
+            {t('vaultPage.checklistNote')}
           </p>
         </section>
 
@@ -1195,23 +1204,21 @@ const VaultPage = () => {
           <div className="mb-4 flex items-center gap-2">
             <CheckCircle2 size={18} className="text-green-500" />
             <h2 className="text-lg font-semibold text-black dark:text-white">
-              Privacy guarantees
+              {t('vaultPage.privacyGuarantees')}
             </h2>
           </div>
 
           <div className="grid gap-4 text-sm leading-relaxed text-black/60 dark:text-white/60 md:grid-cols-3">
             <p>
-              The vault is encrypted locally using AES-GCM before it is
-              downloaded.
+              {t('vaultPage.privacyLocal')}
             </p>
 
             <p>
-              Etherana cannot recover the vault if the recovery phrase is lost.
+              {t('vaultPage.privacyRecovery')}
             </p>
 
             <p>
-              This is designed for encrypted backup and transfer between machines.
-              Daily workspace data should be stored automatically by Etherana.
+              {t('vaultPage.privacyTransfer')}
             </p>
           </div>
         </section>
