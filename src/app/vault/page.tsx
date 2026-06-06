@@ -326,7 +326,7 @@ const decryptBackup = async (
 
 const downloadJson = (filename: string, data: unknown) => {
   const blob = new Blob([JSON.stringify(data, null, 2)], {
-    type: 'application/json;charset=utf-8',
+    type: 'application/vnd.etherana.goanon+json;charset=utf-8',
   });
 
   const url = URL.createObjectURL(blob);
@@ -341,7 +341,7 @@ const downloadJson = (filename: string, data: unknown) => {
 
 const getBackupFilename = () => {
   const date = new Date().toISOString().slice(0, 10);
-  return `etherana-private-vault-${date}.json`;
+  return `etherana-private-vault-${date}.goanon`;
 };
 
 const getSpaceBackupFilename = (spaceName: string, spaceId: string) => {
@@ -353,7 +353,7 @@ const getSpaceBackupFilename = (spaceName: string, spaceId: string) => {
       .replace(/^-+|-+$/g, '')
       .slice(0, 60) || spaceId;
 
-  return `etherana-space-${slug}-${date}.json`;
+  return `etherana-space-${slug}-${date}.goanon`;
 };
 
 
@@ -872,7 +872,7 @@ const VaultPage = () => {
           </h1>
 
           <p className="mt-4 max-w-3xl text-base leading-relaxed text-black/60 dark:text-white/60">
-            Export your Etherana workspace as an encrypted vault file.
+            Export your Etherana workspace as an encrypted .goanon vault file.
             Store it anywhere you want, then import it on another machine with
             your recovery phrase.
           </p>
@@ -1090,7 +1090,7 @@ const VaultPage = () => {
 
             <label className="space-y-2">
               <span className="text-sm font-medium text-black dark:text-white">
-                Vault file
+                .goanon vault file
               </span>
 
               <input
