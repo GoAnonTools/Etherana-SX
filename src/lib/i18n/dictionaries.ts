@@ -58,6 +58,18 @@ export const dictionaries = {
       languageDescription:
         'Choose the interface language. Generated content stays in the language you ask for.',
     },
+    searchPage: {
+      serverError: 'Failed to connect to the server. Please try again later.',
+      askAnything: 'Ask anything...',
+      createNewSpace: 'Create new Space',
+      results: 'Results',
+      agent: 'Agent',
+      resultsTitle: 'Show normal search results',
+      agentTitle: 'Use the AI agent',
+      couldNotLoadNews: 'Could not load news.',
+      noNewsPreview: 'No news preview available.',
+      news: 'News',
+    },
     models: {
       selectModels: 'Select models',
       manageConnections: 'Manage connections',
@@ -141,6 +153,18 @@ export const dictionaries = {
       languageDescription:
         'Choisissez la langue de l’interface. Les contenus générés gardent la langue demandée.',
     },
+    searchPage: {
+      serverError: 'Impossible de se connecter au serveur. Veuillez réessayer plus tard.',
+      askAnything: 'Posez votre question...',
+      createNewSpace: 'Créer un nouvel espace',
+      results: 'Résultats',
+      agent: 'Agent',
+      resultsTitle: 'Afficher les résultats de recherche classiques',
+      agentTitle: 'Utiliser l’agent IA',
+      couldNotLoadNews: 'Impossible de charger les actualités.',
+      noNewsPreview: 'Aucun aperçu d’actualité disponible.',
+      news: 'Actualités',
+    },
     models: {
       selectModels: 'Choisir les modèles',
       manageConnections: 'Gérer les connexions',
@@ -180,6 +204,7 @@ export type TranslationKey =
   | `common.${keyof typeof dictionaries.en.common}`
   | `sidebar.${keyof typeof dictionaries.en.sidebar}`
   | `settings.${keyof typeof dictionaries.en.settings}`
+  | `searchPage.${keyof typeof dictionaries.en.searchPage}`
   | `models.${keyof typeof dictionaries.en.models}`;
 
 export const getTranslation = (locale: Locale, key: TranslationKey) => {

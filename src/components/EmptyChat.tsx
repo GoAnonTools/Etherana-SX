@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Settings, LayoutGrid } from 'lucide-react';
+import { LayoutGrid } from 'lucide-react';
 import EmptyChatMessageInput from './EmptyChatMessageInput';
 import { File } from './ChatWindow';
 import Link from 'next/link';
@@ -12,8 +12,10 @@ import {
   getShowNewsWidget,
   getShowWeatherWidget,
 } from '@/lib/config/clientRegistry';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 const EmptyChat = () => {
+  const { t } = useI18n();
   const [showWeather, setShowWeather] = useState(() =>
     typeof window !== 'undefined' ? getShowWeatherWidget() : true,
   );
@@ -59,7 +61,7 @@ const EmptyChat = () => {
               href="/spaces"
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-black/60 dark:text-white/60 border border-light-200 dark:border-dark-200 rounded-full hover:bg-light-200 dark:hover:bg-dark-200 transition duration-200"
             >
-              <LayoutGrid size={16} /> Create new Space
+              <LayoutGrid size={16} /> {t('searchPage.createNewSpace')}
             </Link>
           </div>
         </div>

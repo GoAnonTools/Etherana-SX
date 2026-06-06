@@ -8,8 +8,10 @@ import { useChat } from '@/lib/hooks/useChat';
 import ModelSelector from './MessageInputActions/ChatModelSelector';
 import SpaceSelector from './MessageInputActions/SpaceSelector';
 import SearchModeToggle from './MessageInputActions/SearchModeToggle';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 const EmptyChatMessageInput = () => {
+  const { t } = useI18n();
   const { sendMessage } = useChat();
 
   /* const [copilotEnabled, setCopilotEnabled] = useState(false); */
@@ -72,7 +74,7 @@ const EmptyChatMessageInput = () => {
           onChange={(e) => setMessage(e.target.value)}
           minRows={2}
           className="px-2 bg-transparent placeholder:text-[15px] placeholder:text-black/50 dark:placeholder:text-white/50 text-sm text-black dark:text-white resize-none focus:outline-none w-full max-h-24 lg:max-h-36 xl:max-h-48"
-          placeholder="Ask anything..."
+          placeholder={t('searchPage.askAnything')}
         />
         <div className="flex flex-row items-center justify-between mt-4">
           <div className="flex flex-row items-center gap-2">

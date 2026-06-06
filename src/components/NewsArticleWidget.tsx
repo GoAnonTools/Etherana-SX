@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 interface Article {
   title: string;
@@ -51,6 +52,7 @@ const getSourceLabel = (url?: string | null) => {
 };
 
 const NewsArticleWidget = () => {
+  const { t } = useI18n();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -107,7 +109,7 @@ const NewsArticleWidget = () => {
         </div>
       ) : error ? (
         <div className="flex w-full items-center px-4 text-xs text-red-400">
-          Could not load news.
+          {t('searchPage.couldNotLoadNews')}
         </div>
       ) : article ? (
         <a
@@ -138,13 +140,13 @@ const NewsArticleWidget = () => {
             </div>
 
             <p className="line-clamp-2 text-[10px] leading-relaxed text-black/60 dark:text-white/60">
-              {article.content || sourceLabel}
+              {article.content || sourceLabel || t('searchPage.news')}
             </p>
           </div>
         </a>
       ) : (
         <div className="flex w-full items-center px-4 text-xs text-black/50 dark:text-white/50">
-          No news preview available.
+          {t('searchPage.noNewsPreview')}
         </div>
       )}
     </div>

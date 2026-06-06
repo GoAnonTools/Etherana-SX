@@ -1,8 +1,10 @@
 import { Bot, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat } from '@/lib/hooks/useChat';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 const SearchModeToggle = () => {
+  const { t } = useI18n();
   const { searchMode, setSearchMode } = useChat();
 
   return (
@@ -16,7 +18,7 @@ const SearchModeToggle = () => {
             ? 'bg-sky-500 text-white shadow-sm etherana-search-mode-active'
             : 'text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white',
         )}
-        title="Show normal search results"
+        title={t('searchPage.resultsTitle')}
       >
         <Search size={13} />
         Results
@@ -31,7 +33,7 @@ const SearchModeToggle = () => {
             ? 'bg-sky-500 text-white shadow-sm etherana-search-mode-active'
             : 'text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white',
         )}
-        title="Use the AI agent"
+        title={t('searchPage.agentTitle')}
       >
         <Bot size={13} />
         Agent
