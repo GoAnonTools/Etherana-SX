@@ -1,0 +1,333 @@
+'use client';
+
+import {
+  CheckSquare,
+  ExternalLink,
+  FileText,
+  Filter,
+  Square,
+  Trash2,
+} from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  type AutomationOutputItem,
+  getAutomationStorageChangedEventName,
+  readAutomationOutputs,
+  writeAutomationOutputs,
+} from '@/lib/vault/localVault';
+
+type OutputFilter = 'all' | 'apps' | 'automations' | 'spaces';
+
+const stripMarkdown = (value: string) => {
+  return value
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/^[-*]\s+/gm, '• ')
+    .trim();
+};
+
+const getOutputKind = (output: AutomationOutputItem) => {
+  if (output.automationId.startsWith('app:')) return 'apps';
+  if (output.outputDestination?.startsWith('space:')) return 'spaces';
+  return 'automations';
+};
+
+const filterOptions: Array<{
+  value: OutputFilter;
+  label: string;
+}> = [
+  { value: 'all', label: 'All' },
+  { value: 'apps', label: 'Apps' },
+  { value: 'automations', label: 'Automations' },
+  { value: 'spaces', label: 'Spaces' },
+];
+
+const getOutputs = () => {
+  return readAutomationOutputs().sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+};
+
+export default function OutputsPage() {
+  const [outputs, setOutputs] = useState<AutomationOutputItem[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [activeFilter, setActiveFilter] = useState<OutputFilter>('all');
+
+  const filteredOutputs = useMemo(() => {
+    if (activeFilter === 'all') return outputs;
+
+    return outputs.filter((output) => getOutputKind(output) === activeFilter);
+  }, [activeFilter, outputs]);
+
+  const selectedIdsSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const selectedCount = selectedIds.length;
+  const allSelected =
+    filteredOutputs.length > 0 &&
+    filteredOutputs.every((output) => selectedIdsSet.has(output.id));
+
+  const counts = useMemo(() => {
+    return outputs.reduce(
+      (acc, output) => {
+        const kind = getOutputKind(output);
+
+        acc.all += 1;
+        acc[kind] += 1;
+
+        return acc;
+      },
+      {
+        all: 0,
+        apps: 0,
+        automations: 0,
+        spaces: 0,
+      },
+    );
+  }, [outputs]);
+
+  const refreshOutputs = () => {
+    setOutputs(getOutputs());
+  };
+
+  useEffect(() => {
+    refreshOutputs();
+
+    const eventName = getAutomationStorageChangedEventName();
+
+    window.addEventListener(eventName, refreshOutputs);
+    window.addEventListener('focus', refreshOutputs);
+
+    return () => {
+      window.removeEventListener(eventName, refreshOutputs);
+      window.removeEventListener('focus', refreshOutputs);
+    };
+  }, []);
+
+  useEffect(() => {
+    setSelectedIds((current) =>
+      current.filter((id) => filteredOutputs.some((output) => output.id === id)),
+    );
+  }, [filteredOutputs]);
+
+  const toggleOutputSelection = (outputId: string) => {
+    setSelectedIds((current) =>
+      current.includes(outputId)
+        ? current.filter((id) => id !== outputId)
+        : [...current, outputId],
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      const visibleIds = new Set(filteredOutputs.map((output) => output.id));
+
+      setSelectedIds((current) =>
+        current.filter((id) => !visibleIds.has(id)),
+      );
+      return;
+    }
+
+    setSelectedIds((current) =>
+      Array.from(
+        new Set([...current, ...filteredOutputs.map((output) => output.id)]),
+      ),
+    );
+  };
+
+  const deleteSelected = () => {
+    if (selectedIds.length === 0) return;
+
+    const confirmed = window.confirm(
+      `Delete ${selectedIds.length} selected output${
+        selectedIds.length > 1 ? 's' : ''
+      }? This cannot be undone.`,
+    );
+
+    if (!confirmed) return;
+
+    const selected = new Set(selectedIds);
+    const nextOutputs = readAutomationOutputs().filter(
+      (output) => !selected.has(output.id),
+    );
+
+    writeAutomationOutputs(nextOutputs);
+    setOutputs(getOutputs());
+    setSelectedIds([]);
+  };
+
+  return (
+    <div className="mx-auto max-w-7xl px-6 py-10 lg:px-10">
+      <header className="mb-8 flex flex-col gap-5 rounded-3xl border border-light-200 bg-light-secondary p-7 dark:border-dark-200 dark:bg-dark-secondary lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-light-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-black/45 dark:border-dark-200 dark:text-white/45">
+            <FileText size={14} />
+            Output Library
+          </div>
+
+          <h1 className="text-4xl font-bold tracking-tight text-black dark:text-white md:text-5xl">
+            Outputs
+          </h1>
+
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-black/60 dark:text-white/60 md:text-base">
+            All saved outputs from Apps, Automations, and Spaces in one place.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          {filteredOutputs.length > 0 && (
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+            >
+              {allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+              {allSelected ? 'Deselect all' : 'Select all'}
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={deleteSelected}
+            disabled={selectedCount === 0}
+            className="inline-flex items-center gap-2 rounded-full border border-red-500/20 px-4 py-2 text-sm font-semibold text-red-500 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Trash2 size={16} />
+            Delete selected
+          </button>
+        </div>
+      </header>
+
+      <section className="mb-6 flex flex-wrap items-center gap-3">
+        <span className="inline-flex items-center gap-2 text-sm font-medium text-black/45 dark:text-white/45">
+          <Filter size={16} />
+          Filter
+        </span>
+
+        {filterOptions.map((option) => {
+          const active = activeFilter === option.value;
+          const count = counts[option.value];
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setActiveFilter(option.value)}
+              className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                active
+                  ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+                  : 'border-light-200 text-black/55 hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/55 dark:hover:bg-dark-secondary dark:hover:text-white'
+              }`}
+            >
+              {option.label} · {count}
+            </button>
+          );
+        })}
+      </section>
+
+      {selectedCount > 0 && (
+        <div className="mb-5 rounded-2xl border border-light-200 bg-light-secondary px-5 py-3 text-sm text-black/60 dark:border-dark-200 dark:bg-dark-secondary dark:text-white/60">
+          {selectedCount} {selectedCount === 1 ? 'output' : 'outputs'} selected
+        </div>
+      )}
+
+      {filteredOutputs.length === 0 ? (
+        <section className="rounded-3xl border border-dashed border-light-200 bg-light-secondary p-10 text-center dark:border-dark-200 dark:bg-dark-secondary">
+          <h2 className="text-xl font-semibold text-black dark:text-white">
+            No outputs found.
+          </h2>
+
+          <p className="mt-2 text-sm text-black/55 dark:text-white/55">
+            Generate and save an output from an App or Automation to see it here.
+          </p>
+
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Link
+              href="/apps"
+              className="inline-flex items-center justify-center rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
+            >
+              Open Apps
+            </Link>
+
+            <Link
+              href="/tasks"
+              className="inline-flex items-center justify-center rounded-full border border-light-200 px-5 py-3 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+            >
+              Open Automations
+            </Link>
+          </div>
+        </section>
+      ) : (
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filteredOutputs.map((output) => {
+            const selected = selectedIdsSet.has(output.id);
+            const preview = stripMarkdown(output.content || output.expectedOutput);
+            const kind = getOutputKind(output);
+
+            return (
+              <article
+                key={output.id}
+                className={`rounded-3xl border bg-light-secondary p-5 transition dark:bg-dark-secondary ${
+                  selected
+                    ? 'border-black ring-2 ring-black/10 dark:border-white dark:ring-white/10'
+                    : 'border-light-200 hover:-translate-y-0.5 hover:shadow-lg dark:border-dark-200'
+                }`}
+              >
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleOutputSelection(output.id)}
+                    className="mt-1 text-black/55 transition hover:text-black dark:text-white/55 dark:hover:text-white"
+                    aria-label={selected ? 'Unselect output' : 'Select output'}
+                  >
+                    {selected ? (
+                      <CheckSquare size={19} />
+                    ) : (
+                      <Square size={19} />
+                    )}
+                  </button>
+
+                  <Link
+                    href={`/outputs/${output.id}`}
+                    className="inline-flex items-center gap-1 rounded-full border border-light-200 px-3 py-1 text-xs font-semibold text-black/55 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/55 dark:hover:bg-dark-primary dark:hover:text-white"
+                  >
+                    Open
+                    <ExternalLink size={13} />
+                  </Link>
+                </div>
+
+                <Link href={`/outputs/${output.id}`} className="block">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-semibold capitalize text-black/45 dark:bg-dark-primary dark:text-white/45">
+                      {kind}
+                    </span>
+
+                    <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-semibold text-black/45 dark:bg-dark-primary dark:text-white/45">
+                      {output.outputType}
+                    </span>
+                  </div>
+
+                  <h2 className="line-clamp-2 text-lg font-semibold text-black dark:text-white">
+                    {output.title}
+                  </h2>
+
+                  <p className="mt-2 text-xs text-black/45 dark:text-white/45">
+                    {new Date(output.createdAt).toLocaleString()}
+                  </p>
+
+                  <p className="mt-4 line-clamp-5 text-sm leading-relaxed text-black/55 dark:text-white/55">
+                    {preview}
+                  </p>
+                </Link>
+              </article>
+            );
+          })}
+        </section>
+      )}
+    </div>
+  );
+}

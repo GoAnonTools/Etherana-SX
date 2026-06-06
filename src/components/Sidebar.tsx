@@ -5,6 +5,7 @@ import { pullAutomationStorageFromDatabase } from '@/lib/vault/localVault';
 import {
   CheckSquare,
   Compass,
+  FileText,
   LayoutGrid,
   Library,
   Plus,
@@ -111,6 +112,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       href: '/library',
       active: segments.includes('library'),
       label: 'Library',
+    },
+    {
+      icon: FileText,
+      href: '/outputs',
+      active: segments.includes('outputs'),
+      label: 'Outputs',
     },
   ];
 
