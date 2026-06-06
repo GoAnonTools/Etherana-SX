@@ -23,6 +23,12 @@ import {
 } from '@/lib/vault/localVault';
 
 
+type OutputSpace = {
+  id: string;
+  name: string;
+  description?: string;
+};
+
 const getWordCount = (content: string) => {
   return content.trim().split(/\s+/).filter(Boolean).length;
 };
@@ -728,6 +734,8 @@ const OutputDetailPage = () => {
   const [title, setTitle] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [spaces, setSpaces] = useState<OutputSpace[]>([]);
+  const [outputDestination, setOutputDestination] = useState('automation');
 
   const refreshOutput = () => {
     const storedOutputs = readAutomationOutputs();
@@ -738,9 +746,28 @@ const OutputDetailPage = () => {
     if (output) {
       setTitle(output.title);
       setContent(output.content ?? '');
+      setOutputDestination(output.outputDestination || 'automation');
       setIsEditing(!output.content?.trim());
     }
   };
+
+  useEffect(() => {
+    const fetchOutputSpaces = async () => {
+      try {
+        const res = await fetch('/api/spaces');
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        setSpaces(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Failed to fetch Spaces for output detail:', err);
+      }
+    };
+
+    fetchOutputSpaces();
+  }, []);
 
   useEffect(() => {
     refreshOutput();
@@ -763,6 +790,19 @@ const OutputDetailPage = () => {
   const wordCount = getWordCount(content);
   const readingTime = getReadingTime(wordCount);
 
+  const getSelectedOutputDestinationLabel = () => {
+    if (outputDestination === 'automation') {
+      return 'General Outputs';
+    }
+
+    if (outputDestination.startsWith('space:')) {
+      const spaceId = outputDestination.replace('space:', '');
+      return spaces.find((space) => space.id === spaceId)?.name ?? 'Space';
+    }
+
+    return 'General Outputs';
+  };
+
   const saveOutput = () => {
     if (!output) return;
 
@@ -770,6 +810,8 @@ const OutputDetailPage = () => {
       ...output,
       title: title.trim() || output.title,
       content,
+      outputDestination,
+      outputDestinationLabel: getSelectedOutputDestinationLabel(),
       status: content.trim().length > 0 ? 'ready' : 'drafting',
       updatedAt: new Date().toISOString(),
     };
@@ -780,6 +822,15 @@ const OutputDetailPage = () => {
 
     setOutputs(nextOutputs);
     writeAutomationOutputs(nextOutputs);
+    setIsEditing(false);
+  };
+
+  const cancelOutputEdit = () => {
+    if (!output) return;
+
+    setTitle(output.title);
+    setContent(output.content ?? '');
+    setOutputDestination(output.outputDestination || 'automation');
     setIsEditing(false);
   };
 
@@ -1079,6 +1130,61 @@ const OutputDetailPage = () => {
               Automation
             </Link>
 
+            {!isEditing ? (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
+              >
+                <PencilLine size={15} />
+                Edit output
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={saveOutput}
+                  className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
+                >
+                  <Save size={15} />
+                  Save changes
+                </button>
+
+                <button
+                  type="button"
+                  onClick={cancelOutputEdit}
+                  className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
+                >
+                  Cancel
+                </button>
+              </>
+            )}
+
+            <label className="inline-flex items-center gap-2 rounded-full border border-light-200 bg-light-secondary px-4 py-2 text-sm font-semibold text-black/65 dark:border-dark-200 dark:bg-dark-secondary dark:text-white/65">
+              <span className="whitespace-nowrap">Save location</span>
+              <select
+                value={outputDestination}
+                onChange={(event) => {
+                  setOutputDestination(event.target.value);
+                  setIsEditing(true);
+                }}
+                className="max-w-[220px] rounded-xl border border-light-200 bg-light-primary px-3 py-1.5 text-sm font-semibold text-black outline-none dark:border-dark-200 dark:bg-dark-primary dark:text-white"
+              >
+                <option className="bg-white text-black" value="automation">
+                  General Outputs
+                </option>
+                {spaces.map((space) => (
+                  <option
+                    key={space.id}
+                    value={`space:${space.id}`}
+                    className="bg-white text-black"
+                  >
+                    {space.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <button
               type="button"
               onClick={copyOutput}
@@ -1108,6 +1214,16 @@ const OutputDetailPage = () => {
               <FileText size={15} />
               Print / Save PDF
             </button>
+
+            {outputDestination.startsWith('space:') && (
+              <Link
+                href={`/spaces/${outputDestination.replace('space:', '')}`}
+                className="inline-flex items-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
+              >
+                <ExternalLink size={15} />
+                Open saved Space
+              </Link>
+            )}
 
             <button
               type="button"
@@ -1230,7 +1346,7 @@ const OutputDetailPage = () => {
                   className="mt-4 inline-flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] active:scale-[0.99] dark:bg-white dark:text-black"
                 >
                   <Save size={16} />
-                  Save Output
+                  Save changes
                 </button>
               </div>
             ) : content.trim().length > 0 ? (
