@@ -23,7 +23,7 @@ export type SmallAppCategory =
 export interface SmallAppInput {
   id: string;
   label: string;
-  type: 'text' | 'textarea' | 'select';
+  type: 'text' | 'textarea' | 'select' | 'date' | 'number';
   placeholder?: string;
   required?: boolean;
   options?: string[];
@@ -48,23 +48,72 @@ export const SMALL_APP_TEMPLATES: SmallAppTemplate[] = [
     icon: Mail,
     category: 'Business',
     description:
-      'Writes a polite invoice or payment reminder email from simple details.',
+      'Writes a polite invoice or payment reminder email from structured invoice details.',
     outputType: 'Email draft',
     goodFor: ['Invoices', 'Client communication', 'Admin'],
     inputs: [
       {
         id: 'clientName',
-        label: 'Client name',
+        label: 'Client / recipient name',
         type: 'text',
-        placeholder: 'Acme Studio',
+        placeholder: 'Acme Studio, Sarah, Valued client...',
+      },
+      {
+        id: 'invoiceNumber',
+        label: 'Invoice number',
+        type: 'text',
+        placeholder: 'INV-150',
         required: true,
       },
       {
-        id: 'invoiceDetails',
-        label: 'Invoice details',
-        type: 'textarea',
-        placeholder: 'Amount, invoice number, due date, context...',
+        id: 'projectName',
+        label: 'Project or service',
+        type: 'text',
+        placeholder: 'Website redesign, New App, consulting package...',
         required: true,
+      },
+      {
+        id: 'amount',
+        label: 'Amount',
+        type: 'number',
+        placeholder: '1500',
+        required: true,
+      },
+      {
+        id: 'currency',
+        label: 'Currency',
+        type: 'select',
+        options: ['EUR (€)', 'USD ($)', 'GBP (£)', 'MAD (DH)', 'CHF', 'CAD ($)', 'AUD ($)', 'NGN (₦)', 'Other / not specified'],
+        required: true,
+      },
+      {
+        id: 'issueDate',
+        label: 'Issue date',
+        type: 'date',
+      },
+      {
+        id: 'dueDate',
+        label: 'Due date',
+        type: 'date',
+        required: true,
+      },
+      {
+        id: 'paymentDetails',
+        label: 'Payment details',
+        type: 'textarea',
+        placeholder: 'Bank transfer, IBAN, PayPal, payment link, usual payment method...',
+      },
+      {
+        id: 'senderName',
+        label: 'Sender name',
+        type: 'text',
+        placeholder: 'Your name or company name',
+      },
+      {
+        id: 'notes',
+        label: 'Optional notes',
+        type: 'textarea',
+        placeholder: 'Attach invoice, mention contract, thank the client, add context...',
       },
       {
         id: 'tone',
@@ -75,7 +124,7 @@ export const SMALL_APP_TEMPLATES: SmallAppTemplate[] = [
       },
     ],
     promptTemplate:
-      'Write an invoice email for {{clientName}}. Details: {{invoiceDetails}}. Tone: {{tone}}. Make it clear, polite, and ready to send.',
+      'Write a ready-to-send invoice email using only the details below. Do not invent missing information, payment details, late fees, contact details, or placeholders. If recipient or sender information is missing, write the email naturally without bracket placeholders. Include a clear subject line. Client or recipient: {{clientName}}. Invoice number: {{invoiceNumber}}. Project or service: {{projectName}}. Amount: {{amount}}. Currency: {{currency}}. Issue date: {{issueDate}}. Due date: {{dueDate}}. Payment details: {{paymentDetails}}. Sender name: {{senderName}}. Optional notes: {{notes}}. Tone: {{tone}}.',
   },
   {
     id: 'client-proposal-generator',

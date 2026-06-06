@@ -3,16 +3,26 @@
 import {
   ArrowLeft,
   Copy,
+  FileText,
   LayoutTemplate,
+  PencilLine,
+  Loader2,
   Play,
   Save,
   Sparkles,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import {
   SMALL_APP_TEMPLATES,
   type SmallAppTemplate,
 } from '@/lib/apps/catalog';
+import {
+  type AutomationOutputItem,
+  getAutomationStorageChangedEventName,
+  readAutomationOutputs,
+  writeAutomationOutputs,
+} from '@/lib/vault/localVault';
 
 type AppInputValues = Record<string, string>;
 
@@ -23,6 +33,185 @@ const buildPromptFromTemplate = (
   return app.promptTemplate.replace(/\{\{(.*?)\}\}/g, (_, key: string) => {
     return values[key.trim()] || '';
   });
+};
+
+const escapeHtml = (value: string) => {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
+const renderPrintableInlineMarkdown = (value: string) => {
+  return escapeHtml(value)
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(
+      /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noreferrer">$1</a>',
+    )
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+};
+
+const renderPrintableTable = (rows: string[]) => {
+  const parsedRows = rows.map((row) =>
+    row
+      .trim()
+      .replace(/^\|/, '')
+      .replace(/\|$/, '')
+      .split('|')
+      .map((cell) => cell.trim()),
+  );
+
+  const bodyRows = parsedRows.filter(
+    (row) => !row.every((cell) => /^:?-{3,}:?$/.test(cell)),
+  );
+
+  if (bodyRows.length === 0) return '';
+
+  const [header, ...body] = bodyRows;
+
+  return `<table>
+    <thead>
+      <tr>${header
+        .map((cell) => `<th>${renderPrintableInlineMarkdown(cell)}</th>`)
+        .join('')}</tr>
+    </thead>
+    <tbody>
+      ${body
+        .map(
+          (row) =>
+            `<tr>${row
+              .map((cell) => `<td>${renderPrintableInlineMarkdown(cell)}</td>`)
+              .join('')}</tr>`,
+        )
+        .join('')}
+    </tbody>
+  </table>`;
+};
+
+const renderPrintableMarkdown = (markdown: string) => {
+  const lines = markdown.split('\n');
+  const html: string[] = [];
+  let paragraph: string[] = [];
+  let listType: 'ul' | 'ol' | null = null;
+
+  const closeParagraph = () => {
+    if (paragraph.length === 0) return;
+
+    html.push(`<p>${paragraph.map(renderPrintableInlineMarkdown).join('<br />')}</p>`);
+    paragraph = [];
+  };
+
+  const closeList = () => {
+    if (!listType) return;
+
+    html.push(`</${listType}>`);
+    listType = null;
+  };
+
+  const openList = (type: 'ul' | 'ol') => {
+    closeParagraph();
+
+    if (listType === type) return;
+
+    closeList();
+    listType = type;
+    html.push(`<${type}>`);
+  };
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      closeParagraph();
+      closeList();
+      continue;
+    }
+
+    if (
+      trimmed.includes('|') &&
+      lines[index + 1]?.trim().match(/^\|?\s*:?-{3,}:?/)
+    ) {
+      closeParagraph();
+      closeList();
+
+      const tableRows = [trimmed];
+      index += 1;
+
+      while (index < lines.length && lines[index].trim().includes('|')) {
+        tableRows.push(lines[index].trim());
+        index += 1;
+      }
+
+      index -= 1;
+      html.push(renderPrintableTable(tableRows));
+      continue;
+    }
+
+    if (/^---+$/.test(trimmed)) {
+      closeParagraph();
+      closeList();
+      html.push('<hr />');
+      continue;
+    }
+
+    const headingMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
+
+    if (headingMatch) {
+      closeParagraph();
+      closeList();
+
+      const level = Math.min(headingMatch[1].length, 4);
+      html.push(`<h${level}>${renderPrintableInlineMarkdown(headingMatch[2])}</h${level}>`);
+      continue;
+    }
+
+    if (trimmed.startsWith('> ')) {
+      closeParagraph();
+      closeList();
+      html.push(`<blockquote>${renderPrintableInlineMarkdown(trimmed.slice(2))}</blockquote>`);
+      continue;
+    }
+
+    const unorderedMatch = trimmed.match(/^[-*]\s+(.+)$/);
+
+    if (unorderedMatch) {
+      openList('ul');
+      html.push(`<li>${renderPrintableInlineMarkdown(unorderedMatch[1])}</li>`);
+      continue;
+    }
+
+    const orderedMatch = trimmed.match(/^\d+\.\s+(.+)$/);
+
+    if (orderedMatch) {
+      openList('ol');
+      html.push(`<li>${renderPrintableInlineMarkdown(orderedMatch[1])}</li>`);
+      continue;
+    }
+
+    paragraph.push(trimmed);
+  }
+
+  closeParagraph();
+  closeList();
+
+  return html.join('\n');
+};
+
+const sanitizeRenderedHtml = (html: string) => {
+  return html
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+    .replace(/<iframe[\s\S]*?>[\s\S]*?<\/iframe>/gi, '')
+    .replace(/\son\w+="[^"]*"/gi, '')
+    .replace(/\son\w+='[^']*'/gi, '');
+};
+
+const renderSafePrintableMarkdown = (markdown: string) => {
+  return sanitizeRenderedHtml(renderPrintableMarkdown(markdown));
 };
 
 const AppCard = ({
@@ -89,7 +278,13 @@ const AppRunner = ({
   const Icon = app.icon;
   const [values, setValues] = useState<AppInputValues>({});
   const [preparedPrompt, setPreparedPrompt] = useState('');
+  const [generatedOutput, setGeneratedOutput] = useState('');
+  const [editDraft, setEditDraft] = useState('');
+  const [isEditingOutput, setIsEditingOutput] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [savedOutputId, setSavedOutputId] = useState('');
 
   const canRun = useMemo(() => {
     return app.inputs.every((input) => {
@@ -98,16 +293,257 @@ const AppRunner = ({
     });
   }, [app.inputs, values]);
 
-  const handlePrepare = () => {
-    if (!canRun) return;
-    setPreparedPrompt(buildPromptFromTemplate(app, values));
+  const handleRunApp = async () => {
+    if (!canRun || isRunning) return;
+
+    const prompt = buildPromptFromTemplate(app, values);
+
+    setPreparedPrompt(prompt);
+    setGeneratedOutput('');
+    setEditDraft('');
+    setIsEditingOutput(false);
+    setError('');
     setCopied(false);
+    setSavedOutputId('');
+    setIsRunning(true);
+
+    try {
+      const res = await fetch('/api/apps/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          appId: app.id,
+          appName: app.name,
+          category: app.category,
+          outputType: app.outputType,
+          prompt,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.message || 'Small App failed.');
+      }
+
+      const output = data.content || '';
+      setGeneratedOutput(output);
+      setEditDraft(output);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Small App failed to generate an output.',
+      );
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  const handleStartEditingOutput = () => {
+    const currentResult = generatedOutput || preparedPrompt;
+
+    if (!currentResult.trim()) return;
+
+    setEditDraft(currentResult);
+    setIsEditingOutput(true);
+  };
+
+  const handleSaveEditedOutput = () => {
+    if (generatedOutput.trim()) {
+      setGeneratedOutput(editDraft);
+    } else {
+      setPreparedPrompt(editDraft);
+    }
+
+    setIsEditingOutput(false);
+    setCopied(false);
+    setSavedOutputId('');
+  };
+
+  const handleCancelEditingOutput = () => {
+    setEditDraft(generatedOutput || preparedPrompt);
+    setIsEditingOutput(false);
   };
 
   const handleCopy = async () => {
-    if (!preparedPrompt) return;
-    await navigator.clipboard.writeText(preparedPrompt);
+    const result = generatedOutput || preparedPrompt;
+
+    if (!result) return;
+
+    await navigator.clipboard.writeText(result);
     setCopied(true);
+  };
+
+  const handlePrintPdf = () => {
+    const result = generatedOutput || preparedPrompt;
+
+    if (!result.trim()) return;
+
+    const printableWindow = window.open('', '_blank');
+
+    if (!printableWindow) {
+      window.alert('Could not open the print window. Please allow pop-ups for Etherana SX.');
+      return;
+    }
+
+    printableWindow.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(app.name)}</title>
+  <style>
+    body {
+      margin: 0;
+      background: #f5f5f5;
+      color: #111;
+      font-family: Inter, Arial, sans-serif;
+      line-height: 1.65;
+    }
+
+    main {
+      max-width: 850px;
+      margin: 0 auto;
+      background: #fff;
+      min-height: 100vh;
+      padding: 48px;
+    }
+
+    .content {
+      font-size: 15px;
+    }
+
+    .content h1,
+    .content h2,
+    .content h3,
+    .content h4 {
+      margin: 26px 0 12px;
+      line-height: 1.25;
+    }
+
+    .content h1 {
+      font-size: 28px;
+    }
+
+    .content h2 {
+      font-size: 22px;
+      border-bottom: 1px solid #e5e5e5;
+      padding-bottom: 8px;
+    }
+
+    .content h3 {
+      font-size: 18px;
+    }
+
+    .content p {
+      margin: 0 0 14px;
+    }
+
+    .content ul,
+    .content ol {
+      margin: 0 0 18px 22px;
+      padding: 0;
+    }
+
+    .content li {
+      margin: 6px 0;
+    }
+
+    .content blockquote {
+      margin: 18px 0;
+      border-left: 4px solid #111;
+      padding: 10px 16px;
+      background: #f7f7f7;
+      color: #333;
+    }
+
+    .content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0 24px;
+      font-size: 13px;
+    }
+
+    .content th,
+    .content td {
+      border: 1px solid #ddd;
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .content th {
+      background: #f1f1f1;
+      font-weight: 750;
+    }
+
+    .content hr {
+      border: 0;
+      border-top: 1px solid #ddd;
+      margin: 28px 0;
+    }
+
+    .content code {
+      border-radius: 5px;
+      background: #f1f1f1;
+      padding: 2px 5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      main {
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <article class="content">${renderSafePrintableMarkdown(result)}</article>
+  </main>
+</body>
+</html>`);
+
+    printableWindow.document.close();
+
+    window.setTimeout(() => {
+      printableWindow.focus();
+      printableWindow.print();
+    }, 250);
+  };
+
+  const handleSaveOutput = () => {
+    if (!generatedOutput.trim()) return;
+
+    const now = new Date().toISOString();
+    const outputId = `app-output-${Date.now()}`;
+
+    const output: AutomationOutputItem = {
+      id: outputId,
+      automationId: `app:${app.id}`,
+      automationName: app.name,
+      title: `${app.name} — ${app.outputType}`,
+      outputType: app.outputType,
+      outputDestination: 'automation',
+      outputDestinationLabel: 'App outputs',
+      status: 'ready',
+      createdAt: now,
+      updatedAt: now,
+      runId: `app-run-${Date.now()}`,
+      prompt: preparedPrompt,
+      expectedOutput: app.outputType,
+      content: generatedOutput,
+    };
+
+    writeAutomationOutputs([output, ...readAutomationOutputs()]);
+    setSavedOutputId(outputId);
   };
 
   return (
@@ -148,7 +584,7 @@ const AppRunner = ({
           className="rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary"
           onSubmit={(event) => {
             event.preventDefault();
-            handlePrepare();
+            handleRunApp();
           }}
         >
           <h2 className="text-xl font-semibold text-black dark:text-white">
@@ -156,7 +592,7 @@ const AppRunner = ({
           </h2>
 
           <p className="mt-2 text-sm text-black/55 dark:text-white/55">
-            Fill the fields, then prepare the app output instructions.
+            Fill the fields, then generate a reusable output.
           </p>
 
           <div className="mt-6 space-y-5">
@@ -200,6 +636,13 @@ const AppRunner = ({
                   </select>
                 ) : (
                   <input
+                    type={
+                      input.type === 'date'
+                        ? 'date'
+                        : input.type === 'number'
+                          ? 'number'
+                          : 'text'
+                    }
                     value={values[input.id] || ''}
                     onChange={(event) =>
                       setValues((current) => ({
@@ -220,9 +663,15 @@ const AppRunner = ({
             disabled={!canRun}
             className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-black"
           >
-            <Play size={16} />
-            Prepare App
+            {isRunning ? <Loader2 className="animate-spin" size={16} /> : <Play size={16} />}
+            {isRunning ? 'Generating...' : 'Generate Output'}
           </button>
+
+          {error && (
+            <p className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+              {error}
+            </p>
+          )}
         </form>
 
         <aside className="space-y-5">
@@ -248,24 +697,57 @@ const AppRunner = ({
         </aside>
       </section>
 
-      {preparedPrompt && (
+      {(preparedPrompt || generatedOutput) && (
         <section className="mt-6 rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-black dark:text-white">
-                Prepared App Instructions
+                {generatedOutput ? 'Generated Output' : 'Prepared App Instructions'}
               </h2>
               <p className="mt-1 text-sm text-black/55 dark:text-white/55">
-                This is the clean instruction that will later be sent directly to
-                the app runner.
+                {generatedOutput
+                  ? 'This output was generated by the Small App.'
+                  : 'These instructions are ready to run once the app generates.'}
               </p>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
+              {(generatedOutput || preparedPrompt) && !isEditingOutput && (
+                <button
+                  type="button"
+                  onClick={handleStartEditingOutput}
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+                >
+                  <PencilLine size={16} />
+                  Edit output
+                </button>
+              )}
+
+              {(generatedOutput || preparedPrompt) && isEditingOutput && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleSaveEditedOutput}
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
+                  >
+                    Save edits
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCancelEditingOutput}
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
+
               <button
                 type="button"
                 onClick={handleCopy}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+                disabled={!generatedOutput && !preparedPrompt}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black disabled:cursor-not-allowed disabled:opacity-40 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
               >
                 <Copy size={16} />
                 {copied ? 'Copied' : 'Copy'}
@@ -273,18 +755,50 @@ const AppRunner = ({
 
               <button
                 type="button"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/45 dark:border-dark-200 dark:text-white/45"
-                title="Saving app outputs will be connected in the next implementation step."
+                onClick={handlePrintPdf}
+                disabled={!generatedOutput && !preparedPrompt}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black disabled:cursor-not-allowed disabled:opacity-40 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+              >
+                <FileText size={16} />
+                Print / Save PDF
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveOutput}
+                disabled={!generatedOutput.trim()}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black disabled:cursor-not-allowed disabled:opacity-40 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
               >
                 <Save size={16} />
-                Save later
+                {savedOutputId ? 'Saved' : 'Save to Outputs'}
               </button>
+
+              {savedOutputId && (
+                <a
+                  href={`/outputs/${savedOutputId}`}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
+                >
+                  Open Output
+                </a>
+              )}
             </div>
           </div>
 
-          <pre className="mt-5 whitespace-pre-wrap rounded-2xl bg-light-primary p-4 text-sm leading-relaxed text-black/75 dark:bg-dark-primary dark:text-white/75">
-            {preparedPrompt}
-          </pre>
+          {(generatedOutput || preparedPrompt) && isEditingOutput ? (
+            <textarea
+              value={editDraft}
+              onChange={(event) => setEditDraft(event.target.value)}
+              rows={18}
+              className="mt-5 w-full resize-y rounded-2xl border border-light-200 bg-light-primary p-5 text-sm leading-relaxed text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
+            />
+          ) : (
+            <article
+              className="mt-5 rounded-2xl bg-light-primary p-5 text-sm leading-relaxed text-black/75 dark:bg-dark-primary dark:text-white/75 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-black/30 [&_blockquote]:pl-4 [&_blockquote]:text-black/60 dark:[&_blockquote]:border-white/30 dark:[&_blockquote]:text-white/60 [&_code]:rounded-md [&_code]:bg-light-secondary [&_code]:px-1.5 [&_code]:py-0.5 dark:[&_code]:bg-dark-secondary [&_em]:italic [&_h1]:mb-4 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:mb-3 [&_h2]:mt-6 [&_h2]:border-b [&_h2]:border-light-200 [&_h2]:pb-2 [&_h2]:text-xl [&_h2]:font-semibold dark:[&_h2]:border-dark-200 [&_h3]:mb-2 [&_h3]:mt-5 [&_h3]:text-lg [&_h3]:font-semibold [&_hr]:my-6 [&_hr]:border-light-200 dark:[&_hr]:border-dark-200 [&_li]:my-1 [&_ol]:mb-4 [&_ol]:ml-5 [&_ol]:list-decimal [&_p]:mb-3 [&_strong]:font-semibold [&_table]:my-5 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-light-200 [&_td]:p-3 dark:[&_td]:border-dark-200 [&_th]:border [&_th]:border-light-200 [&_th]:bg-light-secondary [&_th]:p-3 [&_th]:text-left [&_th]:font-semibold dark:[&_th]:border-dark-200 dark:[&_th]:bg-dark-secondary [&_ul]:mb-4 [&_ul]:ml-5 [&_ul]:list-disc"
+              dangerouslySetInnerHTML={{
+                __html: renderSafePrintableMarkdown(generatedOutput || preparedPrompt),
+              }}
+            />
+          )}
         </section>
       )}
     </div>
@@ -293,6 +807,34 @@ const AppRunner = ({
 
 export default function AppsPage() {
   const [selectedApp, setSelectedApp] = useState<SmallAppTemplate | null>(null);
+
+  const [appOutputs, setAppOutputs] = useState<AutomationOutputItem[]>([]);
+
+  useEffect(() => {
+    const refreshAppOutputs = () => {
+      setAppOutputs(
+        readAutomationOutputs()
+          .filter((output) => output.automationId.startsWith('app:'))
+          .sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() -
+              new Date(a.createdAt).getTime(),
+          ),
+      );
+    };
+
+    refreshAppOutputs();
+
+    const eventName = getAutomationStorageChangedEventName();
+
+    window.addEventListener(eventName, refreshAppOutputs);
+    window.addEventListener('focus', refreshAppOutputs);
+
+    return () => {
+      window.removeEventListener(eventName, refreshAppOutputs);
+      window.removeEventListener('focus', refreshAppOutputs);
+    };
+  }, [selectedApp]);
 
   if (selectedApp) {
     return <AppRunner app={selectedApp} onBack={() => setSelectedApp(null)} />;
@@ -353,6 +895,55 @@ export default function AppsPage() {
           {SMALL_APP_TEMPLATES.length} app templates
         </span>
       </section>
+
+      {appOutputs.length > 0 && (
+        <section className="mb-10 rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
+          <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-black dark:text-white">
+                Recent App Outputs
+              </h2>
+              <p className="mt-1 text-sm text-black/55 dark:text-white/55">
+                Saved outputs generated from your Small Apps.
+              </p>
+            </div>
+
+            <Link
+              href="/apps/outputs"
+              className="inline-flex items-center justify-center rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+            >
+              See all
+            </Link>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {appOutputs.slice(0, 3).map((output) => (
+              <Link
+                key={output.id}
+                href={`/outputs/${output.id}`}
+                className="rounded-2xl border border-light-200 bg-light-primary p-4 transition hover:-translate-y-0.5 hover:shadow-md dark:border-dark-200 dark:bg-dark-primary"
+              >
+                <p className="text-sm font-semibold text-black dark:text-white">
+                  {output.title}
+                </p>
+
+                <p className="mt-1 text-xs text-black/45 dark:text-white/45">
+                  {output.outputType} · {new Date(output.createdAt).toLocaleString()}
+                </p>
+
+                <article
+                  className="mt-3 line-clamp-4 text-sm leading-relaxed text-black/55 dark:text-white/55 [&_blockquote]:border-l-2 [&_blockquote]:border-black/20 [&_blockquote]:pl-3 dark:[&_blockquote]:border-white/20 [&_em]:italic [&_h1]:mb-1 [&_h1]:text-base [&_h1]:font-semibold [&_h2]:mb-1 [&_h2]:text-sm [&_h2]:font-semibold [&_h3]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_li]:my-0.5 [&_ol]:ml-4 [&_ol]:list-decimal [&_p]:mb-1 [&_strong]:font-semibold [&_ul]:ml-4 [&_ul]:list-disc"
+                  dangerouslySetInnerHTML={{
+                    __html: renderSafePrintableMarkdown(
+                      output.content || output.expectedOutput,
+                    ),
+                  }}
+                />
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {SMALL_APP_TEMPLATES.map((app) => (
