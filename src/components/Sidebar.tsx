@@ -18,6 +18,7 @@ import { useSelectedLayoutSegments } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import Layout from './Layout';
 import SettingsButton from './Settings/SettingsButton';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 interface Space {
   id: string;
@@ -67,6 +68,7 @@ const SectionTitle = ({ children }: { children: React.ReactNode }) => {
 
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const segments = useSelectedLayoutSegments();
+  const { t } = useI18n();
   const [spaces, setSpaces] = useState<Space[]>([]);
 
   const activeSpaceId = segments[0] === 'spaces' ? segments[1] : undefined;
@@ -99,25 +101,25 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       icon: Search,
       href: '/search',
       active: segments.includes('search') || segments.includes('c'),
-      label: 'Search',
+      label: t('sidebar.search'),
     },
     {
       icon: Compass,
       href: '/discover',
       active: segments.includes('discover'),
-      label: 'Discover',
+      label: t('sidebar.discover'),
     },
     {
       icon: Library,
       href: '/library',
       active: segments.includes('library'),
-      label: 'Library',
+      label: t('sidebar.library'),
     },
     {
       icon: FileText,
       href: '/outputs',
       active: segments.includes('outputs'),
-      label: 'Outputs',
+      label: t('sidebar.outputs'),
     },
   ];
 
@@ -126,13 +128,13 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       icon: CheckSquare,
       href: '/tasks',
       active: segments.includes('tasks'),
-      label: 'Automations',
+      label: t('sidebar.automations'),
     },
     {
       icon: LayoutGrid,
       href: '/apps',
       active: segments.includes('apps'),
-      label: 'Apps',
+      label: t('sidebar.apps'),
     },
   ];
 
@@ -141,7 +143,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       icon: ShieldCheck,
       href: '/vault',
       active: segments.includes('vault'),
-      label: 'Backup Vault',
+      label: t('sidebar.backupVault'),
     },
   ];
 
@@ -151,7 +153,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       icon: LayoutGrid,
       href: '/spaces',
       active: segments.includes('spaces'),
-      label: 'Spaces',
+      label: t('sidebar.spaces'),
     },
     ...automationLinks,
     ...vaultLinks,
@@ -196,7 +198,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             </div>
 
             <div className="space-y-2">
-              <SectionTitle>Workspaces</SectionTitle>
+              <SectionTitle>{t('sidebar.workspaces')}</SectionTitle>
 
               <div className="space-y-1">
                 <SidebarLink
@@ -204,7 +206,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                     icon: LayoutGrid,
                     href: '/spaces',
                     active: segments.includes('spaces') && !activeSpaceId,
-                    label: 'All Spaces',
+                    label: t('sidebar.allSpaces'),
                   }}
                 />
 
@@ -245,7 +247,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             </div>
 
             <div className="space-y-2">
-              <SectionTitle>Automation</SectionTitle>
+              <SectionTitle>{t('sidebar.automation')}</SectionTitle>
 
               <div className="space-y-1">
                 {automationLinks.map((link) => (
@@ -255,7 +257,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             </div>
 
             <div className="space-y-2">
-              <SectionTitle>Privacy</SectionTitle>
+              <SectionTitle>{t('sidebar.privacy')}</SectionTitle>
 
               <div className="space-y-1">
                 {vaultLinks.map((link) => (

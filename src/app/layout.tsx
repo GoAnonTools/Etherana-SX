@@ -10,6 +10,7 @@ import ThemeProvider from '@/components/theme/Provider';
 import configManager from '@/lib/config';
 import SetupWizard from '@/components/Setup/SetupWizard';
 import { ChatProvider } from '@/lib/hooks/useChat';
+import { I18nProvider } from '@/lib/i18n/Provider';
 
 // fix: replaced Google Fonts with system font to allow offline builds
 const montserrat = { className: 'font-sans' };
@@ -34,7 +35,8 @@ export default function RootLayout({
     <html className="h-full" lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <body className={cn('h-full antialiased', montserrat.className)}>
         <ThemeProvider>
-          {setupComplete ? (
+          <I18nProvider>
+            {setupComplete ? (
             <ChatProvider>
               <Sidebar>{children}</Sidebar>
               <Toaster
@@ -47,9 +49,10 @@ export default function RootLayout({
                 }}
               />
             </ChatProvider>
-          ) : (
-            <SetupWizard configSections={configSections} />
-          )}
+            ) : (
+              <SetupWizard configSections={configSections} />
+            )}
+          </I18nProvider>
         </ThemeProvider>
       </body>
     </html>
