@@ -995,7 +995,7 @@ export default function AppsPage() {
             </div>
 
             <Link
-              href="/apps/outputs"
+              href="/outputs?filter=apps"
               className="inline-flex items-center justify-center rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
             >
               See all

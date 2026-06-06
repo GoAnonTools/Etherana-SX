@@ -64,6 +64,15 @@ const filterOptions: Array<{
   { value: 'spaces', label: 'Spaces' },
 ];
 
+const isOutputFilter = (value: string | null): value is OutputFilter => {
+  return (
+    value === 'all' ||
+    value === 'apps' ||
+    value === 'automations' ||
+    value === 'spaces'
+  );
+};
+
 const getOutputs = () => {
   return readAutomationOutputs().sort(
     (a, b) =>
@@ -110,6 +119,14 @@ export default function OutputsPage() {
   const refreshOutputs = () => {
     setOutputs(getOutputs());
   };
+
+  useEffect(() => {
+    const filterFromUrl = new URLSearchParams(window.location.search).get('filter');
+
+    if (isOutputFilter(filterFromUrl)) {
+      setActiveFilter(filterFromUrl);
+    }
+  }, []);
 
   useEffect(() => {
     refreshOutputs();
