@@ -46,6 +46,7 @@ import {
 } from '@/lib/vault/localVault';
 import { AUTOMATION_TEMPLATES } from '@/lib/automations/catalog';
 import { computeNextRunAt } from '@/lib/automations/schedule';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 
 type AutomationMode = 'manual' | 'auto';
@@ -179,14 +180,14 @@ const getAutomationOutputDestinationLabel = (
 
 
 const WEEKDAY_OPTIONS = [
-  { value: 'MO', label: 'Mon' },
-  { value: 'TU', label: 'Tue' },
-  { value: 'WE', label: 'Wed' },
-  { value: 'TH', label: 'Thu' },
-  { value: 'FR', label: 'Fri' },
-  { value: 'SA', label: 'Sat' },
-  { value: 'SU', label: 'Sun' },
-];
+  { value: 'MO', labelKey: 'automationsPage.mon' },
+  { value: 'TU', labelKey: 'automationsPage.tue' },
+  { value: 'WE', labelKey: 'automationsPage.wed' },
+  { value: 'TH', labelKey: 'automationsPage.thu' },
+  { value: 'FR', labelKey: 'automationsPage.fri' },
+  { value: 'SA', labelKey: 'automationsPage.sat' },
+  { value: 'SU', labelKey: 'automationsPage.sun' },
+] as const;
 
 const getDefaultScheduleType = (frequency: string): AutomationScheduleType => {
   const normalized = frequency.toLowerCase();
@@ -244,11 +245,17 @@ const getAutomationScheduleType = (automation: AutomationTemplate): AutomationSc
   return normalizeScheduleType(automation.scheduleType, automation.frequency);
 };
 
-const getAutomationScheduleLabel = (automation: AutomationTemplate) => {
+const getAutomationScheduleLabel = (
+  automation: AutomationTemplate,
+  t?: (key: any) => string,
+) => {
+  const translate = t ?? ((key: string) => key);
   const scheduleType = getAutomationScheduleType(automation);
   const time = automation.scheduleTime || '09:00';
 
-  if (scheduleType === 'daily') return `Daily at ${time}`;
+  if (scheduleType === 'daily') {
+    return `${translate('automationsPage.dailyAt')} ${time}`;
+  }
 
   if (scheduleType === 'weekly') {
     const days =
@@ -256,22 +263,42 @@ const getAutomationScheduleLabel = (automation: AutomationTemplate) => {
         ? automation.scheduleDays
         : getDefaultScheduleDays(automation.frequency);
     const labels = days
-      .map((day) => WEEKDAY_OPTIONS.find((option) => option.value === day)?.label || day)
+      .map((day) => {
+        const option = WEEKDAY_OPTIONS.find((item) => item.value === day);
+        return option ? translate(option.labelKey) : day;
+      })
       .join(', ');
-    return `Weekly on ${labels} at ${time}`;
+    return `${translate('automationsPage.weeklyOn')} ${labels} ${translate(
+      'automationsPage.at',
+    )} ${time}`;
   }
 
   if (scheduleType === 'monthly') {
-    return `Monthly on day ${automation.scheduleDayOfMonth || 1} at ${time}`;
+    return `${translate('automationsPage.monthlyOnDay')} ${
+      automation.scheduleDayOfMonth || 1
+    } ${translate('automationsPage.at')} ${time}`;
   }
 
-  return automation.frequency || 'Manual';
+  return automation.frequency || translate('automationsPage.manual');
 };
 
-const getNextRunLabel = (automation: AutomationTemplate) => {
-  if (getAutomationMode(automation) !== 'auto') return 'Only when you run it';
-  if (getAutomationStatus(automation) === 'paused') return 'Paused';
-  return automation.nextRunAt ? new Date(automation.nextRunAt).toLocaleString() : 'Not calculated yet';
+const getNextRunLabel = (
+  automation: AutomationTemplate,
+  t?: (key: any) => string,
+) => {
+  const translate = t ?? ((key: string) => key);
+
+  if (getAutomationMode(automation) !== 'auto') {
+    return translate('automationsPage.onlyWhenRun');
+  }
+
+  if (getAutomationStatus(automation) === 'paused') {
+    return translate('automationsPage.paused');
+  }
+
+  return automation.nextRunAt
+    ? new Date(automation.nextRunAt).toLocaleString()
+    : translate('automationsPage.notCalculatedYet');
 };
 
 const getAutomationMode = (automation: AutomationTemplate): AutomationMode => {
@@ -282,12 +309,26 @@ const getAutomationStatus = (automation: AutomationTemplate): AutomationStatus =
   return automation.status || 'active';
 };
 
-const getAutomationModeLabel = (automation: AutomationTemplate) => {
-  return getAutomationMode(automation) === 'auto' ? 'Auto-run' : 'Manual';
+const getAutomationModeLabel = (
+  automation: AutomationTemplate,
+  t?: (key: any) => string,
+) => {
+  if (getAutomationMode(automation) === 'auto') {
+    return t ? t('automationsPage.autoRun') : 'Auto-run';
+  }
+
+  return t ? t('automationsPage.manual') : 'Manual';
 };
 
-const getAutomationStatusLabel = (automation: AutomationTemplate) => {
-  return getAutomationStatus(automation) === 'paused' ? 'Paused' : 'Active';
+const getAutomationStatusLabel = (
+  automation: AutomationTemplate,
+  t?: (key: any) => string,
+) => {
+  if (getAutomationStatus(automation) === 'paused') {
+    return t ? t('automationsPage.paused') : 'Paused';
+  }
+
+  return t ? t('automationsPage.active') : 'Active';
 };
 
 const isAutomationPaused = (automation: AutomationTemplate) => {
@@ -507,6 +548,7 @@ const AutomationBuilder = ({
   onSave: (automation: StoredAutomation) => void;
   onCreateSpace: (name: string) => Promise<AutomationSpace | null>;
 }) => {
+  const { t } = useI18n();
   const isEditing = Boolean(editingAutomation);
 
   const [name, setName] = useState(editingAutomation?.name ?? '');
@@ -612,19 +654,19 @@ const AutomationBuilder = ({
         <div>
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-light-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-black/45 dark:border-dark-200 dark:text-white/45">
             {isEditing ? <PencilLine size={14} /> : <Plus size={14} />}
-            {isEditing ? 'Edit Automation' : 'New Automation'}
+            {isEditing ? t('automationsPage.editAutomation') : t('automationsPage.newAutomation')}
           </div>
 
           <h2 className="text-2xl font-bold text-black dark:text-white">
             {isEditing
-              ? 'Edit automation'
-              : 'Create a custom automation'}
+              ? t('automationsPage.editAutomationTitle')
+              : t('automationsPage.createCustomAutomation')}
           </h2>
 
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-black/55 dark:text-white/55">
             {isEditing
-              ? 'Update the workflow instructions, frequency, and expected output. If this started from a template, saving will create your own custom automation.'
-              : 'Define what the agent should do, how often it should happen, and what kind of output you expect.'}
+              ? t('automationsPage.editDescription')
+              : t('automationsPage.createDescription')}
           </p>
         </div>
 
@@ -632,7 +674,7 @@ const AutomationBuilder = ({
           type="button"
           onClick={onCancel}
           className="rounded-full p-2 text-black/45 transition hover:bg-light-primary hover:text-black dark:text-white/45 dark:hover:bg-dark-primary dark:hover:text-white"
-          aria-label="Close automation builder"
+          aria-label={t('automationsPage.closeBuilder')}
         >
           <X size={20} />
         </button>
@@ -642,7 +684,7 @@ const AutomationBuilder = ({
         <div className="grid gap-5 md:grid-cols-2">
           <label className="space-y-2">
             <span className="text-sm font-medium text-black dark:text-white">
-              Automation name
+              {t('automationsPage.automationName')}
             </span>
             <input
               value={name}
@@ -654,7 +696,7 @@ const AutomationBuilder = ({
 
           <label className="space-y-2">
             <span className="text-sm font-medium text-black dark:text-white">
-              Category
+              {t('automationsPage.category')}
             </span>
             <input
               value={category}
@@ -667,7 +709,7 @@ const AutomationBuilder = ({
 
         <label className="space-y-2">
           <span className="text-sm font-medium text-black dark:text-white">
-            Frequency
+            {t('automationsPage.frequency')}
           </span>
           <input
             value={frequency}
@@ -679,29 +721,29 @@ const AutomationBuilder = ({
         <div className="grid gap-5 md:grid-cols-2">
           <label className="space-y-2">
             <span className="text-sm font-medium text-black dark:text-white">
-              Automation mode
+              {t('automationsPage.automationMode')}
             </span>
             <select
               value={mode}
               onChange={(event) => setMode(event.target.value as AutomationMode)}
               className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
             >
-              <option value="manual">Manual — user runs it when needed</option>
-              <option value="auto">Auto-run — runs when due if server is active</option>
+              <option value="manual">{t('automationsPage.manualOption')}</option>
+              <option value="auto">{t('automationsPage.autoOption')}</option>
             </select>
           </label>
 
           <label className="space-y-2">
             <span className="text-sm font-medium text-black dark:text-white">
-              Status
+              {t('automationsPage.status')}
             </span>
             <select
               value={status}
               onChange={(event) => setStatus(event.target.value as AutomationStatus)}
               className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
             >
-              <option value="active">Active</option>
-              <option value="paused">Paused</option>
+              <option value="active">{t('automationsPage.active')}</option>
+              <option value="paused">{t('automationsPage.paused')}</option>
             </select>
           </label>
         </div>
@@ -709,11 +751,11 @@ const AutomationBuilder = ({
         <div className="rounded-3xl border border-light-200 bg-light-primary p-5 dark:border-dark-200 dark:bg-dark-primary">
           <div className="mb-5">
             <h3 className="text-sm font-semibold text-black dark:text-white">
-              Automation schedule settings
+              {t('automationsPage.scheduleSettings')}
             </h3>
 
             <p className="mt-1 text-xs text-black/50 dark:text-white/50">
-              Choose when Auto-run should execute this automation while the local server is active.
+              {t('automationsPage.scheduleDescription')}
             </p>
 
             <button
@@ -721,14 +763,14 @@ const AutomationBuilder = ({
               onClick={setTestScheduleInTwoMinutes}
               className="mt-4 inline-flex items-center justify-center rounded-full border border-light-200 px-4 py-2 text-xs font-semibold text-black/60 transition hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/60 dark:hover:bg-dark-secondary dark:hover:text-white"
             >
-              Test in 2 minutes
+              {t('automationsPage.testInTwoMinutes')}
             </button>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
             <label className="space-y-2">
               <span className="text-sm font-medium text-black dark:text-white">
-                Schedule type
+                {t('automationsPage.scheduleType')}
               </span>
 
               <select
@@ -738,16 +780,16 @@ const AutomationBuilder = ({
                 }
                 className="w-full rounded-2xl border border-light-200 bg-light-secondary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-secondary dark:text-white dark:focus:border-white"
               >
-                <option value="manual">Manual only</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
+                <option value="manual">{t('automationsPage.manualOnly')}</option>
+                <option value="daily">{t('automationsPage.daily')}</option>
+                <option value="weekly">{t('automationsPage.weekly')}</option>
+                <option value="monthly">{t('automationsPage.monthly')}</option>
               </select>
             </label>
 
             <label className="space-y-2">
               <span className="text-sm font-medium text-black dark:text-white">
-                Time
+                {t('automationsPage.time')}
               </span>
 
               <input
@@ -762,7 +804,7 @@ const AutomationBuilder = ({
           {scheduleType === 'weekly' && (
             <div className="mt-5">
               <p className="mb-3 text-sm font-medium text-black dark:text-white">
-                Days
+                {t('automationsPage.days')}
               </p>
 
               <div className="flex flex-wrap gap-2">
@@ -786,7 +828,7 @@ const AutomationBuilder = ({
                           : 'border-light-200 text-black/55 hover:bg-light-secondary dark:border-dark-200 dark:text-white/55 dark:hover:bg-dark-secondary'
                       }`}
                     >
-                      {day.label}
+                      {t(day.labelKey)}
                     </button>
                   );
                 })}
@@ -797,7 +839,7 @@ const AutomationBuilder = ({
           {scheduleType === 'monthly' && (
             <label className="mt-5 block space-y-2">
               <span className="text-sm font-medium text-black dark:text-white">
-                Day of month
+                {t('automationsPage.dayOfMonth')}
               </span>
 
               <input
@@ -818,7 +860,7 @@ const AutomationBuilder = ({
 
         <label className="space-y-2">
           <span className="text-sm font-medium text-black dark:text-white">
-            Objective
+            {t('automationsPage.objective')}
           </span>
           <textarea
             value={purpose}
@@ -831,7 +873,7 @@ const AutomationBuilder = ({
 
         <label className="space-y-2">
           <span className="text-sm font-medium text-black dark:text-white">
-            Agent instructions
+            {t('automationsPage.agentInstructions')}
           </span>
           <textarea
             value={prompt}
@@ -844,7 +886,7 @@ const AutomationBuilder = ({
 
         <label className="space-y-2">
           <span className="text-sm font-medium text-black dark:text-white">
-            Expected output
+            {t('automationsPage.expectedOutput')}
           </span>
           <textarea
             value={output}
@@ -858,7 +900,7 @@ const AutomationBuilder = ({
         <div className="grid gap-5 md:grid-cols-2">
           <label className="space-y-2">
             <span className="text-sm font-medium text-black dark:text-white">
-              Output type
+              {t('automationsPage.outputType')}
             </span>
             <select
               value={outputType}
@@ -875,7 +917,7 @@ const AutomationBuilder = ({
 
           <label className="space-y-2">
             <span className="text-sm font-medium text-black dark:text-white">
-              Save destination
+              {t('automationsPage.saveDestination')}
             </span>
             <select
               value={outputDestination}
@@ -883,11 +925,11 @@ const AutomationBuilder = ({
               className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
             >
               <option value={DEFAULT_OUTPUT_DESTINATION}>
-                Automation outputs
+                {t('automationsPage.automationOutputs')}
               </option>
 
               <option value={NEW_SPACE_DESTINATION}>
-                Create new Space…
+                {t('automationsPage.createNewSpace')}
               </option>
 
               {spaces.map((space) => (
@@ -901,7 +943,7 @@ const AutomationBuilder = ({
               <input
                 value={newSpaceName}
                 onChange={(event) => setNewSpaceName(event.target.value)}
-                placeholder="New Space name, e.g. AI Research"
+                placeholder={t('automationsPage.newSpaceName')}
                 className="mt-3 w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
               />
             )}
@@ -914,7 +956,7 @@ const AutomationBuilder = ({
             onClick={onCancel}
             className="rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
           >
-            Cancel
+            {t('automationsPage.cancel')}
           </button>
 
           <button
@@ -923,7 +965,7 @@ const AutomationBuilder = ({
             className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-black"
           >
             <Save size={16} />
-            {isEditing ? 'Save Changes' : 'Create Automation'}
+            {isEditing ? t('automationsPage.saveChanges') : t('automationsPage.createAutomation')}
           </button>
         </div>
       </form>
@@ -932,8 +974,9 @@ const AutomationBuilder = ({
 };
 
 const AutomationModeStatusPills = ({ automation }: { automation: AutomationTemplate }) => {
-  const modeLabel = getAutomationModeLabel(automation);
-  const statusLabel = getAutomationStatusLabel(automation);
+  const { t } = useI18n();
+  const modeLabel = getAutomationModeLabel(automation, t);
+  const statusLabel = getAutomationStatusLabel(automation, t);
 
   return (
     <div className="flex flex-wrap gap-2">
@@ -944,7 +987,7 @@ const AutomationModeStatusPills = ({ automation }: { automation: AutomationTempl
         {statusLabel}
       </span>
       <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-medium text-black/45 dark:bg-dark-primary dark:text-white/45">
-        {getAutomationScheduleLabel(automation)}
+        {getAutomationScheduleLabel(automation, t)}
       </span>
     </div>
   );
@@ -957,6 +1000,7 @@ const AutomationCard = ({
   automation: AutomationTemplate;
   onSelect: (id: string) => void;
 }) => {
+  const { t } = useI18n();
   const Icon = automation.icon;
 
   return (
@@ -980,7 +1024,7 @@ const AutomationCard = ({
 
             {automation.isCustom && (
               <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-medium text-black/45 dark:bg-dark-primary dark:text-white/45">
-                Custom
+                {t('automationsPage.custom')}
               </span>
             )}
               <AutomationModeStatusPills automation={automation} />
@@ -1001,7 +1045,7 @@ const AutomationCard = ({
           <div className="rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
             <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-black/40 dark:text-white/40">
               <Clock size={14} />
-              Schedule
+              {t('automationsPage.schedule')}
             </div>
 
             <p className="text-sm text-black/75 dark:text-white/75">
@@ -1012,7 +1056,7 @@ const AutomationCard = ({
           <div className="rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
             <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-black/40 dark:text-white/40">
               <Zap size={14} />
-              Expected output
+              {t('automationsPage.expectedOutput')}
             </div>
 
             <p className="text-sm leading-relaxed text-black/75 dark:text-white/75">
@@ -1023,11 +1067,11 @@ const AutomationCard = ({
 
         <div className="relative mt-6 flex items-center justify-between gap-3">
           <p className="text-xs text-black/40 dark:text-white/40">
-            Review, configure, then run manually.
+            {t('automationsPage.reviewConfigureRun')}
           </p>
 
           <span className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition duration-200 group-hover:scale-[1.02] dark:bg-white dark:text-black">
-            View Details
+            {t('automationsPage.viewDetails')}
             <ArrowRight size={16} />
           </span>
         </div>
@@ -1065,23 +1109,23 @@ const AutomationsList = ({
   onRestoreTemplates: () => void;
   onSelect: (id: string) => void;
 }) => {
+  const { t } = useI18n();
+
   return (
     <div className="mx-auto max-w-7xl px-6 py-10 lg:px-10">
       <header className="mb-10 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-3xl">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-light-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-black/45 dark:border-dark-200 dark:text-white/45">
             <Sparkles size={14} />
-            Automation
+            {t('automationsPage.automation')}
           </div>
 
           <h1 className="text-4xl font-bold tracking-tight text-black dark:text-white md:text-5xl">
-            Automations
+            {t('automationsPage.automations')}
           </h1>
 
           <p className="mt-4 text-base leading-relaxed text-black/60 dark:text-white/60 md:text-lg">
-            Repeatable AI workflows for planning, research, sales, clients,
-            content, and operations. Start manually today, then turn them into
-            scheduled automations later.
+            {t('automationsPage.listSubtitle')}
           </p>
         </div>
 
@@ -1093,7 +1137,7 @@ const AutomationsList = ({
               className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-3 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
             >
               <Repeat size={17} />
-              Restore Templates
+              {t('automationsPage.restoreTemplates')}
             </button>
           )}
 
@@ -1103,7 +1147,7 @@ const AutomationsList = ({
             className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] active:scale-[0.99] dark:bg-white dark:text-black"
           >
             <Plus size={17} />
-            New Automation
+            {t('automationsPage.newAutomationButton')}
           </button>
 
           <button
@@ -1111,7 +1155,7 @@ const AutomationsList = ({
             onClick={onCleanDuplicateAutomations}
             className="inline-flex items-center justify-center rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/60 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/60 dark:hover:bg-dark-primary dark:hover:text-white"
           >
-            Clean duplicates
+            {t('automationsPage.cleanDuplicates')}
           </button>
         </div>
       </header>
@@ -1129,28 +1173,28 @@ const AutomationsList = ({
       <section className="mb-10 grid gap-4 md:grid-cols-3">
         <div className="rounded-3xl border border-light-200 bg-light-secondary p-5 dark:border-dark-200 dark:bg-dark-secondary">
           <p className="text-sm font-semibold text-black dark:text-white">
-            Search
+            {t('automationsPage.searchTitle')}
           </p>
           <p className="mt-1 text-sm text-black/55 dark:text-white/55">
-            Ask once and get a fast answer.
+            {t('automationsPage.searchDescription')}
           </p>
         </div>
 
         <div className="rounded-3xl border border-light-200 bg-light-secondary p-5 dark:border-dark-200 dark:bg-dark-secondary">
           <p className="text-sm font-semibold text-black dark:text-white">
-            Space
+            {t('automationsPage.spaceTitle')}
           </p>
           <p className="mt-1 text-sm text-black/55 dark:text-white/55">
-            Save knowledge and outputs in context.
+            {t('automationsPage.spaceDescription')}
           </p>
         </div>
 
         <div className="rounded-3xl border border-light-200 bg-light-secondary p-5 dark:border-dark-200 dark:bg-dark-secondary">
           <p className="text-sm font-semibold text-black dark:text-white">
-            Automation
+            {t('automationsPage.automation')}
           </p>
           <p className="mt-1 text-sm text-black/55 dark:text-white/55">
-            Repeat the workflow and generate recurring outputs.
+            {t('automationsPage.automationDescription')}
           </p>
         </div>
       </section>
@@ -1158,17 +1202,17 @@ const AutomationsList = ({
       <section className="mb-8 flex flex-wrap items-center gap-3 text-sm text-black/45 dark:text-white/45">
         <span className="inline-flex items-center gap-2">
           <LayoutTemplate size={16} />
-          {AUTOMATIONS.length} templates
+          {AUTOMATIONS.length} {t('automationsPage.templates')}
         </span>
 
         <span>•</span>
 
-        <span>{customCount} custom automations</span>
+        <span>{customCount} {t('automationsPage.customAutomations')}</span>
 
         {hiddenTemplateCount > 0 && (
           <>
             <span>•</span>
-            <span>{hiddenTemplateCount} hidden templates</span>
+            <span>{hiddenTemplateCount} {t('automationsPage.hiddenTemplates')}</span>
           </>
         )}
       </section>
@@ -1205,6 +1249,7 @@ const AutomationDetail = ({
   onDuplicate: (automation: AutomationTemplate) => void;
   onDelete: (automation: AutomationTemplate) => void;
 }) => {
+  const { t } = useI18n();
   const Icon = automation.icon;
 
   return (
@@ -1215,14 +1260,14 @@ const AutomationDetail = ({
         className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-black/55 transition hover:text-black dark:text-white/55 dark:hover:text-white"
       >
         <ArrowLeft size={16} />
-        Back to Automations
+        {t('automationsPage.backToAutomations')}
       </button>
 
       <header className="grid gap-8 lg:grid-cols-[1fr_360px] lg:items-start">
         <div>
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-light-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-black/45 dark:border-dark-200 dark:text-white/45">
             <Sparkles size={14} />
-            {automation.category} Automation
+            {automation.category} {t('automationsPage.automation')}
           </div>
 
           <div className="flex items-start gap-4">
@@ -1238,7 +1283,7 @@ const AutomationDetail = ({
 
                 {automation.isCustom && (
                   <span className="rounded-full bg-light-secondary px-3 py-1 text-xs font-semibold text-black/45 dark:bg-dark-secondary dark:text-white/45">
-                    Custom
+                    {t('automationsPage.custom')}
                   </span>
                 )}
               <AutomationModeStatusPills automation={automation} />
@@ -1253,12 +1298,11 @@ const AutomationDetail = ({
 
         <aside className="rounded-3xl border border-light-200 bg-light-secondary p-6 shadow-sm dark:border-dark-200 dark:bg-dark-secondary">
           <p className="text-sm font-semibold text-black dark:text-white">
-            Manual run
+            {t('automationsPage.manualRun')}
           </p>
 
           <p className="mt-2 text-sm leading-relaxed text-black/55 dark:text-white/55">
-            Start this workflow in Agent mode. The generated result can later be
-            saved as a Space output.
+            {t('automationsPage.manualRunDescription')}
           </p>
 
           <button
@@ -1267,12 +1311,12 @@ const AutomationDetail = ({
             className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition duration-200 hover:scale-[1.01] active:scale-[0.99] dark:bg-white dark:text-black"
           >
             <Play size={16} />
-            Run Automation
+            {t('automationsPage.runAutomation')}
           </button>
         <div className="mt-5 rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
           <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-black/40 dark:text-white/40">
             <CheckCircle2 size={14} />
-            Mode & status
+            {t('automationsPage.modeAndStatus')}
           </div>
           <p className="text-sm font-medium text-black/75 dark:text-white/75">
             {getAutomationModeLabel(automation)}
@@ -1285,20 +1329,20 @@ const AutomationDetail = ({
         <div className="mt-5 rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
           <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-black/40 dark:text-white/40">
             <Clock size={14} />
-            Schedule & next run
+            {t('automationsPage.scheduleAndNextRun')}
           </div>
           <p className="text-sm font-medium text-black/75 dark:text-white/75">
-            {getAutomationScheduleLabel(automation)}
+            {getAutomationScheduleLabel(automation, t)}
           </p>
           <p className="mt-1 text-sm text-black/55 dark:text-white/55">
-            Next: {getNextRunLabel(automation)}
+            {t('automationsPage.next')}: {getNextRunLabel(automation, t)}
           </p>
         </div>
 
           <div className="mt-5 rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
             <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-black/40 dark:text-white/40">
               <Clock size={14} />
-              Schedule
+              {t('automationsPage.schedule')}
             </div>
 
             <p className="text-sm text-black/75 dark:text-white/75">
@@ -1309,7 +1353,7 @@ const AutomationDetail = ({
           <div className="mt-5 rounded-2xl bg-light-primary p-4 dark:bg-dark-primary">
             <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-black/40 dark:text-white/40">
               <FileText size={14} />
-              Output destination
+              {t('automationsPage.outputDestination')}
             </div>
 
             <p className="text-sm font-medium text-black/75 dark:text-white/75">
@@ -1317,7 +1361,7 @@ const AutomationDetail = ({
             </p>
 
             <p className="mt-1 text-sm text-black/55 dark:text-white/55">
-              Save to {getAutomationOutputDestinationLabel(automation)}
+              {t('automationsPage.saveTo')} {getAutomationOutputDestinationLabel(automation)}
             </p>
           </div>
 
@@ -1328,7 +1372,7 @@ const AutomationDetail = ({
               className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
             >
               <PencilLine size={16} />
-              {automation.isCustom ? 'Edit Settings' : 'Customize Template'}
+              {automation.isCustom ? t('automationsPage.editSettings') : t('automationsPage.customizeTemplate')}
             </button>
 
             <button
@@ -1337,7 +1381,7 @@ const AutomationDetail = ({
               className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
             >
               <Copy size={16} />
-              Duplicate
+              {t('automationsPage.duplicate')}
             </button>
 
             <button
@@ -1346,7 +1390,7 @@ const AutomationDetail = ({
               className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-red-500/20 px-5 py-2.5 text-sm font-semibold text-red-500 transition hover:bg-red-500/10"
             >
               <Trash2 size={16} />
-              {automation.isCustom ? 'Delete' : 'Remove Template'}
+              {automation.isCustom ? t('automationsPage.delete') : t('automationsPage.removeTemplate')}
             </button>
           </div>
         </aside>
@@ -1359,12 +1403,11 @@ const AutomationDetail = ({
           </div>
 
           <h2 className="text-lg font-semibold text-black dark:text-white">
-            1. Workflow
+            {t('automationsPage.workflow')}
           </h2>
 
           <p className="mt-2 text-sm leading-relaxed text-black/55 dark:text-white/55">
-            The automation starts from a predefined business prompt and runs as
-            a multi-step agent task.
+            {t('automationsPage.workflowDescription')}
           </p>
         </div>
 
@@ -1374,12 +1417,11 @@ const AutomationDetail = ({
           </div>
 
           <h2 className="text-lg font-semibold text-black dark:text-white">
-            2. Repeatable
+            {t('automationsPage.repeatable')}
           </h2>
 
           <p className="mt-2 text-sm leading-relaxed text-black/55 dark:text-white/55">
-            Today it runs manually. Later, this same template can become a
-            scheduled automation with history.
+            {t('automationsPage.repeatableDescription')}
           </p>
         </div>
 
@@ -1389,12 +1431,11 @@ const AutomationDetail = ({
           </div>
 
           <h2 className="text-lg font-semibold text-black dark:text-white">
-            3. Output
+            {t('automationsPage.output')}
           </h2>
 
           <p className="mt-2 text-sm leading-relaxed text-black/55 dark:text-white/55">
-            The expected result is a reusable deliverable, not just a chat
-            answer.
+            {t('automationsPage.outputDescription')}
           </p>
         </div>
       </section>
@@ -1402,7 +1443,7 @@ const AutomationDetail = ({
       <section className="mt-10 grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-black/40 dark:text-white/40">
-            Agent prompt
+            {t('automationsPage.agentPrompt')}
           </p>
 
           <p className="text-base leading-relaxed text-black/75 dark:text-white/75">
@@ -1412,7 +1453,7 @@ const AutomationDetail = ({
 
         <div className="rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-black/40 dark:text-white/40">
-            Expected output
+            {t('automationsPage.expectedOutput')}
           </p>
 
           <p className="text-sm leading-relaxed text-black/65 dark:text-white/65">
@@ -1423,7 +1464,7 @@ const AutomationDetail = ({
 
       <section className="mt-10 rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
         <p className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-black/40 dark:text-white/40">
-          Good for
+          {t('automationsPage.goodFor')}
         </p>
 
         <div className="flex flex-wrap gap-3">
@@ -1443,11 +1484,11 @@ const AutomationDetail = ({
         <div className="mb-5 flex items-center justify-between gap-4">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-black/40 dark:text-white/40">
-              Saved outputs
+              {t('automationsPage.savedOutputs')}
             </p>
 
             <h2 className="text-lg font-semibold text-black dark:text-white">
-              Automation outputs
+              {t('automationsPage.automationOutputs')}
             </h2>
           </div>
 
@@ -1483,15 +1524,14 @@ const AutomationDetail = ({
                 </p>
 
                 <p className="mt-3 text-xs text-black/40 dark:text-white/40">
-                  Created {new Date(output.createdAt).toLocaleString()}
+                  {t('automationsPage.created')} {new Date(output.createdAt).toLocaleString()}
                 </p>
               </a>
             ))}
           </div>
         ) : (
           <p className="text-sm leading-relaxed text-black/55 dark:text-white/55">
-            No outputs yet. Run this automation to create the first output
-            record.
+            {t('automationsPage.noOutputsYet')}
           </p>
         )}
       </section>
@@ -1500,11 +1540,11 @@ const AutomationDetail = ({
         <div className="mb-5 flex items-center justify-between gap-4">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-black/40 dark:text-white/40">
-              Run history
+              {t('automationsPage.runHistory')}
             </p>
 
             <h2 className="text-lg font-semibold text-black dark:text-white">
-              Recent manual runs
+              {t('automationsPage.recentManualRuns')}
             </h2>
           </div>
 
@@ -1520,7 +1560,7 @@ const AutomationDetail = ({
               >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm font-medium text-black dark:text-white">
-                    Manual run started
+                    {t('automationsPage.manualRunStarted')}
                   </p>
 
                   <p className="text-xs text-black/45 dark:text-white/45">
@@ -1541,8 +1581,7 @@ const AutomationDetail = ({
           </div>
         ) : (
           <p className="text-sm leading-relaxed text-black/55 dark:text-white/55">
-            No runs yet. Start this automation once to create the first history
-            entry.
+            {t('automationsPage.noRunsYet')}
           </p>
         )}
       </section>
@@ -1551,6 +1590,8 @@ const AutomationDetail = ({
 };
 
 const AutomationsPage = () => {
+  const { t } = useI18n();
+
   const refreshAutomationStorageFromCache = () => {
     setCustomAutomations(readCustomAutomations());
     setHiddenTemplateIds(readHiddenTemplateIds());
@@ -1720,7 +1761,7 @@ const AutomationsPage = () => {
         },
         body: JSON.stringify({
           name: cleanName,
-          description: 'Created from an automation output destination.',
+          description: t('automationsPage.automationOutputs'),
         }),
       });
 
@@ -1750,7 +1791,7 @@ const AutomationsPage = () => {
       return createdSpace;
     } catch (error) {
       console.error('Failed to create Space from automation:', error);
-      window.alert('Could not create the Space. Please try again.');
+      window.alert(t('automationsPage.couldNotCreateSpace'));
       return null;
     }
   };
@@ -1796,7 +1837,7 @@ const AutomationsPage = () => {
       ? customAutomations.find((item) => item.id === automation.id)
       : {
           id: `custom-${Date.now()}`,
-          name: `${automation.name} Custom`,
+          name: `${automation.name} ${t('automationsPage.customSuffix')}`,
           category: automation.category,
           purpose: automation.purpose,
           frequency: automation.frequency,
@@ -1847,12 +1888,16 @@ const AutomationsPage = () => {
     const removedCount = customAutomations.length - cleanedAutomations.length;
 
     if (removedCount <= 0) {
-      window.alert('No duplicate automations found.');
+      window.alert(t('automationsPage.noDuplicatesFound'));
       return;
     }
 
     const confirmed = window.confirm(
-      `Clean ${removedCount} duplicate automation${removedCount > 1 ? 's' : ''}? The newest version will be kept. Runs and outputs will not be deleted.`,
+      `${t('automationsPage.cleanDuplicateConfirmPrefix')} ${removedCount} ${
+        removedCount > 1
+          ? t('automationsPage.duplicateAutomationPlural')
+          : t('automationsPage.duplicateAutomationSingular')
+      }? ${t('automationsPage.cleanDuplicateConfirmSuffix')}`,
     );
 
     if (!confirmed) return;
@@ -1874,14 +1919,18 @@ const AutomationsPage = () => {
     }
 
     window.alert(
-      `Cleaned ${removedCount} duplicate automation${removedCount > 1 ? 's' : ''}.`,
+      `${t('automationsPage.cleaned')} ${removedCount} ${
+        removedCount > 1
+          ? t('automationsPage.duplicateAutomationPlural')
+          : t('automationsPage.duplicateAutomationSingular')
+      }.`,
     );
   };
 
   const duplicateAutomation = (automation: AutomationTemplate) => {
     const duplicated: StoredAutomation = {
       id: `custom-${Date.now()}`,
-      name: `${automation.name} Copy`,
+      name: `${automation.name} ${t('automationsPage.copySuffix')}`,
       category: automation.category,
       purpose: automation.purpose,
       frequency: automation.frequency,
@@ -1920,7 +1969,7 @@ const AutomationsPage = () => {
   const deleteAutomation = (automation: AutomationTemplate) => {
     if (automation.isCustom) {
       const confirmed = window.confirm(
-        `Delete "${automation.name}"? This cannot be undone.`,
+        `${t('automationsPage.delete')} "${automation.name}"? ${t('automationsPage.deleteConfirmSuffix')}`,
       );
 
       if (!confirmed) return;
@@ -1932,7 +1981,7 @@ const AutomationsPage = () => {
       });
     } else {
       const confirmed = window.confirm(
-        `Remove the "${automation.name}" template from your Automations grid? You can restore default templates later.`,
+        `${t('automationsPage.removeTemplateConfirmPrefix')} "${automation.name}" ${t('automationsPage.removeTemplateConfirmSuffix')}`,
       );
 
       if (!confirmed) return;
