@@ -976,8 +976,14 @@ export default function AppsPage() {
         </span>
       </section>
 
+      <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        {SMALL_APP_TEMPLATES.map((app) => (
+          <AppCard key={app.id} app={app} onSelect={setSelectedApp} />
+        ))}
+      </section>
+
       {appOutputs.length > 0 && (
-        <section className="mb-10 rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
+        <section className="mt-10 mb-10 rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
           <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-black dark:text-white">
@@ -1024,12 +1030,6 @@ export default function AppsPage() {
           </div>
         </section>
       )}
-
-      <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {SMALL_APP_TEMPLATES.map((app) => (
-          <AppCard key={app.id} app={app} onSelect={setSelectedApp} />
-        ))}
-      </section>
     </div>
   );
 }
