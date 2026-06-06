@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ConfigModelProvider } from '@/lib/config/types';
 import { toast } from 'sonner';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 const AddModel = ({
   providerId,
@@ -18,6 +19,7 @@ const AddModel = ({
   const [modelName, setModelName] = useState('');
   const [modelKey, setModelKey] = useState('');
   const [loading, setLoading] = useState(false);
+  const { t } = useI18n();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,13 +61,13 @@ const AddModel = ({
         }),
       );
 
-      toast.success('Model added successfully.');
+      toast.success(t('models.modelAdded'));
       setModelName('');
       setModelKey('');
       setOpen(false);
     } catch (error) {
       console.error('Error adding model:', error);
-      toast.error('Failed to add model.');
+      toast.error(t('models.modelAddFailed'));
     } finally {
       setLoading(false);
     }
@@ -78,7 +80,7 @@ const AddModel = ({
         className="text-xs text-black/70 dark:text-white/70 hover:text-black hover:dark:text-white flex flex-row items-center space-x-1 active:scale-95 transition duration-200"
       >
         <Plus size={12} />
-        <span>Add</span>
+        <span>{t('common.add')}</span>
       </button>
       <AnimatePresence>
         {open && (
@@ -98,7 +100,7 @@ const AddModel = ({
               <DialogPanel className="w-full mx-4 lg:w-[600px] max-h-[85vh] flex flex-col border bg-light-primary dark:bg-dark-primary border-light-secondary dark:border-dark-secondary rounded-lg">
                 <div className="px-6 pt-6 pb-4">
                   <h3 className="text-black/90 dark:text-white/90 font-medium text-sm">
-                    Add new {type === 'chat' ? 'chat' : 'embedding'} model
+                    {type === 'chat' ? t('models.addNewChatModel') : t('models.addNewEmbeddingModel')}
                   </h3>
                 </div>
                 <div className="border-t border-light-200 dark:border-dark-200" />
@@ -116,7 +118,7 @@ const AddModel = ({
                           value={modelName}
                           onChange={(e) => setModelName(e.target.value)}
                           className="w-full rounded-lg border border-light-200 dark:border-dark-200 bg-light-primary dark:bg-dark-primary px-4 py-3 text-[13px] text-black/80 dark:text-white/80 placeholder:text-black/40 dark:placeholder:text-white/40 focus-visible:outline-none focus-visible:border-light-300 dark:focus-visible:border-dark-300 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-                          placeholder="e.g., GPT-4"
+                          placeholder={t('models.modelNamePlaceholder')}
                           type="text"
                           required
                         />
@@ -129,7 +131,7 @@ const AddModel = ({
                           value={modelKey}
                           onChange={(e) => setModelKey(e.target.value)}
                           className="w-full rounded-lg border border-light-200 dark:border-dark-200 bg-light-primary dark:bg-dark-primary px-4 py-3 text-[13px] text-black/80 dark:text-white/80 placeholder:text-black/40 dark:placeholder:text-white/40 focus-visible:outline-none focus-visible:border-light-300 dark:focus-visible:border-dark-300 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-                          placeholder="e.g., gpt-4"
+                          placeholder={t('models.modelKeyPlaceholder')}
                           type="text"
                           required
                         />
@@ -145,7 +147,7 @@ const AddModel = ({
                         {loading ? (
                           <Loader2 className="animate-spin" size={16} />
                         ) : (
-                          'Add Model'
+                          t('models.addModel')
                         )}
                       </button>
                     </div>

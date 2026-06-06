@@ -15,6 +15,7 @@ import {
 } from '@/lib/config/types';
 import Select from '@/components/ui/Select';
 import { toast } from 'sonner';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 const AddProvider = ({
   modelProviders,
@@ -30,6 +31,7 @@ const AddProvider = ({
   const [config, setConfig] = useState<Record<string, any>>({});
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const { t } = useI18n();
 
   const providerConfigMap = useMemo(() => {
     const map: Record<string, { name: string; fields: UIConfigField[] }> = {};
@@ -82,10 +84,10 @@ const AddProvider = ({
 
       setProviders((prev) => [...prev, data]);
 
-      toast.success('Connection added successfully.');
+      toast.success(t('models.connectionAdded'));
     } catch (error) {
       console.error('Error adding provider:', error);
-      toast.error('Failed to add connection.');
+      toast.error(t('models.connectionAddFailed'));
     } finally {
       setLoading(false);
       setOpen(false);
@@ -99,7 +101,7 @@ const AddProvider = ({
         className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs sm:text-xs border border-light-200 dark:border-dark-200 text-black dark:text-white bg-light-secondary/50 dark:bg-dark-secondary/50 hover:bg-light-secondary hover:dark:bg-dark-secondary hover:border-light-300 hover:dark:border-dark-300 flex flex-row items-center space-x-1 active:scale-95 transition duration-200"
       >
         <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
-        <span>Add Connection</span>
+        <span>{t('models.addConnection')}</span>
       </button>
       <AnimatePresence>
         {open && (
@@ -155,7 +157,7 @@ const AddProvider = ({
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           className="w-full rounded-lg border border-light-200 dark:border-dark-200 bg-light-primary dark:bg-dark-primary px-4 py-3 pr-10 text-sm text-black/80 dark:text-white/80 placeholder:text-black/40 dark:placeholder:text-white/40 focus-visible:outline-none focus-visible:border-light-300 dark:focus-visible:border-dark-300 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
-                          placeholder={'e.g., My OpenAI Connection'}
+                          placeholder={t('models.connectionNamePlaceholder')}
                           type="text"
                           required={true}
                         />
@@ -199,7 +201,7 @@ const AddProvider = ({
                       {loading ? (
                         <Loader2 className="animate-spin" size={16} />
                       ) : (
-                        'Add Connection'
+                        t('models.addConnection')
                       )}
                     </button>
                   </div>

@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import AddModel from './AddModelDialog';
 import UpdateProvider from './UpdateProviderDialog';
 import DeleteProvider from './DeleteProviderDialog';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 const ModelProvider = ({
   modelProvider,
@@ -18,6 +19,7 @@ const ModelProvider = ({
   setProviders: React.Dispatch<React.SetStateAction<ConfigModelProvider[]>>;
 }) => {
   const [open, setOpen] = useState(true);
+  const { t } = useI18n();
 
   const handleModelDelete = async (
     type: 'chat' | 'embedding',
@@ -59,10 +61,10 @@ const ModelProvider = ({
           }) as ConfigModelProvider[],
       );
 
-      toast.success('Model deleted successfully.');
+      toast.success(t('models.modelDeleted'));
     } catch (err) {
       console.error('Failed to delete model', err);
-      toast.error('Failed to delete model.');
+      toast.error(t('models.modelDeleteFailed'));
     }
   };
 
@@ -89,7 +91,7 @@ const ModelProvider = ({
             </p>
             {modelCount > 0 && (
               <p className="text-[10px] lg:text-[11px] text-black/50 dark:text-white/50">
-                {modelCount} model{modelCount !== 1 ? 's' : ''} configured
+                {modelCount} {modelCount !== 1 ? t('models.modelPlural') : t('models.modelSingular')} {t('models.configured')}
               </p>
             )}
           </div>

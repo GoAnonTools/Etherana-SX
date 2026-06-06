@@ -7,6 +7,7 @@ import {
 } from '@/lib/config/types';
 import ModelProvider from './ModelProvider';
 import ModelSelect from './ModelSelect';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 const Models = ({
   fields,
@@ -16,6 +17,7 @@ const Models = ({
   values: ConfigModelProvider[];
 }) => {
   const [providers, setProviders] = useState<ConfigModelProvider[]>(values);
+  const { t } = useI18n();
 
   return (
     <div className="flex-1 space-y-6 overflow-y-auto py-6">
@@ -66,8 +68,7 @@ const Models = ({
               No connections yet
             </p>
             <p className="text-xs text-black/50 dark:text-white/50 text-center max-w-sm mb-4">
-              Add your first connection to start using AI models. Connect to
-              OpenAI, Anthropic, Ollama, and more.
+{t('models.noConnectionsDescription')}
             </p>
           </div>
         ) : (
