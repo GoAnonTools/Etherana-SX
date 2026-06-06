@@ -70,6 +70,20 @@ export const dictionaries = {
       noNewsPreview: 'No news preview available.',
       news: 'News',
     },
+    discoverPage: {
+      title: 'Discover',
+      tech: 'Tech & Science',
+      finance: 'Finance',
+      art: 'Art & Culture',
+      sports: 'Sports',
+      entertainment: 'Entertainment',
+      errorFetching: 'Error fetching articles',
+      noArticlesTitle: 'No articles found',
+      noArticlesDescription:
+        'Discover could not find articles for this topic right now. Make sure the local SearXNG service is running, then try another topic.',
+      tryAgain: 'Try again',
+      fallbackLabel: 'Discover',
+    },
     models: {
       selectModels: 'Select models',
       manageConnections: 'Manage connections',
@@ -165,6 +179,20 @@ export const dictionaries = {
       noNewsPreview: 'Aucun aperçu d’actualité disponible.',
       news: 'Actualités',
     },
+    discoverPage: {
+      title: 'Découvrir',
+      tech: 'Tech & Science',
+      finance: 'Finance',
+      art: 'Art & Culture',
+      sports: 'Sports',
+      entertainment: 'Divertissement',
+      errorFetching: 'Erreur lors du chargement des articles',
+      noArticlesTitle: 'Aucun article trouvé',
+      noArticlesDescription:
+        'Discover ne trouve aucun article pour ce sujet pour le moment. Vérifiez que le service local SearXNG fonctionne, puis essayez un autre sujet.',
+      tryAgain: 'Réessayer',
+      fallbackLabel: 'Découvrir',
+    },
     models: {
       selectModels: 'Choisir les modèles',
       manageConnections: 'Gérer les connexions',
@@ -205,6 +233,7 @@ export type TranslationKey =
   | `sidebar.${keyof typeof dictionaries.en.sidebar}`
   | `settings.${keyof typeof dictionaries.en.settings}`
   | `searchPage.${keyof typeof dictionaries.en.searchPage}`
+  | `discoverPage.${keyof typeof dictionaries.en.discoverPage}`
   | `models.${keyof typeof dictionaries.en.models}`;
 
 export const getTranslation = (locale: Locale, key: TranslationKey) => {

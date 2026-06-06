@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { Discover } from '@/app/discover/page';
+import { useI18n } from '@/lib/i18n/useI18n';
 
 const getSafeThumbnailUrl = (thumbnail?: string | null) => {
   if (!thumbnail || typeof thumbnail !== 'string') {
@@ -33,21 +34,22 @@ const getSafeThumbnailUrl = (thumbnail?: string | null) => {
   }
 };
 
-const getSourceLabel = (url?: string | null) => {
+const getSourceLabel = (url?: string | null, fallback = 'Discover') => {
   if (!url || typeof url !== 'string') {
-    return 'Discover';
+    return fallback;
   }
 
   try {
     const hostname = new URL(url).hostname.replace(/^www\./, '');
 
-    return hostname || 'Discover';
+    return hostname || fallback;
   } catch {
-    return 'Discover';
+    return fallback;
   }
 };
 
 const SmallNewsCard = ({ item }: { item: Discover }) => {
+  const { t } = useI18n();
   const [imageFailed, setImageFailed] = useState(false);
 
   const thumbnail = useMemo(
@@ -55,7 +57,10 @@ const SmallNewsCard = ({ item }: { item: Discover }) => {
     [item.thumbnail],
   );
 
-  const sourceLabel = useMemo(() => getSourceLabel(item.url), [item.url]);
+  const sourceLabel = useMemo(
+    () => getSourceLabel(item.url, t('discoverPage.fallbackLabel')),
+    [item.url, t],
+  );
   const imageUrl = imageFailed ? null : thumbnail;
   const initial = item.title?.trim()?.charAt(0)?.toUpperCase() || 'E';
 

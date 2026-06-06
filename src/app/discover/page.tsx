@@ -6,6 +6,8 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import SmallNewsCard from '@/components/Discover/SmallNewsCard';
 import MajorNewsCard from '@/components/Discover/MajorNewsCard';
+import { useI18n } from '@/lib/i18n/useI18n';
+import type { TranslationKey } from '@/lib/i18n/dictionaries';
 
 export interface Discover {
   title: string;
@@ -14,36 +16,38 @@ export interface Discover {
   thumbnail: string;
 }
 
-const topics: { key: string; display: string }[] = [
+const topics: { key: string; labelKey: TranslationKey }[] = [
   {
-    display: 'Tech & Science',
+    labelKey: 'discoverPage.tech',
     key: 'tech',
   },
   {
-    display: 'Finance',
+    labelKey: 'discoverPage.finance',
     key: 'finance',
   },
   {
-    display: 'Art & Culture',
+    labelKey: 'discoverPage.art',
     key: 'art',
   },
   {
-    display: 'Sports',
+    labelKey: 'discoverPage.sports',
     key: 'sports',
   },
   {
-    display: 'Entertainment',
+    labelKey: 'discoverPage.entertainment',
     key: 'entertainment',
   },
 ];
 
 const Page = () => {
+  const { t } = useI18n();
   const [discover, setDiscover] = useState<Discover[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTopic, setActiveTopic] = useState<string>(topics[0].key);
 
   const fetchArticles = async (topic: string) => {
     setLoading(true);
+
     try {
       const res = await fetch(`/api/discover?topic=${topic}`, {
         method: 'GET',
@@ -61,7 +65,7 @@ const Page = () => {
       setDiscover(Array.isArray(data.blogs) ? data.blogs : []);
     } catch (err: any) {
       console.error('Error fetching data:', err.message);
-      toast.error('Error fetching data');
+      toast.error(t('discoverPage.errorFetching'));
     } finally {
       setLoading(false);
     }
@@ -74,30 +78,31 @@ const Page = () => {
   return (
     <>
       <div>
-        <div className="flex flex-col pt-10 border-b border-light-200/20 dark:border-dark-200/20 pb-6 px-2">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-col border-b border-light-200/20 px-2 pb-6 pt-10 dark:border-dark-200/20">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center justify-center">
               <Globe2Icon size={45} className="mb-2.5" />
               <h1
-                className="text-5xl font-normal p-2"
+                className="p-2 text-5xl font-normal"
                 style={{ fontFamily: 'PP Editorial, serif' }}
               >
-                Discover
+                {t('discoverPage.title')}
               </h1>
             </div>
+
             <div className="flex flex-row items-center space-x-2 overflow-x-auto">
-              {topics.map((t, i) => (
+              {topics.map((topic) => (
                 <div
-                  key={i}
+                  key={topic.key}
                   className={cn(
-                    'border-[0.1px] rounded-full text-sm px-3 py-1 text-nowrap transition duration-200 cursor-pointer',
-                    activeTopic === t.key
-                      ? 'text-cyan-700 dark:text-cyan-300 bg-cyan-300/20 border-cyan-700/60 dark:bg-cyan-300/30 dark:border-cyan-300/40'
-                      : 'border-black/30 dark:border-white/30 text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:border-black/40 dark:hover:border-white/40 hover:bg-black/5 dark:hover:bg-white/5',
+                    'cursor-pointer text-nowrap rounded-full border-[0.1px] px-3 py-1 text-sm transition duration-200',
+                    activeTopic === topic.key
+                      ? 'border-cyan-700/60 bg-cyan-300/20 text-cyan-700 dark:border-cyan-300/40 dark:bg-cyan-300/30 dark:text-cyan-300'
+                      : 'border-black/30 text-black/70 hover:border-black/40 hover:bg-black/5 hover:text-black dark:border-white/30 dark:text-white/70 dark:hover:border-white/40 dark:hover:bg-white/5 dark:hover:text-white',
                   )}
-                  onClick={() => setActiveTopic(t.key)}
+                  onClick={() => setActiveTopic(topic.key)}
                 >
-                  <span>{t.display}</span>
+                  <span>{t(topic.labelKey)}</span>
                 </div>
               ))}
             </div>
@@ -105,10 +110,10 @@ const Page = () => {
         </div>
 
         {loading ? (
-          <div className="flex flex-row items-center justify-center min-h-screen">
+          <div className="flex min-h-screen flex-row items-center justify-center">
             <svg
               aria-hidden="true"
-              className="w-8 h-8 text-light-200 fill-light-secondary dark:text-[#202020] animate-spin dark:fill-[#ffffff3b]"
+              className="h-8 w-8 animate-spin fill-light-secondary text-light-200 dark:fill-[#ffffff3b] dark:text-[#202020]"
               viewBox="0 0 100 101"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -127,11 +132,11 @@ const Page = () => {
           <div className="flex min-h-[55vh] flex-col items-center justify-center px-6 text-center">
             <div className="rounded-3xl border border-light-200 bg-light-secondary p-8 dark:border-dark-200 dark:bg-dark-secondary">
               <h2 className="text-2xl font-semibold text-black dark:text-white">
-                No articles found
+                {t('discoverPage.noArticlesTitle')}
               </h2>
 
               <p className="mt-3 max-w-xl text-sm leading-relaxed text-black/55 dark:text-white/55">
-                Discover could not find articles for this topic right now. Make sure the local SearXNG service is running, then try another topic.
+                {t('discoverPage.noArticlesDescription')}
               </p>
 
               <button
@@ -139,14 +144,14 @@ const Page = () => {
                 onClick={() => fetchArticles(activeTopic)}
                 className="mt-6 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
               >
-                Try again
+                {t('discoverPage.tryAgain')}
               </button>
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-4 pb-28 pt-5 lg:pb-8 w-full">
+          <div className="flex w-full flex-col gap-4 pb-28 pt-5 lg:pb-8">
             <div className="block lg:hidden">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {discover?.map((item, i) => (
                   <SmallNewsCard key={`mobile-${i}`} item={item} />
                 ))}
@@ -165,7 +170,7 @@ const Page = () => {
                       sections.push(
                         <hr
                           key={`sep-${index}`}
-                          className="border-t border-light-200/20 dark:border-dark-200/20 my-3 w-full"
+                          className="my-3 w-full border-t border-light-200/20 dark:border-dark-200/20"
                         />,
                       );
                     }
@@ -185,7 +190,7 @@ const Page = () => {
                       sections.push(
                         <hr
                           key={`sep-${index}-after`}
-                          className="border-t border-light-200/20 dark:border-dark-200/20 my-3 w-full"
+                          className="my-3 w-full border-t border-light-200/20 dark:border-dark-200/20"
                         />,
                       );
                     }
@@ -195,7 +200,7 @@ const Page = () => {
                       sections.push(
                         <div
                           key={`small-group-${index}`}
-                          className="grid lg:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-4"
+                          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
                         >
                           {smallCards.map((item, i) => (
                             <SmallNewsCard
@@ -212,7 +217,7 @@ const Page = () => {
                       sections.push(
                         <hr
                           key={`sep-${index}-after-small`}
-                          className="border-t border-light-200/20 dark:border-dark-200/20 my-3 w-full"
+                          className="my-3 w-full border-t border-light-200/20 dark:border-dark-200/20"
                         />,
                       );
                     }
@@ -227,11 +232,12 @@ const Page = () => {
                             isLeft={i === 0}
                           />,
                         );
+
                         if (i === 0) {
                           sections.push(
                             <hr
                               key={`sep-double-${index + i}`}
-                              className="border-t border-light-200/20 dark:border-dark-200/20 my-3 w-full"
+                              className="my-3 w-full border-t border-light-200/20 dark:border-dark-200/20"
                             />,
                           );
                         }
@@ -252,7 +258,7 @@ const Page = () => {
                       sections.push(
                         <hr
                           key={`sep-${index}-after-major`}
-                          className="border-t border-light-200/20 dark:border-dark-200/20 my-3 w-full"
+                          className="my-3 w-full border-t border-light-200/20 dark:border-dark-200/20"
                         />,
                       );
                     }
@@ -262,7 +268,7 @@ const Page = () => {
                       sections.push(
                         <div
                           key={`small-group-2-${index}`}
-                          className="grid lg:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-4"
+                          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
                         >
                           {smallCards.map((item, i) => (
                             <SmallNewsCard
