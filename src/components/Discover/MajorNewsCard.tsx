@@ -39,12 +39,17 @@ const MajorNewsCard = ({
             <ThumbnailImage thumbnail={item.thumbnail} title={item.title} />
           ) : null}
           <div
-            className="absolute inset-0 bg-light-200 dark:bg-dark-200 items-center justify-center"
+            className="absolute inset-0 bg-gradient-to-br from-cyan-500/15 via-light-200 to-purple-500/15 dark:from-cyan-400/15 dark:via-dark-200 dark:to-purple-400/15 items-center justify-center"
             style={{ display: item.thumbnail ? 'none' : 'flex' }}
           >
-            <span className="text-4xl font-bold text-black/20 dark:text-white/20">
-              {item.title?.charAt(0)?.toUpperCase() || '?'}
-            </span>
+            <div className="rounded-3xl border border-black/10 bg-white/20 px-5 py-4 text-center backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+              <span className="block text-4xl font-bold text-black/25 dark:text-white/25">
+                {item.title?.charAt(0)?.toUpperCase() || '?'}
+              </span>
+              <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.18em] text-black/35 dark:text-white/35">
+                Discover
+              </span>
+            </div>
           </div>
         </div>
         <div className="flex flex-col justify-center flex-1 py-4">
@@ -77,12 +82,17 @@ const MajorNewsCard = ({
             <ThumbnailImage thumbnail={item.thumbnail} title={item.title} />
           ) : null}
           <div
-            className="absolute inset-0 bg-light-200 dark:bg-dark-200 items-center justify-center"
+            className="absolute inset-0 bg-gradient-to-br from-cyan-500/15 via-light-200 to-purple-500/15 dark:from-cyan-400/15 dark:via-dark-200 dark:to-purple-400/15 items-center justify-center"
             style={{ display: item.thumbnail ? 'none' : 'flex' }}
           >
-            <span className="text-4xl font-bold text-black/20 dark:text-white/20">
-              {item.title?.charAt(0)?.toUpperCase() || '?'}
-            </span>
+            <div className="rounded-3xl border border-black/10 bg-white/20 px-5 py-4 text-center backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+              <span className="block text-4xl font-bold text-black/25 dark:text-white/25">
+                {item.title?.charAt(0)?.toUpperCase() || '?'}
+              </span>
+              <span className="mt-1 block text-xs font-semibold uppercase tracking-[0.18em] text-black/35 dark:text-white/35">
+                Discover
+              </span>
+            </div>
           </div>
         </div>
       </>

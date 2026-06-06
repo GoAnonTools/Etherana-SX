@@ -58,7 +58,7 @@ const Page = () => {
         throw new Error(data.message);
       }
 
-      setDiscover(data.blogs);
+      setDiscover(Array.isArray(data.blogs) ? data.blogs : []);
     } catch (err: any) {
       console.error('Error fetching data:', err.message);
       toast.error('Error fetching data');
@@ -122,6 +122,26 @@ const Page = () => {
                 fill="currentFill"
               />
             </svg>
+          </div>
+        ) : discover && discover.length === 0 ? (
+          <div className="flex min-h-[55vh] flex-col items-center justify-center px-6 text-center">
+            <div className="rounded-3xl border border-light-200 bg-light-secondary p-8 dark:border-dark-200 dark:bg-dark-secondary">
+              <h2 className="text-2xl font-semibold text-black dark:text-white">
+                No articles found
+              </h2>
+
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-black/55 dark:text-white/55">
+                Discover could not find articles for this topic right now. Make sure the local SearXNG service is running, then try another topic.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => fetchArticles(activeTopic)}
+                className="mt-6 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
+              >
+                Try again
+              </button>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col gap-4 pb-28 pt-5 lg:pb-8 w-full">
