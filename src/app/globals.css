@@ -11,6 +11,20 @@
 }
 
 @layer base {
+  :root {
+    --color-light-50: 255 255 255;
+    --color-light-100: 246 248 250;
+    --color-light-200: 232 237 241;
+    --color-light-300: 208 215 222;
+  }
+
+  html[data-light-theme-style='amber'] {
+    --color-light-50: 250 239 216;
+    --color-light-100: 255 247 230;
+    --color-light-200: 232 203 153;
+    --color-light-300: 189 137 58;
+  }
+
   .overflow-hidden-scrollable {
     -ms-overflow-style: none;
   }
@@ -137,5 +151,106 @@
   textarea,
   input {
     font-size: 16px !important;
+  }
+}
+
+
+/* Etherana Amber theme */
+@layer utilities {
+  html.light[data-light-theme-style='amber'] body {
+    background: rgb(250 239 216) !important;
+  }
+
+  html.light[data-light-theme-style='amber'] .bg-light-primary {
+    background-color: rgb(250 239 216) !important;
+  }
+
+  html.light[data-light-theme-style='amber'] .bg-light-secondary {
+    background-color: rgb(255 247 230) !important;
+  }
+
+  html.light[data-light-theme-style='amber'] .bg-light-200 {
+    background-color: rgb(232 203 153) !important;
+  }
+
+  html.light[data-light-theme-style='amber'] .bg-light-300 {
+    background-color: rgb(189 137 58) !important;
+  }
+
+  html.light[data-light-theme-style='amber'] .border-light-200,
+  html.light[data-light-theme-style='amber'] .border-light-200\/20,
+  html.light[data-light-theme-style='amber'] .border-light-200\/60 {
+    border-color: rgb(218 185 128) !important;
+  }
+
+  html.light[data-light-theme-style='amber'] .border-light-300 {
+    border-color: rgb(189 137 58) !important;
+  }
+
+  html.light[data-light-theme-style='amber'] .shadow-light-200\/10 {
+    --tw-shadow-color: rgb(150 105 38 / 0.14) !important;
+    --tw-shadow: var(--tw-shadow-colored) !important;
+  }
+
+  html.light[data-light-theme-style='amber'] .hover\:bg-light-200:hover {
+    background-color: rgb(232 203 153) !important;
+  }
+
+  html.light[data-light-theme-style='amber'] input,
+  html.light[data-light-theme-style='amber'] textarea,
+  html.light[data-light-theme-style='amber'] select {
+    background-color: rgb(255 247 230) !important;
+    border-color: rgb(218 185 128) !important;
+  }
+
+  html.light[data-light-theme-style='amber'] .bg-cyan-300\/20,
+  html.light[data-light-theme-style='amber'] .bg-cyan-500,
+  html.light[data-light-theme-style='amber'] .bg-blue-500,
+  html.light[data-light-theme-style='amber'] .bg-blue-600 {
+    background-color: rgb(180 119 28) !important;
+  }
+
+  html.light[data-light-theme-style='amber'] .text-cyan-500,
+  html.light[data-light-theme-style='amber'] .text-cyan-600,
+  html.light[data-light-theme-style='amber'] .text-cyan-700,
+  html.light[data-light-theme-style='amber'] .text-blue-500,
+  html.light[data-light-theme-style='amber'] .text-blue-600,
+  html.light[data-light-theme-style='amber'] .text-blue-700,
+  html.light[data-light-theme-style='amber'] .group-hover\:text-cyan-500:hover,
+  html.light[data-light-theme-style='amber'] .group:hover .group-hover\:text-cyan-500 {
+    color: rgb(146 87 18) !important;
+  }
+
+  html.light[data-light-theme-style='amber'] .border-cyan-700\/60,
+  html.light[data-light-theme-style='amber'] .border-blue-500,
+  html.light[data-light-theme-style='amber'] .border-blue-600 {
+    border-color: rgb(180 119 28) !important;
+  }
+
+  html.light[data-light-theme-style='amber'] .fill-light-secondary {
+    fill: rgb(255 247 230) !important;
+  }
+
+  html.light[data-light-theme-style='amber'] .from-cyan-500\/15 {
+    --tw-gradient-from: rgb(180 119 28 / 0.16) var(--tw-gradient-from-position) !important;
+    --tw-gradient-to: rgb(180 119 28 / 0) var(--tw-gradient-to-position) !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+  }
+
+  html.light[data-light-theme-style='amber'] .to-purple-500\/15 {
+    --tw-gradient-to: rgb(120 74 20 / 0.16) var(--tw-gradient-to-position) !important;
+  }
+}
+
+@layer utilities {
+  html.light[data-light-theme-style='amber'] .etherana-search-mode-active {
+    background-color: rgb(232 203 153) !important;
+    color: rgb(44 32 16) !important;
+    border: 1px solid rgb(218 185 128) !important;
+    box-shadow: 0 1px 2px rgb(120 74 20 / 0.12) !important;
+  }
+
+  html.light[data-light-theme-style='amber'] .etherana-search-mode-active svg {
+    color: rgb(146 87 18) !important;
   }
 }

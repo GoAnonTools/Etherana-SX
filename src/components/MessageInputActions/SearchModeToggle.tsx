@@ -13,7 +13,7 @@ const SearchModeToggle = () => {
         className={cn(
           'flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition',
           searchMode === 'results'
-            ? 'bg-sky-500 text-white shadow-sm'
+            ? 'bg-sky-500 text-white shadow-sm etherana-search-mode-active'
             : 'text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white',
         )}
         title="Show normal search results"
@@ -28,7 +28,7 @@ const SearchModeToggle = () => {
         className={cn(
           'flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition',
           searchMode === 'agent'
-            ? 'bg-sky-500 text-white shadow-sm'
+            ? 'bg-sky-500 text-white shadow-sm etherana-search-mode-active'
             : 'text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white',
         )}
         title="Use the AI agent"
