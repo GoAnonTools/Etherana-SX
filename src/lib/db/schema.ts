@@ -147,3 +147,29 @@ export const spaceLinks = sqliteTable('space_links', {
   description: text('description'),
   createdAt: text('createdAt').notNull(),
 });
+
+export const customAppRecords = sqliteTable('custom_apps', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  category: text('category').notNull(),
+  description: text('description').notNull(),
+  outputType: text('outputType').notNull(),
+  promptTemplate: text('promptTemplate').notNull(),
+  inputs: text('inputs', { mode: 'json' })
+    .$type<
+      {
+        id: string;
+        label: string;
+        type: 'text' | 'textarea' | 'select' | 'date' | 'number';
+        placeholder?: string;
+        required?: boolean;
+        options?: string[];
+      }[]
+    >()
+    .default(sql`'[]'`),
+  goodFor: text('goodFor', { mode: 'json' })
+    .$type<string[]>()
+    .default(sql`'[]'`),
+  createdAt: text('createdAt').notNull(),
+  updatedAt: text('updatedAt').notNull(),
+});
