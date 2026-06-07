@@ -342,6 +342,14 @@ export const dictionaries = {
       duplicating: 'Duplicating...',
       copySuffix: 'Copy',
       couldNotDuplicateCustomApp: 'Could not duplicate custom app.',
+
+      importJson: 'Import JSON',
+      importing: 'Importing...',
+      exportJson: 'Export JSON',
+      importCustomAppHelp:
+        'Import an Etherana SX custom app JSON file shared from another workspace.',
+      invalidCustomAppJson: 'This file is not a valid custom app JSON.',
+      couldNotImportCustomApp: 'Could not import custom app.',
 },
     automationsPage: {
       automation: 'Automation',
@@ -1057,6 +1065,14 @@ export const dictionaries = {
       duplicating: 'Duplication...',
       copySuffix: 'Copie',
       couldNotDuplicateCustomApp: 'Impossible de dupliquer l’app personnalisée.',
+
+      importJson: 'Importer JSON',
+      importing: 'Import...',
+      exportJson: 'Exporter JSON',
+      importCustomAppHelp:
+        'Importez un fichier JSON d’app personnalisée Etherana SX partagé depuis un autre espace.',
+      invalidCustomAppJson: 'Ce fichier JSON n’est pas une app personnalisée valide.',
+      couldNotImportCustomApp: 'Impossible d’importer l’app personnalisée.',
 },
     automationsPage: {
       automation: 'Automatisation',

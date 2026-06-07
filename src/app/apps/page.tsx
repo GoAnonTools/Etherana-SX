@@ -3,6 +3,7 @@
 import {
   ArrowLeft,
   Copy,
+  Download,
   FileText,
   LayoutTemplate,
   PencilLine,
@@ -12,10 +13,11 @@ import {
   Save,
   Sparkles,
   Trash2,
+  Upload,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   SMALL_APP_TEMPLATES,
   type SmallAppCategory,
@@ -83,6 +85,50 @@ const mapCustomAppToTemplate = (app: CustomAppRecord): AppCatalogItem => ({
   isCustom: true,
   updatedAt: app.updatedAt,
 });
+
+const getExportFilename = (name: string) => {
+  const slug =
+    name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60) || 'custom-app';
+
+  return `${slug}.etherana-app.json`;
+};
+
+const unwrapImportedCustomApp = (value: unknown) => {
+  if (!value || typeof value !== 'object') {
+    throw new Error('Invalid custom app JSON.');
+  }
+
+  const raw = value as Record<string, any>;
+  const app = raw.app || raw.customApp || raw;
+
+  if (!app || typeof app !== 'object') {
+    throw new Error('Invalid custom app JSON.');
+  }
+
+  if (
+    typeof app.name !== 'string' ||
+    typeof app.description !== 'string' ||
+    typeof app.promptTemplate !== 'string' ||
+    !Array.isArray(app.inputs)
+  ) {
+    throw new Error('Invalid custom app JSON.');
+  }
+
+  return {
+    name: app.name,
+    category: app.category || 'Business',
+    description: app.description,
+    outputType: app.outputType || 'Document',
+    promptTemplate: app.promptTemplate,
+    inputs: app.inputs,
+    goodFor: Array.isArray(app.goodFor) ? app.goodFor : [],
+  };
+};
 
 type BuilderFieldDraft = SmallAppInput & {
   optionsText?: string;
@@ -1506,6 +1552,8 @@ export default function AppsPage() {
     useState<CustomAppRecord | null>(null);
   const [deletingCustomAppId, setDeletingCustomAppId] = useState('');
   const [duplicatingCustomAppId, setDuplicatingCustomAppId] = useState('');
+  const [isImportingCustomApp, setIsImportingCustomApp] = useState(false);
+  const importCustomAppInputRef = useRef<HTMLInputElement | null>(null);
 
   const [appOutputs, setAppOutputs] = useState<AutomationOutputItem[]>([]);
 
@@ -1590,6 +1638,85 @@ export default function AppsPage() {
       );
     } finally {
       setDuplicatingCustomAppId('');
+    }
+  };
+
+  const handleExportCustomApp = (app: CustomAppRecord) => {
+    const payload = {
+      kind: 'etherana-sx-custom-app',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      app: {
+        name: app.name,
+        category: app.category,
+        description: app.description,
+        outputType: app.outputType,
+        promptTemplate: app.promptTemplate,
+        inputs: app.inputs,
+        goodFor: app.goodFor,
+      },
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = getExportFilename(app.name);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportCustomAppFile = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+
+    event.target.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    setIsImportingCustomApp(true);
+    setCustomAppsError('');
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const payload = unwrapImportedCustomApp(parsed);
+
+      const res = await fetch('/api/apps/custom', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.message || t('appsPage.couldNotImportCustomApp'));
+      }
+
+      await refreshCustomApps();
+    } catch (err) {
+      console.error('Failed to import custom app:', err);
+      setCustomAppsError(
+        err instanceof SyntaxError
+          ? t('appsPage.invalidCustomAppJson')
+          : err instanceof Error
+            ? err.message
+            : t('appsPage.couldNotImportCustomApp'),
+      );
+    } finally {
+      setIsImportingCustomApp(false);
     }
   };
 
@@ -1763,16 +1890,43 @@ export default function AppsPage() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={openCreateCustomApp}
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
-          >
-            <Plus size={16} />
-            {customApps.length > 0
-              ? t('appsPage.createCustomApp')
-              : t('appsPage.createFirstCustomApp')}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <input
+              ref={importCustomAppInputRef}
+              type="file"
+              accept="application/json,.json,.etherana-app.json"
+              className="hidden"
+              onChange={handleImportCustomAppFile}
+            />
+
+            <button
+              type="button"
+              onClick={() => importCustomAppInputRef.current?.click()}
+              disabled={isImportingCustomApp}
+              title={t('appsPage.importCustomAppHelp')}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+            >
+              {isImportingCustomApp ? (
+                <Loader2 className="animate-spin" size={16} />
+              ) : (
+                <Upload size={16} />
+              )}
+              {isImportingCustomApp
+                ? t('appsPage.importing')
+                : t('appsPage.importJson')}
+            </button>
+
+            <button
+              type="button"
+              onClick={openCreateCustomApp}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+            >
+              <Plus size={16} />
+              {customApps.length > 0
+                ? t('appsPage.createCustomApp')
+                : t('appsPage.createFirstCustomApp')}
+            </button>
+          </div>
         </div>
 
         {customApps.length === 0 ? (
@@ -1790,14 +1944,32 @@ export default function AppsPage() {
               {t('appsPage.noCustomAppsDescription')}
             </p>
 
-            <button
-              type="button"
-              onClick={openCreateCustomApp}
-              className="mt-5 inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
-            >
-              <Plus size={16} />
-              {t('appsPage.createFirstCustomApp')}
-            </button>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                onClick={openCreateCustomApp}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
+              >
+                <Plus size={16} />
+                {t('appsPage.createFirstCustomApp')}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => importCustomAppInputRef.current?.click()}
+                disabled={isImportingCustomApp}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-5 py-2.5 text-sm font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
+              >
+                {isImportingCustomApp ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <Upload size={16} />
+                )}
+                {isImportingCustomApp
+                  ? t('appsPage.importing')
+                  : t('appsPage.importJson')}
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -1849,6 +2021,15 @@ export default function AppsPage() {
                     {duplicatingCustomAppId === app.id
                       ? t('appsPage.duplicating')
                       : t('appsPage.duplicate')}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleExportCustomApp(app)}
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-3 py-2 text-xs font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
+                  >
+                    <Download size={14} />
+                    {t('appsPage.exportJson')}
                   </button>
 
                   <button
