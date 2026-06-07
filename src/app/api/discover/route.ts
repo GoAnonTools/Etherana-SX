@@ -3,28 +3,135 @@ import { getSearxngURL } from '@/lib/config/serverRegistry';
 
 const websitesForTopic = {
   tech: {
-    queries: ['technology news', 'artificial intelligence news', 'consumer technology news'],
-    links: ['techcrunch.com', 'wired.com', 'theverge.com'],
+    queries: [
+      'technology news',
+      'artificial intelligence news',
+      'consumer technology startup news',
+    ],
+    broadQuery:
+      'technology artificial intelligence startups cybersecurity consumer technology news',
+    relevanceKeywords: [
+      'technology',
+      'tech',
+      'artificial intelligence',
+      'ai',
+      'startup',
+      'software',
+      'cybersecurity',
+      'consumer technology',
+      'gadgets',
+      'apps',
+    ],
+    links: ['techcrunch.com', 'wired.com', 'theverge.com', 'arstechnica.com'],
   },
   finance: {
-    queries: ['finance news', 'stock market news', 'economy news'],
-    links: ['bloomberg.com', 'cnbc.com', 'marketwatch.com'],
+    queries: ['finance news', 'stock market news', 'economy business news'],
+    broadQuery: 'finance markets economy stocks business banking news',
+    relevanceKeywords: [
+      'finance',
+      'market',
+      'markets',
+      'stocks',
+      'economy',
+      'inflation',
+      'bank',
+      'banking',
+      'earnings',
+      'business',
+      'investors',
+    ],
+    links: ['bloomberg.com', 'cnbc.com', 'marketwatch.com', 'reuters.com'],
   },
   art: {
-    queries: ['art culture news', 'museum exhibition news', 'modern art news'],
-    links: ['artnews.com', 'hyperallergic.com', 'theartnewspaper.com'],
+    queries: [
+      'art exhibition museum news',
+      'contemporary art gallery news',
+      'artist museum culture news',
+    ],
+    broadQuery:
+      'art exhibition museum gallery artist contemporary art culture news',
+    relevanceKeywords: [
+      'art',
+      'artist',
+      'artists',
+      'museum',
+      'exhibition',
+      'gallery',
+      'galleries',
+      'painting',
+      'sculpture',
+      'contemporary',
+      'curator',
+      'biennale',
+      'auction',
+      'culture',
+    ],
+    links: [
+      'artnews.com',
+      'hyperallergic.com',
+      'theartnewspaper.com',
+      'artforum.com',
+      'artsy.net',
+    ],
   },
   sports: {
-    queries: ['sports news', 'football news', 'basketball news'],
-    links: ['espn.com', 'bbc.com/sport', 'skysports.com'],
+    queries: [
+      'sports news today',
+      'football basketball tennis sports news',
+      'sports match team player news',
+    ],
+    broadQuery:
+      'sports football basketball tennis match team player league news',
+    relevanceKeywords: [
+      'sports',
+      'sport',
+      'football',
+      'soccer',
+      'basketball',
+      'tennis',
+      'match',
+      'game',
+      'team',
+      'player',
+      'league',
+      'season',
+      'coach',
+      'club',
+      'wins',
+      'final',
+    ],
+    links: [
+      'espn.com',
+      'bbc.com/sport',
+      'skysports.com',
+      'theguardian.com/sport',
+      'sports.yahoo.com',
+    ],
   },
   entertainment: {
     queries: ['movie news', 'tv news', 'streaming entertainment news'],
-    links: ['hollywoodreporter.com', 'variety.com', 'deadline.com'],
+    broadQuery: 'movie tv streaming entertainment hollywood celebrity news',
+    relevanceKeywords: [
+      'movie',
+      'film',
+      'tv',
+      'series',
+      'streaming',
+      'entertainment',
+      'hollywood',
+      'actor',
+      'actress',
+      'director',
+      'netflix',
+      'trailer',
+      'box office',
+    ],
+    links: ['hollywoodreporter.com', 'variety.com', 'deadline.com', 'thewrap.com'],
   },
 };
 
 type Topic = keyof typeof websitesForTopic;
+type DiscoverLanguage = 'en' | 'fr' | 'auto';
 
 type DiscoverApiItem = {
   title: string;
@@ -41,8 +148,14 @@ type DiscoverCacheEntry = {
 const DISCOVER_CACHE_TTL_MS = 10 * 60 * 1000;
 const discoverCache = new Map<string, DiscoverCacheEntry>();
 
-const getDiscoverCacheKey = (topic: Topic, mode: 'normal' | 'preview') =>
-  `${topic}:${mode}`;
+const getDiscoverCacheKey = (
+  topic: Topic,
+  mode: 'normal' | 'preview',
+  language: DiscoverLanguage,
+) => `${topic}:${mode}:${language}`;
+
+const getSearchLanguage = (language: DiscoverLanguage) =>
+  language === 'fr' ? 'fr' : 'en';
 
 const getCachedDiscoverItems = (key: string, allowStale = false) => {
   const entry = discoverCache.get(key);
@@ -189,7 +302,7 @@ const normalizeDiscoverResult = (item: any): DiscoverApiItem | null => {
   };
 };
 
-const isBadDiscoverResult = (item: DiscoverApiItem) => {
+const isBadDiscoverResult = (item: DiscoverApiItem, topic?: Topic) => {
   const title = item.title.toLowerCase();
   const content = item.content.toLowerCase();
 
@@ -206,7 +319,51 @@ const isBadDiscoverResult = (item: DiscoverApiItem) => {
     'page ',
     'author:',
     'tag:',
+    'sign in',
+    'subscribe',
+    'newsletter',
+    'privacy policy',
+    'terms of service',
+    'home page',
+    'front pages',
+    'push notifications faq',
+    'latest news, results',
+    'results, stats & transfers',
   ];
+
+  const sportsUtilityPatterns = [
+    'quiz',
+    'scores',
+    'scoreboard',
+    'standings',
+    'table and standings',
+    'fixtures',
+    'kick-off times',
+    'tv channel',
+    'fantasy premier league',
+    'practice session',
+    'live football today',
+    'push notifications',
+    'latest news, results',
+    'results, stats',
+    'order of play',
+    'draw and results',
+    'final score',
+    'premier league live',
+    'build-up, commentary',
+    'latest news & gossip',
+    'sports live',
+    'indian sports live',
+    'fpl stats',
+  ];
+
+  if (
+    topic === 'sports' &&
+    (sportsUtilityPatterns.some((pattern) => title.includes(pattern)) ||
+      title.startsWith('live '))
+  ) {
+    return true;
+  }
 
   if (badTitlePatterns.some((pattern) => title.includes(pattern))) {
     return true;
@@ -242,9 +399,30 @@ const isBadDiscoverResult = (item: DiscoverApiItem) => {
       '/page/',
       '/latest',
       '/newsletters',
+      '/search',
+      '/privacy',
+      '/terms',
+      '/about',
+      '/contact',
+      '/video/',
+      '/videos/',
+      '/live-blog/',
+      '/faq',
     ];
 
     if (badPathPatterns.some((pattern) => lowerPath.includes(pattern))) {
+      return true;
+    }
+
+    if (
+      topic === 'sports' &&
+      (pathParts.length <= 2 ||
+        lowerPath.endsWith('/all') ||
+        lowerPath.includes('/live/') ||
+        lowerPath.includes('/match/_/') ||
+        lowerPath.includes('/scoreboard') ||
+        lowerPath.includes('/scores'))
+    ) {
       return true;
     }
 
@@ -435,7 +613,7 @@ const enrichMissingThumbnails = async (
   return nextItems;
 };
 
-const normalizeFilterAndDedupe = (results: any[]) => {
+const normalizeFilterAndDedupe = (results: any[], topic?: Topic) => {
   const seenUrls = new Set<string>();
 
   return results
@@ -451,10 +629,12 @@ const normalizeFilterAndDedupe = (results: any[]) => {
     })
     .map(normalizeDiscoverResult)
     .filter(Boolean)
-    .filter((item) => !isBadDiscoverResult(item as DiscoverApiItem)) as DiscoverApiItem[];
+    .filter(
+      (item) => !isBadDiscoverResult(item as DiscoverApiItem, topic),
+    ) as DiscoverApiItem[];
 };
 
-const normalizeAndDedupeSoft = (results: any[]) => {
+const normalizeAndDedupeSoft = (results: any[], topic?: Topic) => {
   const seenUrls = new Set<string>();
 
   return results
@@ -469,30 +649,157 @@ const normalizeAndDedupeSoft = (results: any[]) => {
       return true;
     })
     .map(normalizeDiscoverResult)
-    .filter(Boolean) as DiscoverApiItem[];
+    .filter(Boolean)
+    .filter(
+      (item) => !isBadDiscoverResult(item as DiscoverApiItem, topic),
+    ) as DiscoverApiItem[];
 };
+
+const normalizeTitleKey = (title: string) =>
+  title
+    .toLowerCase()
+    .replace(/\s+-\s+[^-]+$/g, '')
+    .replace(/\s+\|\s+[^|]+$/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
 
 const mergeUniqueItems = (items: DiscoverApiItem[]) => {
   const seenUrls = new Set<string>();
+  const seenTitles = new Set<string>();
 
   return items.filter((item) => {
     const url = item.url.toLowerCase();
+    const titleKey = normalizeTitleKey(item.title);
 
     if (seenUrls.has(url)) {
       return false;
     }
 
+    if (titleKey.length > 24 && seenTitles.has(titleKey)) {
+      return false;
+    }
+
     seenUrls.add(url);
+
+    if (titleKey.length > 24) {
+      seenTitles.add(titleKey);
+    }
+
     return true;
   });
 };
 
 
-const sortBestFirst = (items: DiscoverApiItem[]) =>
+const getHostname = (url: string) => {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+  } catch {
+    return '';
+  }
+};
+
+const getPathDepth = (url: string) => {
+  try {
+    return new URL(url).pathname.split('/').filter(Boolean).length;
+  } catch {
+    return 0;
+  }
+};
+
+const getSourceScore = (item: DiscoverApiItem, topic: Topic) => {
+  const hostname = getHostname(item.url);
+
+  if (!hostname) {
+    return 0;
+  }
+
+  const isKnownSource = websitesForTopic[topic].links.some((link) => {
+    const sourceHost = link.split('/')[0].replace(/^www\./, '').toLowerCase();
+
+    return hostname === sourceHost || hostname.endsWith(`.${sourceHost}`);
+  });
+
+  return isKnownSource ? 8 : 0;
+};
+
+const countKeywordHits = (value: string, keywords: string[]) =>
+  keywords.reduce((score, keyword) => {
+    const normalizedKeyword = keyword.toLowerCase();
+
+    if (!normalizedKeyword) {
+      return score;
+    }
+
+    return value.includes(normalizedKeyword) ? score + 1 : score;
+  }, 0);
+
+const getDiscoverItemScore = (item: DiscoverApiItem, topic: Topic) => {
+  const title = item.title.toLowerCase();
+  const content = item.content.toLowerCase();
+  const url = item.url.toLowerCase();
+  const keywords = websitesForTopic[topic].relevanceKeywords;
+  const pathDepth = getPathDepth(item.url);
+
+  let score = 0;
+
+  score += countKeywordHits(title, keywords) * 10;
+  score += countKeywordHits(content, keywords) * 3;
+  score += countKeywordHits(url, keywords) * 2;
+  score += getSourceScore(item, topic);
+
+  if (item.thumbnail) {
+    score += 4;
+  }
+
+  if (item.title.length >= 24) {
+    score += 2;
+  }
+
+  if (item.content.length >= 80) {
+    score += 2;
+  }
+
+  if (pathDepth >= 2) {
+    score += 2;
+  }
+
+  if (pathDepth <= 1) {
+    score -= 10;
+  }
+
+  if (
+    title.includes('latest') ||
+    title.includes('news, photos') ||
+    title.includes('videos') ||
+    title.includes('archive')
+  ) {
+    score -= 12;
+  }
+
+  if (url.includes('/search') || url.includes('/tag/') || url.includes('/author/')) {
+    score -= 15;
+  }
+
+  return score;
+};
+
+const keepRelevantItems = (items: DiscoverApiItem[], topic: Topic) => {
+  const filtered = items.filter((item) => getDiscoverItemScore(item, topic) >= 6);
+
+  return filtered.length >= 8 ? filtered : items;
+};
+
+const sortBestFirst = (items: DiscoverApiItem[], topic: Topic) =>
   [...items].sort((a, b) => {
+    const scoreDelta =
+      getDiscoverItemScore(b, topic) - getDiscoverItemScore(a, topic);
+
+    if (scoreDelta !== 0) {
+      return scoreDelta;
+    }
+
     if (a.thumbnail && !b.thumbnail) return -1;
     if (!a.thumbnail && b.thumbnail) return 1;
-
     return 0;
   });
 
@@ -502,11 +809,15 @@ export const GET = async (req: Request) => {
 
     const mode: 'normal' | 'preview' =
       (params.get('mode') as 'normal' | 'preview') || 'normal';
+    const languageParam = params.get('language') as DiscoverLanguage | null;
+    const language: DiscoverLanguage =
+      languageParam === 'fr' || languageParam === 'auto' ? languageParam : 'en';
+    const searchLanguage = getSearchLanguage(language);
     const topicParam = (params.get('topic') as Topic) || 'tech';
     const topic: Topic = websitesForTopic[topicParam] ? topicParam : 'tech';
 
     const selectedTopic = websitesForTopic[topic];
-    const cacheKey = getDiscoverCacheKey(topic, mode);
+    const cacheKey = getDiscoverCacheKey(topic, mode, language);
     const freshCachedData = getCachedDiscoverItems(cacheKey);
 
     if (freshCachedData) {
@@ -533,7 +844,7 @@ export const GET = async (req: Request) => {
           selectedTopic.links.map((link) =>
             searchSearxng(`site:${link} ${query}`, {
               pageno: 1,
-              language: 'en',
+              language: searchLanguage,
               time_range: 'month',
             }).catch(() => ({ results: [], suggestions: [] })),
           ),
@@ -546,18 +857,18 @@ export const GET = async (req: Request) => {
         }
       }
 
-      data = normalizeFilterAndDedupe(allResults);
+      data = normalizeFilterAndDedupe(allResults, topic);
 
       if (data.length < 8) {
         const fallback = await searchSearxng(selectedTopic.queries[0], {
           pageno: 1,
-          language: 'en',
+          language: searchLanguage,
           time_range: 'month',
         }).catch(() => ({ results: [], suggestions: [] }));
 
         data = [
           ...data,
-          ...normalizeFilterAndDedupe(fallback.results || []),
+          ...normalizeFilterAndDedupe(fallback.results || [], topic),
         ];
 
         data = mergeUniqueItems(data);
@@ -571,7 +882,7 @@ export const GET = async (req: Request) => {
             selectedTopic.links.map((link) =>
               searchSearxng(`site:${link} ${query}`, {
                 pageno: 1,
-                language: 'en',
+                language: searchLanguage,
               }).catch(() => ({ results: [], suggestions: [] })),
             ),
           );
@@ -585,7 +896,7 @@ export const GET = async (req: Request) => {
 
         data = [
           ...data,
-          ...normalizeFilterAndDedupe(relaxedResults),
+          ...normalizeFilterAndDedupe(relaxedResults, topic),
         ];
 
         data = mergeUniqueItems(data);
@@ -603,33 +914,32 @@ export const GET = async (req: Request) => {
         }`,
         {
           pageno: 1,
-          language: 'en',
+          language: searchLanguage,
           time_range: 'month',
         },
       ).catch(() => ({ results: [], suggestions: [] }));
 
-      data = normalizeFilterAndDedupe(result.results || []);
+      data = normalizeFilterAndDedupe(result.results || [], topic);
     }
 
     if (data.length < 8) {
-      const broadQuery =
-        topic === 'entertainment'
-          ? 'movie tv streaming entertainment news'
-          : selectedTopic.queries[0];
+      const broadQuery = selectedTopic.broadQuery;
 
       const broadFallback = await searchSearxng(broadQuery, {
         pageno: 1,
-        language: 'en',
+        language: searchLanguage,
       }).catch(() => ({ results: [], suggestions: [] }));
 
       data = mergeUniqueItems([
         ...data,
-        ...normalizeAndDedupeSoft(broadFallback.results || []),
+        ...normalizeAndDedupeSoft(broadFallback.results || [], topic),
       ]).slice(0, 18);
     }
 
+    data = keepRelevantItems(data, topic);
+    data = sortBestFirst(data, topic);
     data = await enrichMissingThumbnails(data, 16);
-    data = sortBestFirst(data).slice(0, 18);
+    data = sortBestFirst(data, topic).slice(0, 18);
 
     const staleCachedData = getCachedDiscoverItems(cacheKey, true);
 
@@ -650,6 +960,7 @@ export const GET = async (req: Request) => {
     if (staleCachedData && isWeakDiscoverResult(data)) {
       data = sortBestFirst(
         mergeUniqueDiscoverItems(data, staleCachedData),
+        topic,
       ).slice(0, 18);
     }
 
