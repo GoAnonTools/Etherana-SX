@@ -1621,6 +1621,20 @@ export const dictionaries = {
   },
 } as const;
 
+type WidenDictionaryStrings<T> = {
+  readonly [K in keyof T]: T[K] extends string
+    ? string
+    : WidenDictionaryStrings<T[K]>;
+};
+
+type EnglishDictionaryShape = WidenDictionaryStrings<typeof dictionaries.en>;
+
+const assertDictionaryShape = <T extends EnglishDictionaryShape>(
+  dictionary: T,
+) => dictionary;
+
+assertDictionaryShape(dictionaries.fr);
+
 export type TranslationKey =
   | `common.${keyof typeof dictionaries.en.common}`
   | `sidebar.${keyof typeof dictionaries.en.sidebar}`
