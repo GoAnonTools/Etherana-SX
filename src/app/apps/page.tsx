@@ -159,6 +159,7 @@ const CustomAppBuilder = ({
   onCancel: () => void;
   onSaved: () => Promise<void>;
 }) => {
+  const { t } = useI18n();
   const [form, setForm] = useState<CustomAppBuilderForm>(() =>
     initialApp ? customAppRecordToBuilderForm(initialApp) : createBlankCustomAppForm(),
   );
@@ -242,22 +243,22 @@ const CustomAppBuilder = ({
     const payload = buildPayload();
 
     if (!payload.name) {
-      setError('Custom app name is required.');
+      setError(t('appsPage.customAppNameRequired'));
       return;
     }
 
     if (!payload.description) {
-      setError('Custom app description is required.');
+      setError(t('appsPage.customAppDescriptionRequired'));
       return;
     }
 
     if (!payload.promptTemplate) {
-      setError('Prompt template is required.');
+      setError(t('appsPage.customAppPromptRequired'));
       return;
     }
 
     if (payload.inputs.length === 0) {
-      setError('Add at least one input field.');
+      setError(t('appsPage.customAppInputRequired'));
       return;
     }
 
@@ -276,13 +277,13 @@ const CustomAppBuilder = ({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data?.message || 'Could not save custom app.');
+        throw new Error(data?.message || t('appsPage.couldNotSaveCustomApp'));
       }
 
       await onSaved();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Could not save custom app.',
+        err instanceof Error ? err.message : t('appsPage.couldNotSaveCustomApp'),
       );
     } finally {
       setIsSaving(false);
@@ -294,15 +295,15 @@ const CustomAppBuilder = ({
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="inline-flex rounded-full border border-light-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-black/45 dark:border-dark-200 dark:text-white/45">
-            Custom App
+            {t('appsPage.customApp')}
           </p>
 
           <h2 className="mt-3 text-2xl font-semibold text-black dark:text-white">
-            {initialApp ? 'Edit custom app' : 'Create custom app'}
+            {initialApp ? t('appsPage.editCustomApp') : t('appsPage.createCustomApp')}
           </h2>
 
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-black/55 dark:text-white/55">
-            Define the fields users fill in, then write a prompt template using placeholders like {'{{topic}}'} or {'{{clientName}}'}.
+            {t('appsPage.createCustomAppDescription')}
           </p>
         </div>
 
@@ -312,7 +313,7 @@ const CustomAppBuilder = ({
           className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
         >
           <X size={16} />
-          Close
+          {t('appsPage.close')}
         </button>
       </div>
 
@@ -320,21 +321,21 @@ const CustomAppBuilder = ({
         <div className="grid gap-4 md:grid-cols-2">
           <label className="block space-y-2">
             <span className="text-sm font-medium text-black dark:text-white">
-              App name *
+              {t('appsPage.appName')} *
             </span>
             <input
               value={form.name}
               onChange={(event) =>
                 setForm((current) => ({ ...current, name: event.target.value }))
               }
-              placeholder="Client Follow-up Writer"
+              placeholder={t('appsPage.appNamePlaceholder')}
               className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
             />
           </label>
 
           <label className="block space-y-2">
             <span className="text-sm font-medium text-black dark:text-white">
-              Category
+              {t('appsPage.category')}
             </span>
             <select
               value={form.category}
@@ -366,14 +367,14 @@ const CustomAppBuilder = ({
                   outputType: event.target.value,
                 }))
               }
-              placeholder="Email draft, Study note, Proposal..."
+              placeholder={t('appsPage.outputTypePlaceholder')}
               className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
             />
           </label>
 
           <label className="block space-y-2">
             <span className="text-sm font-medium text-black dark:text-white">
-              Good for
+              {t('appsPage.goodFor')}
             </span>
             <input
               value={form.goodForText}
@@ -383,7 +384,7 @@ const CustomAppBuilder = ({
                   goodForText: event.target.value,
                 }))
               }
-              placeholder="Study, Revision, Client work"
+              placeholder={t('appsPage.goodForPlaceholder')}
               className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
             />
           </label>
@@ -402,7 +403,7 @@ const CustomAppBuilder = ({
               }))
             }
             rows={3}
-            placeholder="What does this app help the user do?"
+            placeholder={t('appsPage.customAppDescriptionPlaceholder')}
             className="w-full resize-none rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
           />
         </label>
@@ -411,10 +412,10 @@ const CustomAppBuilder = ({
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-lg font-semibold text-black dark:text-white">
-                Fields
+                {t('appsPage.fields')}
               </h3>
               <p className="mt-1 text-sm text-black/55 dark:text-white/55">
-                These become the inputs shown before running the app.
+                {t('appsPage.fieldsDescription')}
               </p>
             </div>
 
@@ -424,7 +425,7 @@ const CustomAppBuilder = ({
               className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
             >
               <Plus size={16} />
-              Add field
+              {t('appsPage.addField')}
             </button>
           </div>
 
@@ -436,7 +437,7 @@ const CustomAppBuilder = ({
               >
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold text-black dark:text-white">
-                    Field {index + 1}
+                    {t('appsPage.field')} {index + 1}
                   </p>
 
                   <button
@@ -446,14 +447,14 @@ const CustomAppBuilder = ({
                     className="inline-flex items-center gap-2 rounded-full border border-red-500/20 px-3 py-1.5 text-xs font-semibold text-red-500 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <Trash2 size={14} />
-                    Remove
+                    {t('appsPage.remove')}
                   </button>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <label className="block space-y-2">
                     <span className="text-xs font-medium text-black/65 dark:text-white/65">
-                      Label *
+                      {t('appsPage.label')} *
                     </span>
                     <input
                       value={input.label}
@@ -466,14 +467,14 @@ const CustomAppBuilder = ({
                               : input.id,
                         })
                       }
-                      placeholder="Topic"
+                      placeholder={t('appsPage.fieldLabelPlaceholder')}
                       className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
                     />
                   </label>
 
                   <label className="block space-y-2">
                     <span className="text-xs font-medium text-black/65 dark:text-white/65">
-                      Type
+                      {t('appsPage.type')}
                     </span>
                     <select
                       value={input.type}
@@ -484,17 +485,17 @@ const CustomAppBuilder = ({
                       }
                       className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
                     >
-                      <option value="text">Text</option>
-                      <option value="textarea">Textarea</option>
-                      <option value="select">Select</option>
-                      <option value="number">Number</option>
-                      <option value="date">Date</option>
+                      <option value="text">{t('appsPage.fieldTypeText')}</option>
+                      <option value="textarea">{t('appsPage.fieldTypeTextarea')}</option>
+                      <option value="select">{t('appsPage.fieldTypeSelect')}</option>
+                      <option value="number">{t('appsPage.fieldTypeNumber')}</option>
+                      <option value="date">{t('appsPage.fieldTypeDate')}</option>
                     </select>
                   </label>
 
                   <label className="block space-y-2">
                     <span className="text-xs font-medium text-black/65 dark:text-white/65">
-                      Placeholder
+                      {t('appsPage.placeholder')}
                     </span>
                     <input
                       value={input.placeholder || ''}
@@ -503,7 +504,7 @@ const CustomAppBuilder = ({
                           placeholder: event.target.value,
                         })
                       }
-                      placeholder="Paste the topic here..."
+                      placeholder={t('appsPage.fieldPlaceholderExample')}
                       className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
                     />
                   </label>
@@ -518,14 +519,14 @@ const CustomAppBuilder = ({
                         })
                       }
                     />
-                    Required field
+                    {t('appsPage.requiredField')}
                   </label>
                 </div>
 
                 {input.type === 'select' && (
                   <label className="mt-3 block space-y-2">
                     <span className="text-xs font-medium text-black/65 dark:text-white/65">
-                      Select options
+                      {t('appsPage.selectOptions')}
                     </span>
                     <textarea
                       value={input.optionsText || ''}
@@ -535,7 +536,7 @@ const CustomAppBuilder = ({
                         })
                       }
                       rows={3}
-                      placeholder={'Beginner\nIntermediate\nAdvanced'}
+                      placeholder={t('appsPage.selectOptionsPlaceholder')}
                       className="w-full resize-none rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
                     />
                   </label>
@@ -547,7 +548,7 @@ const CustomAppBuilder = ({
 
         <label className="block space-y-2">
           <span className="text-sm font-medium text-black dark:text-white">
-            Prompt template *
+            {t('appsPage.promptTemplate')} *
           </span>
           <textarea
             value={form.promptTemplate}
@@ -558,11 +559,11 @@ const CustomAppBuilder = ({
               }))
             }
             rows={7}
-            placeholder="Write a clear output using this information: {{topic}}. Level: {{level}}."
+            placeholder={t('appsPage.promptTemplatePlaceholder')}
             className="w-full resize-y rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
           />
           <p className="text-xs leading-relaxed text-black/45 dark:text-white/45">
-            Use placeholders matching field labels or ids, for example {'{{topic}}'}.
+            {t('appsPage.promptTemplateHelp')}
           </p>
         </label>
 
@@ -579,7 +580,11 @@ const CustomAppBuilder = ({
             className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black"
           >
             {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-            {isSaving ? 'Saving...' : initialApp ? 'Save custom app' : 'Create custom app'}
+            {isSaving
+              ? t('appsPage.saving')
+              : initialApp
+                ? t('appsPage.saveCustomApp')
+                : t('appsPage.createCustomApp')}
           </button>
 
           <button
@@ -587,7 +592,7 @@ const CustomAppBuilder = ({
             onClick={onCancel}
             className="inline-flex items-center justify-center rounded-full border border-light-200 px-5 py-3 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
           >
-            Cancel
+            {t('appsPage.cancel')}
           </button>
         </div>
       </form>
@@ -1505,7 +1510,13 @@ export default function AppsPage() {
   };
 
   const handleDeleteCustomApp = async (app: CustomAppRecord) => {
-    if (!window.confirm(`Delete "${app.name}"? This cannot be undone.`)) {
+    if (
+      !window.confirm(
+        `${t('appsPage.deleteCustomAppConfirmPrefix')} "${app.name}"? ${t(
+          'appsPage.deleteCustomAppConfirmSuffix',
+        )}`,
+      )
+    ) {
       return;
     }
 
@@ -1522,7 +1533,7 @@ export default function AppsPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.message || 'Could not delete custom app.');
+        throw new Error(data?.message || t('appsPage.couldNotDeleteCustomApp'));
       }
 
       if (editingCustomApp?.id === app.id) {
@@ -1533,7 +1544,7 @@ export default function AppsPage() {
     } catch (err) {
       console.error('Failed to delete custom app:', err);
       setCustomAppsError(
-        err instanceof Error ? err.message : 'Could not delete custom app.',
+        err instanceof Error ? err.message : t('appsPage.couldNotDeleteCustomApp'),
       );
     } finally {
       setDeletingCustomAppId('');
@@ -1603,7 +1614,7 @@ export default function AppsPage() {
           className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
         >
           <Plus size={16} />
-          Create Custom App
+          {t('appsPage.createCustomApp')}
         </button>
       </header>
 
@@ -1647,7 +1658,7 @@ export default function AppsPage() {
       <section className="mb-8 flex flex-wrap items-center gap-3 text-sm text-black/45 dark:text-white/45">
         <span className="inline-flex items-center gap-2">
           <LayoutTemplate size={16} />
-          {catalogApps.length} app templates
+          {catalogApps.length} {t('appsPage.appTemplates')}
         </span>
       </section>
 
@@ -1656,10 +1667,10 @@ export default function AppsPage() {
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-black dark:text-white">
-                Your custom apps
+                {t('appsPage.yourCustomApps')}
               </h2>
               <p className="mt-1 text-sm text-black/55 dark:text-white/55">
-                Edit or delete the apps you created locally.
+                {t('appsPage.yourCustomAppsDescription')}
               </p>
             </div>
           </div>
@@ -1681,7 +1692,7 @@ export default function AppsPage() {
                   </div>
 
                   <span className="rounded-full bg-black/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-black/45 dark:bg-white/10 dark:text-white/45">
-                    Custom
+                    {t('appsPage.custom')}
                   </span>
                 </div>
 
@@ -1696,7 +1707,7 @@ export default function AppsPage() {
                     className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-3 py-2 text-xs font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
                   >
                     <PencilLine size={14} />
-                    Edit
+                    {t('appsPage.edit')}
                   </button>
 
                   <button
@@ -1710,7 +1721,7 @@ export default function AppsPage() {
                     ) : (
                       <Trash2 size={14} />
                     )}
-                    Delete
+                    {t('appsPage.delete')}
                   </button>
                 </div>
               </article>
