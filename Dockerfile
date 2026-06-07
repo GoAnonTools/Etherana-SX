@@ -55,10 +55,14 @@ COPY searxng/limiter.toml /etc/searxng/limiter.toml
 COPY searxng/uwsgi.ini /etc/searxng/uwsgi.ini
 RUN chown -R searxng:searxng /etc/searxng
 
+ARG SEARXNG_REF=86903a2c666da974462264060fdd80d1f09dd2ee
+
 USER searxng
 
-RUN git clone "https://github.com/searxng/searxng" \
-                   "/usr/local/searxng/searxng-src"
+RUN git clone --filter=blob:none "https://github.com/searxng/searxng" \
+                   "/usr/local/searxng/searxng-src" && \
+    cd "/usr/local/searxng/searxng-src" && \
+    git checkout "$SEARXNG_REF"
 
 RUN python3 -m venv "/usr/local/searxng/searx-pyenv"
 RUN "/usr/local/searxng/searx-pyenv/bin/pip" install --upgrade pip setuptools wheel pyyaml msgspec typing_extensions
@@ -80,6 +84,9 @@ RUN chown -R etherana:etherana /home/etherana
 EXPOSE 3000 8080
 
 ENV SEARXNG_URL=http://localhost:8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD curl -fsS http://localhost:3000/api/config >/dev/null || exit 1
 
 # entrypoint.sh starts SearXNG via sudo then drops to etherana for the Node process
 USER etherana
