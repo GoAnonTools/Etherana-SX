@@ -101,18 +101,20 @@ const Page = () => {
 
             <div className="flex flex-row items-center space-x-2 overflow-x-auto">
               {topics.map((topic) => (
-                <div
+                <button
                   key={topic.key}
+                  type="button"
                   className={cn(
-                    'cursor-pointer text-nowrap rounded-full border-[0.1px] px-3 py-1 text-sm transition duration-200',
+                    'text-nowrap rounded-full border-[0.1px] px-3 py-1 text-sm transition duration-200',
                     activeTopic === topic.key
                       ? 'border-cyan-700/60 bg-cyan-300/20 text-cyan-700 dark:border-cyan-300/40 dark:bg-cyan-300/30 dark:text-cyan-300'
                       : 'border-black/30 text-black/70 hover:border-black/40 hover:bg-black/5 hover:text-black dark:border-white/30 dark:text-white/70 dark:hover:border-white/40 dark:hover:bg-white/5 dark:hover:text-white',
                   )}
+                  aria-pressed={activeTopic === topic.key}
                   onClick={() => setActiveTopic(topic.key)}
                 >
                   <span>{t(topic.labelKey)}</span>
-                </div>
+                </button>
               ))}
             </div>
           </div>
