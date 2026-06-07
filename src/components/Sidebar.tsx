@@ -184,7 +184,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 Etherana SX
               </p>
               <p className="text-xs text-black/45 dark:text-white/45">
-                AI workspace
+                {t('sidebar.subtitle')}
               </p>
             </div>
           </Link>
@@ -194,7 +194,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             className="mb-6 flex items-center justify-center gap-2 rounded-full bg-black px-4 py-2.5 text-sm font-semibold text-white transition duration-200 hover:scale-[1.01] active:scale-[0.99] dark:bg-white dark:text-black"
           >
             <Plus size={16} />
-            New Search
+            {t('sidebar.newSearch')}
           </Link>
 
           <nav className="flex flex-1 flex-col gap-7 overflow-y-auto">
