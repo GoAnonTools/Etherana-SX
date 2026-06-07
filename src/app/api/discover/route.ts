@@ -613,7 +613,7 @@ const enrichMissingThumbnails = async (
   return nextItems;
 };
 
-const normalizeFilterAndDedupe = (results: any[], topic?: Topic) => {
+const normalizeAndDedupe = (results: any[]) => {
   const seenUrls = new Set<string>();
 
   return results
@@ -628,32 +628,15 @@ const normalizeFilterAndDedupe = (results: any[], topic?: Topic) => {
       return true;
     })
     .map(normalizeDiscoverResult)
-    .filter(Boolean)
-    .filter(
-      (item) => !isBadDiscoverResult(item as DiscoverApiItem, topic),
-    ) as DiscoverApiItem[];
+    .filter(Boolean) as DiscoverApiItem[];
 };
 
-const normalizeAndDedupeSoft = (results: any[], topic?: Topic) => {
-  const seenUrls = new Set<string>();
+const normalizeFilterAndDedupe = (results: any[], topic?: Topic) =>
+  normalizeAndDedupe(results).filter(
+    (item) => !isBadDiscoverResult(item, topic),
+  );
 
-  return results
-    .filter((item) => {
-      const url = String(item?.url || '').toLowerCase().trim();
-
-      if (!url || seenUrls.has(url)) {
-        return false;
-      }
-
-      seenUrls.add(url);
-      return true;
-    })
-    .map(normalizeDiscoverResult)
-    .filter(Boolean)
-    .filter(
-      (item) => !isBadDiscoverResult(item as DiscoverApiItem, topic),
-    ) as DiscoverApiItem[];
-};
+const normalizeAndDedupeSoft = (results: any[]) => normalizeAndDedupe(results);
 
 const normalizeTitleKey = (title: string) =>
   title
@@ -932,7 +915,7 @@ export const GET = async (req: Request) => {
 
       data = mergeUniqueItems([
         ...data,
-        ...normalizeAndDedupeSoft(broadFallback.results || [], topic),
+        ...normalizeAndDedupeSoft(broadFallback.results || []),
       ]).slice(0, 18);
     }
 
