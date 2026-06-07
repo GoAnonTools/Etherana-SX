@@ -936,6 +936,21 @@ export const GET = async (req: Request) => {
       ]).slice(0, 18);
     }
 
+    if (data.length === 0) {
+      const rescueFallback = await searchSearxng(
+        selectedTopic.broadQuery || selectedTopic.queries[0],
+        {
+          pageno: 1,
+          language: searchLanguage,
+          time_range: 'month',
+        },
+      ).catch(() => ({ results: [], suggestions: [] }));
+
+      data = mergeUniqueItems(
+        normalizeAndDedupeSoft(rescueFallback.results || []),
+      ).slice(0, 18);
+    }
+
     data = keepRelevantItems(data, topic);
     data = sortBestFirst(data, topic);
     data = await enrichMissingThumbnails(data, 16);
