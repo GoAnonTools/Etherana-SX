@@ -37,6 +37,80 @@ export const dictionaries = {
       privacy: 'Privacy',
       backupVault: 'Backup Vault',
       spaces: 'Spaces',
+      help: 'Help',
+    },
+    helpPage: {
+      badge: 'Local guide',
+      title: 'Welcome to Etherana SX',
+      subtitle:
+        'A local-first AI workspace to search, organize, generate, automate, and save useful outputs.',
+      startIncludedTitle: 'Start with the built-in local model',
+      startIncludedDescription:
+        'Etherana SX starts with Gemma 4 4B already included, so you can try the workspace immediately without configuring anything.',
+      optionalProviderTitle: 'Optional: add another AI provider',
+      optionalProviderDescription:
+        'If you want stronger models or a different provider, go to Settings and add your preferred connection later.',
+      workspaceFirstTitle: 'Workspace-first',
+      workspaceFirstDescription:
+        'Spaces, Outputs, Apps, Automations, Discover, and Vault are designed to work together instead of staying isolated.',
+      reusableToolsTitle: 'Reusable tools',
+      reusableToolsDescription:
+        'Turn repeated work into Small Apps, Custom Apps, and Automations.',
+      privateDesignTitle: 'Local-first by design',
+      privateDesignDescription:
+        'Your workspace is organized locally. Some features may call configured AI providers or local services depending on your setup.',
+      organizationTitle: 'How Etherana SX is organized',
+      organizationSubtitle:
+        'Each section has a simple role. Start small, then connect the pieces as your projects grow.',
+      searchTitle: 'Search',
+      searchDescription:
+        'Ask questions, research topics, and create answers with normal results or the AI agent.',
+      discoverTitle: 'Discover',
+      discoverDescription:
+        'Browse fresh articles by topic and keep inspiration flowing.',
+      spacesTitle: 'Spaces',
+      spacesDescription:
+        'Keep project context together: chats, files, notes, links, outputs, and automations.',
+      appsTitle: 'Apps',
+      appsDescription:
+        'Run ready-made mini tools or create your own Custom Apps with fields and prompt templates.',
+      automationsTitle: 'Automations',
+      automationsDescription:
+        'Create manual or auto-run AI tasks for work you repeat often.',
+      outputsTitle: 'Outputs',
+      outputsDescription:
+        'Save, edit, move, export, and reuse generated results.',
+      vaultTitle: 'Vault',
+      vaultDescription:
+        'Export and restore your encrypted .goanon backup when your workspace matters.',
+      firstStepsTitle: 'Recommended first steps',
+      firstStep1: 'Start with Gemma 4 4B and try the workspace immediately.',
+      firstStep2: 'Try a Search to ask a question or research a topic.',
+      firstStep3: 'Create a Space for a real project.',
+      firstStep4: 'Run a Small App or create a Custom App.',
+      firstStep5: 'Save the result to Outputs or a Space.',
+      firstStep6: 'Create an Automation when a task becomes repetitive.',
+      firstStep7: 'Export your Vault backup when your workspace starts to matter.',
+      workflowsTitle: 'Common workflows',
+      researchWorkflowTitle: 'Research workflow',
+      researchWorkflowDescription:
+        'Search → Save useful output → Move to Space → Add notes and links.',
+      clientWorkflowTitle: 'Client work workflow',
+      clientWorkflowDescription:
+        'Create Space → Use proposal/email Apps → Save outputs → Track follow-ups.',
+      learningWorkflowTitle: 'Learning workflow',
+      learningWorkflowDescription:
+        'Create Study Space → Use Custom Apps for explanations → Save revision sheets.',
+      automationWorkflowTitle: 'Automation workflow',
+      automationWorkflowDescription:
+        'Create task → Run manually first → Switch to Auto-run if it becomes useful.',
+      localReminderTitle: 'Local-first reminder',
+      localReminderDescription:
+        'Etherana SX works out of the box with its built-in local model. You can start immediately, then customize providers, exports, backups, and local services later.',
+      openSearch: 'Open Search',
+      openSpaces: 'Open Spaces',
+      openApps: 'Open Apps',
+      openVault: 'Open Vault',
     },
     settings: {
       preferences: 'Preferences',
@@ -758,6 +832,80 @@ export const dictionaries = {
       privacy: 'Confidentialité',
       backupVault: 'Coffre de sauvegarde',
       spaces: 'Espaces',
+      help: 'Aide',
+    },
+    helpPage: {
+      badge: 'Guide local',
+      title: 'Bienvenue dans Etherana SX',
+      subtitle:
+        'Un espace de travail IA local-first pour rechercher, organiser, générer, automatiser et sauvegarder vos sorties utiles.',
+      startIncludedTitle: 'Commencez avec le modèle local intégré',
+      startIncludedDescription:
+        'Etherana SX démarre avec Gemma 4 4B déjà inclus, vous pouvez donc tester l’espace de travail immédiatement sans configuration.',
+      optionalProviderTitle: 'Optionnel : ajouter un autre fournisseur IA',
+      optionalProviderDescription:
+        'Si vous voulez des modèles plus puissants ou un autre fournisseur, allez dans Réglages et ajoutez votre connexion plus tard.',
+      workspaceFirstTitle: 'Pensé comme un espace de travail',
+      workspaceFirstDescription:
+        'Espaces, Sorties, Apps, Automatisations, Découvrir et Coffre sont pensés pour fonctionner ensemble au lieu de rester séparés.',
+      reusableToolsTitle: 'Outils réutilisables',
+      reusableToolsDescription:
+        'Transformez les tâches répétitives en Small Apps, Apps personnalisées et Automatisations.',
+      privateDesignTitle: 'Local-first par conception',
+      privateDesignDescription:
+        'Votre espace de travail est organisé localement. Certaines fonctions peuvent appeler vos fournisseurs IA configurés ou des services locaux selon votre installation.',
+      organizationTitle: 'Comment Etherana SX est organisé',
+      organizationSubtitle:
+        'Chaque section a un rôle simple. Commencez petit, puis reliez les éléments quand vos projets grandissent.',
+      searchTitle: 'Recherche',
+      searchDescription:
+        'Posez des questions, recherchez des sujets et créez des réponses avec les résultats classiques ou l’agent IA.',
+      discoverTitle: 'Découvrir',
+      discoverDescription:
+        'Parcourez des articles récents par sujet et gardez une source d’inspiration.',
+      spacesTitle: 'Espaces',
+      spacesDescription:
+        'Gardez le contexte d’un projet au même endroit : chats, fichiers, notes, liens, sorties et automatisations.',
+      appsTitle: 'Apps',
+      appsDescription:
+        'Lancez des mini-outils prêts à l’emploi ou créez vos Apps personnalisées avec champs et prompts.',
+      automationsTitle: 'Automatisations',
+      automationsDescription:
+        'Créez des tâches IA manuelles ou automatiques pour ce que vous répétez souvent.',
+      outputsTitle: 'Sorties',
+      outputsDescription:
+        'Sauvegardez, modifiez, déplacez, exportez et réutilisez les résultats générés.',
+      vaultTitle: 'Coffre',
+      vaultDescription:
+        'Exportez et restaurez votre sauvegarde chiffrée .goanon quand votre espace devient important.',
+      firstStepsTitle: 'Premiers pas recommandés',
+      firstStep1: 'Commencez avec Gemma 4 4B et testez l’espace immédiatement.',
+      firstStep2: 'Essayez une Recherche pour poser une question ou explorer un sujet.',
+      firstStep3: 'Créez un Espace pour un vrai projet.',
+      firstStep4: 'Lancez une Small App ou créez une App personnalisée.',
+      firstStep5: 'Sauvegardez le résultat dans Sorties ou dans un Espace.',
+      firstStep6: 'Créez une Automatisation quand une tâche devient répétitive.',
+      firstStep7: 'Exportez votre Coffre quand votre espace commence à compter.',
+      workflowsTitle: 'Flux de travail courants',
+      researchWorkflowTitle: 'Flux de recherche',
+      researchWorkflowDescription:
+        'Recherche → Sauvegarder une sortie utile → Déplacer vers un Espace → Ajouter notes et liens.',
+      clientWorkflowTitle: 'Flux de travail client',
+      clientWorkflowDescription:
+        'Créer un Espace → Utiliser les Apps proposition/email → Sauvegarder les sorties → Suivre les relances.',
+      learningWorkflowTitle: 'Flux d’apprentissage',
+      learningWorkflowDescription:
+        'Créer un Espace d’étude → Utiliser des Apps personnalisées pour expliquer → Sauvegarder des fiches.',
+      automationWorkflowTitle: 'Flux d’automatisation',
+      automationWorkflowDescription:
+        'Créer une tâche → Lancer manuellement d’abord → Passer en Auto-run si c’est utile.',
+      localReminderTitle: 'Rappel local-first',
+      localReminderDescription:
+        'Etherana SX fonctionne directement avec son modèle local intégré. Vous pouvez commencer tout de suite, puis personnaliser les fournisseurs, exports, sauvegardes et services locaux plus tard.',
+      openSearch: 'Ouvrir Recherche',
+      openSpaces: 'Ouvrir Espaces',
+      openApps: 'Ouvrir Apps',
+      openVault: 'Ouvrir le Coffre',
     },
     settings: {
       preferences: 'Préférences',
@@ -1460,6 +1608,7 @@ export type TranslationKey =
   | `sidebar.${keyof typeof dictionaries.en.sidebar}`
   | `settings.${keyof typeof dictionaries.en.settings}`
   | `searchPage.${keyof typeof dictionaries.en.searchPage}`
+  | `helpPage.${keyof typeof dictionaries.en.helpPage}`
   | `discoverPage.${keyof typeof dictionaries.en.discoverPage}`
   | `libraryPage.${keyof typeof dictionaries.en.libraryPage}`
   | `outputsPage.${keyof typeof dictionaries.en.outputsPage}`

@@ -6,6 +6,7 @@ import {
   CheckSquare,
   Compass,
   FileText,
+  HelpCircle,
   LayoutGrid,
   Library,
   Plus,
@@ -144,6 +145,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       href: '/vault',
       active: segments.includes('vault'),
       label: t('sidebar.backupVault'),
+    },
+    {
+      icon: HelpCircle,
+      href: '/help',
+      active: segments.includes('help'),
+      label: t('sidebar.help'),
     },
   ];
 
