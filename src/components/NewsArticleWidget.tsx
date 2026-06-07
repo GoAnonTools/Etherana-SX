@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useI18n } from '@/lib/i18n/useI18n';
+import AppErrorBoundary from '@/components/ErrorBoundary/AppErrorBoundary';
 
 interface Article {
   title: string;
@@ -51,7 +52,7 @@ const getSourceLabel = (url?: string | null) => {
   }
 };
 
-const NewsArticleWidget = () => {
+const NewsArticleWidgetContent = () => {
   const { t, locale } = useI18n();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
@@ -157,5 +158,14 @@ const NewsArticleWidget = () => {
     </div>
   );
 };
+
+const NewsArticleWidget = () => (
+  <AppErrorBoundary
+    title="News preview could not be displayed"
+    description="The rest of Etherana SX is still available. Try refreshing this preview or open Discover from the sidebar."
+  >
+    <NewsArticleWidgetContent />
+  </AppErrorBoundary>
+);
 
 export default NewsArticleWidget;
