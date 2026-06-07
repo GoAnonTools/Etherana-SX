@@ -130,6 +130,144 @@ const websitesForTopic = {
   },
 };
 
+
+const frenchWebsitesForTopic: typeof websitesForTopic = {
+  tech: {
+    queries: [
+      'actualité technologie France',
+      'actualité intelligence artificielle France',
+      'actualité numérique cybersécurité startups France',
+    ],
+    broadQuery:
+      'actualité technologie intelligence artificielle numérique cybersécurité startups France',
+    relevanceKeywords: [
+      'technologie',
+      'tech',
+      'numérique',
+      'intelligence artificielle',
+      'ia',
+      'startup',
+      'logiciel',
+      'cybersécurité',
+      'application',
+      'applications',
+      'innovation',
+    ],
+    links: ['01net.com', 'numerama.com', 'clubic.com', 'next.ink', 'usine-digitale.fr'],
+  },
+  finance: {
+    queries: [
+      'actualité finance France',
+      'actualité marchés bourse économie France',
+      'actualité entreprises banques économie France',
+    ],
+    broadQuery:
+      'actualité finance marchés bourse économie entreprises banques France',
+    relevanceKeywords: [
+      'finance',
+      'marché',
+      'marchés',
+      'bourse',
+      'économie',
+      'inflation',
+      'banque',
+      'entreprise',
+      'entreprises',
+      'investisseurs',
+      'croissance',
+    ],
+    links: ['lesechos.fr', 'latribune.fr', 'boursorama.com', 'zonebourse.com', 'capital.fr'],
+  },
+  art: {
+    queries: [
+      'actualité art exposition musée France',
+      'actualité art contemporain galerie culture France',
+      'actualité artiste musée culture France',
+    ],
+    broadQuery:
+      'actualité art exposition musée galerie artiste art contemporain culture France',
+    relevanceKeywords: [
+      'art',
+      'artiste',
+      'artistes',
+      'musée',
+      'exposition',
+      'galerie',
+      'peinture',
+      'sculpture',
+      'contemporain',
+      'culture',
+      'patrimoine',
+      'festival',
+    ],
+    links: [
+      'lemonde.fr',
+      'telerama.fr',
+      'franceculture.fr',
+      'beauxarts.com',
+      'connaissancedesarts.com',
+    ],
+  },
+  sports: {
+    queries: [
+      'actualité sport France aujourd’hui',
+      'actualité football basket tennis sport France',
+      'actualité match équipe joueur sport France',
+    ],
+    broadQuery:
+      'actualité sport football basket tennis match équipe joueur championnat France',
+    relevanceKeywords: [
+      'sport',
+      'sports',
+      'football',
+      'basket',
+      'basketball',
+      'tennis',
+      'match',
+      'équipe',
+      'joueur',
+      'joueuse',
+      'club',
+      'championnat',
+      'saison',
+      'entraîneur',
+      'finale',
+    ],
+    links: [
+      'lequipe.fr',
+      'eurosport.fr',
+      'rmcsport.bfmtv.com',
+      'francetvinfo.fr',
+      'sports.orange.fr',
+    ],
+  },
+  entertainment: {
+    queries: [
+      'actualité cinéma séries streaming France',
+      'actualité télévision divertissement France',
+      'actualité films acteurs streaming France',
+    ],
+    broadQuery:
+      'actualité cinéma séries télévision streaming divertissement acteurs France',
+    relevanceKeywords: [
+      'cinéma',
+      'film',
+      'films',
+      'série',
+      'séries',
+      'streaming',
+      'divertissement',
+      'acteur',
+      'actrice',
+      'réalisateur',
+      'netflix',
+      'bande-annonce',
+      'box-office',
+    ],
+    links: ['allocine.fr', 'premiere.fr', 'ecranlarge.com', 'puremedias.com', 'konbini.com'],
+  },
+};
+
 type Topic = keyof typeof websitesForTopic;
 type DiscoverLanguage = 'en' | 'fr' | 'auto';
 
@@ -156,6 +294,9 @@ const getDiscoverCacheKey = (
 
 const getSearchLanguage = (language: DiscoverLanguage) =>
   language === 'fr' ? 'fr' : 'en';
+
+const getTopicConfig = (topic: Topic, language: DiscoverLanguage) =>
+  language === 'fr' ? frenchWebsitesForTopic[topic] : websitesForTopic[topic];
 
 const getCachedDiscoverItems = (key: string, allowStale = false) => {
   const entry = discoverCache.get(key);
@@ -689,14 +830,16 @@ const getPathDepth = (url: string) => {
   }
 };
 
-const getSourceScore = (item: DiscoverApiItem, topic: Topic) => {
+const getSourceScore = (item: DiscoverApiItem, topic: Topic, language: DiscoverLanguage) => {
   const hostname = getHostname(item.url);
 
   if (!hostname) {
     return 0;
   }
 
-  const isKnownSource = websitesForTopic[topic].links.some((link) => {
+  const topicConfig = getTopicConfig(topic, language);
+
+  const isKnownSource = topicConfig.links.some((link) => {
     const sourceHost = link.split('/')[0].replace(/^www\./, '').toLowerCase();
 
     return hostname === sourceHost || hostname.endsWith(`.${sourceHost}`);
@@ -716,11 +859,12 @@ const countKeywordHits = (value: string, keywords: string[]) =>
     return value.includes(normalizedKeyword) ? score + 1 : score;
   }, 0);
 
-const getDiscoverItemScore = (item: DiscoverApiItem, topic: Topic) => {
+const getDiscoverItemScore = (item: DiscoverApiItem, topic: Topic, language: DiscoverLanguage) => {
   const title = item.title.toLowerCase();
   const content = item.content.toLowerCase();
   const url = item.url.toLowerCase();
-  const keywords = websitesForTopic[topic].relevanceKeywords;
+  const topicConfig = getTopicConfig(topic, language);
+  const keywords = topicConfig.relevanceKeywords;
   const pathDepth = getPathDepth(item.url);
 
   let score = 0;
@@ -728,7 +872,7 @@ const getDiscoverItemScore = (item: DiscoverApiItem, topic: Topic) => {
   score += countKeywordHits(title, keywords) * 10;
   score += countKeywordHits(content, keywords) * 3;
   score += countKeywordHits(url, keywords) * 2;
-  score += getSourceScore(item, topic);
+  score += getSourceScore(item, topic, language);
 
   if (item.thumbnail) {
     score += 4;
@@ -766,16 +910,27 @@ const getDiscoverItemScore = (item: DiscoverApiItem, topic: Topic) => {
   return score;
 };
 
-const keepRelevantItems = (items: DiscoverApiItem[], topic: Topic) => {
-  const filtered = items.filter((item) => getDiscoverItemScore(item, topic) >= 6);
+const keepRelevantItems = (
+  items: DiscoverApiItem[],
+  topic: Topic,
+  language: DiscoverLanguage,
+) => {
+  const filtered = items.filter(
+    (item) => getDiscoverItemScore(item, topic, language) >= 6,
+  );
 
   return filtered.length >= 8 ? filtered : items;
 };
 
-const sortBestFirst = (items: DiscoverApiItem[], topic: Topic) =>
+const sortBestFirst = (
+  items: DiscoverApiItem[],
+  topic: Topic,
+  language: DiscoverLanguage,
+) =>
   [...items].sort((a, b) => {
     const scoreDelta =
-      getDiscoverItemScore(b, topic) - getDiscoverItemScore(a, topic);
+      getDiscoverItemScore(b, topic, language) -
+      getDiscoverItemScore(a, topic, language);
 
     if (scoreDelta !== 0) {
       return scoreDelta;
@@ -799,7 +954,7 @@ export const GET = async (req: Request) => {
     const topicParam = (params.get('topic') as Topic) || 'tech';
     const topic: Topic = websitesForTopic[topicParam] ? topicParam : 'tech';
 
-    const selectedTopic = websitesForTopic[topic];
+    const selectedTopic = getTopicConfig(topic, language);
     const cacheKey = getDiscoverCacheKey(topic, mode, language);
     const freshCachedData = getCachedDiscoverItems(cacheKey);
 
@@ -934,10 +1089,10 @@ export const GET = async (req: Request) => {
       ).slice(0, 18);
     }
 
-    data = keepRelevantItems(data, topic);
-    data = sortBestFirst(data, topic);
+    data = keepRelevantItems(data, topic, language);
+    data = sortBestFirst(data, topic, language);
     data = await enrichMissingThumbnails(data, 16);
-    data = sortBestFirst(data, topic).slice(0, 18);
+    data = sortBestFirst(data, topic, language).slice(0, 18);
 
     const staleCachedData = getCachedDiscoverItems(cacheKey, true);
 
@@ -959,6 +1114,7 @@ export const GET = async (req: Request) => {
       data = sortBestFirst(
         mergeUniqueDiscoverItems(data, staleCachedData),
         topic,
+        language,
       ).slice(0, 18);
     }
 
