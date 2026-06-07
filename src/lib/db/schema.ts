@@ -173,3 +173,13 @@ export const customAppRecords = sqliteTable('custom_apps', {
   createdAt: text('createdAt').notNull(),
   updatedAt: text('updatedAt').notNull(),
 });
+
+
+export const discoverCacheRecords = sqliteTable('discover_cache', {
+  key: text('key').primaryKey(),
+  topic: text('topic').notNull(),
+  mode: text('mode').notNull(),
+  language: text('language').notNull(),
+  createdAt: integer('createdAt').notNull(),
+  itemsJson: text('itemsJson').notNull(),
+});

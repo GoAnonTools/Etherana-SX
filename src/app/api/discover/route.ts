@@ -1,5 +1,8 @@
 import { searchSearxng } from '@/lib/searxng';
 import { getSearxngURL } from '@/lib/config/serverRegistry';
+import { eq } from 'drizzle-orm';
+import db from '@/lib/db';
+import { discoverCacheRecords } from '@/lib/db/schema';
 import {
   type DiscoverApiItem,
   type DiscoverLanguage,
@@ -27,6 +30,19 @@ const getDiscoverCacheKey = (
   language: DiscoverLanguage,
 ) => `${topic}:${mode}:${language}`;
 
+const isFreshDiscoverCacheEntry = (createdAt: number) =>
+  Date.now() - createdAt < DISCOVER_CACHE_TTL_MS;
+
+const parseCachedDiscoverItems = (itemsJson: string) => {
+  try {
+    const items = JSON.parse(itemsJson);
+
+    return Array.isArray(items) ? (items as DiscoverApiItem[]) : null;
+  } catch {
+    return null;
+  }
+};
+
 const getCachedDiscoverItems = (key: string, allowStale = false) => {
   const entry = discoverCache.get(key);
 
@@ -34,24 +50,97 @@ const getCachedDiscoverItems = (key: string, allowStale = false) => {
     return null;
   }
 
-  const isFresh = Date.now() - entry.createdAt < DISCOVER_CACHE_TTL_MS;
-
-  if (!allowStale && !isFresh) {
+  if (!allowStale && !isFreshDiscoverCacheEntry(entry.createdAt)) {
     return null;
   }
 
   return entry.items;
 };
 
-const setCachedDiscoverItems = (key: string, items: DiscoverApiItem[]) => {
+const getPersistentDiscoverItems = (key: string, allowStale = false) => {
+  try {
+    const row = db
+      .select()
+      .from(discoverCacheRecords)
+      .where(eq(discoverCacheRecords.key, key))
+      .get();
+
+    if (!row) {
+      return null;
+    }
+
+    if (!allowStale && !isFreshDiscoverCacheEntry(row.createdAt)) {
+      return null;
+    }
+
+    const items = parseCachedDiscoverItems(row.itemsJson);
+
+    if (!items || items.length === 0) {
+      return null;
+    }
+
+    discoverCache.set(key, {
+      createdAt: row.createdAt,
+      items,
+    });
+
+    return items;
+  } catch (error) {
+    console.error('Failed to read Discover cache:', error);
+    return null;
+  }
+};
+
+const setCachedDiscoverItems = (
+  key: string,
+  items: DiscoverApiItem[],
+  meta?: {
+    topic: Topic;
+    mode: 'normal' | 'preview';
+    language: DiscoverLanguage;
+  },
+) => {
   if (items.length === 0) {
     return;
   }
 
+  const createdAt = Date.now();
+
   discoverCache.set(key, {
-    createdAt: Date.now(),
+    createdAt,
     items,
   });
+
+  if (!meta) {
+    return;
+  }
+
+  try {
+    const itemsJson = JSON.stringify(items);
+
+    db.insert(discoverCacheRecords)
+      .values({
+        key,
+        topic: meta.topic,
+        mode: meta.mode,
+        language: meta.language,
+        createdAt,
+        itemsJson,
+      })
+      .onConflictDoUpdate({
+        target: discoverCacheRecords.key,
+        set: {
+          topic: meta.topic,
+          mode: meta.mode,
+          language: meta.language,
+          createdAt,
+          itemsJson,
+        },
+      })
+      .run();
+  } catch (error) {
+    console.error('Failed to write Discover cache:', error);
+  }
 };
 
 const countItemsWithImages = (items: DiscoverApiItem[]) =>
@@ -378,7 +467,8 @@ export const GET = async (req: Request) => {
 
     const selectedTopic = getTopicConfig(topic, language);
     const cacheKey = getDiscoverCacheKey(topic, mode, language);
-    const freshCachedData = getCachedDiscoverItems(cacheKey);
+    const freshCachedData =
+      getCachedDiscoverItems(cacheKey) || getPersistentDiscoverItems(cacheKey);
 
     if (freshCachedData) {
       return Response.json(
@@ -516,7 +606,9 @@ export const GET = async (req: Request) => {
     data = await enrichMissingThumbnails(data, 16);
     data = sortBestFirst(data, topic, language).slice(0, 18);
 
-    const staleCachedData = getCachedDiscoverItems(cacheKey, true);
+    const staleCachedData =
+      getCachedDiscoverItems(cacheKey, true) ||
+      getPersistentDiscoverItems(cacheKey, true);
 
     if (staleCachedData && data.length === 0) {
       return Response.json(
@@ -540,7 +632,11 @@ export const GET = async (req: Request) => {
       ).slice(0, 18);
     }
 
-    setCachedDiscoverItems(cacheKey, data);
+    setCachedDiscoverItems(cacheKey, data, {
+      topic,
+      mode,
+      language,
+    });
 
     return Response.json(
       {
