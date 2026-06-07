@@ -1505,6 +1505,7 @@ export default function AppsPage() {
   const [editingCustomApp, setEditingCustomApp] =
     useState<CustomAppRecord | null>(null);
   const [deletingCustomAppId, setDeletingCustomAppId] = useState('');
+  const [duplicatingCustomAppId, setDuplicatingCustomAppId] = useState('');
 
   const [appOutputs, setAppOutputs] = useState<AutomationOutputItem[]>([]);
 
@@ -1548,6 +1549,48 @@ export default function AppsPage() {
   const handleCustomAppSaved = async () => {
     await refreshCustomApps();
     closeCustomAppBuilder();
+  };
+
+  const handleDuplicateCustomApp = async (app: CustomAppRecord) => {
+    setDuplicatingCustomAppId(app.id);
+    setCustomAppsError('');
+
+    try {
+      const res = await fetch('/api/apps/custom', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: `${app.name} ${t('appsPage.copySuffix')}`,
+          category: app.category,
+          description: app.description,
+          outputType: app.outputType,
+          promptTemplate: app.promptTemplate,
+          inputs: app.inputs,
+          goodFor: app.goodFor,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(
+          data?.message || t('appsPage.couldNotDuplicateCustomApp'),
+        );
+      }
+
+      await refreshCustomApps();
+    } catch (err) {
+      console.error('Failed to duplicate custom app:', err);
+      setCustomAppsError(
+        err instanceof Error
+          ? err.message
+          : t('appsPage.couldNotDuplicateCustomApp'),
+      );
+    } finally {
+      setDuplicatingCustomAppId('');
+    }
   };
 
   const handleDeleteCustomApp = async (app: CustomAppRecord) => {
@@ -1790,6 +1833,22 @@ export default function AppsPage() {
                   >
                     <Play size={14} />
                     {t('appsPage.open')}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDuplicateCustomApp(app)}
+                    disabled={duplicatingCustomAppId === app.id}
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-3 py-2 text-xs font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
+                  >
+                    {duplicatingCustomAppId === app.id ? (
+                      <Loader2 className="animate-spin" size={14} />
+                    ) : (
+                      <Copy size={14} />
+                    )}
+                    {duplicatingCustomAppId === app.id
+                      ? t('appsPage.duplicating')
+                      : t('appsPage.duplicate')}
                   </button>
 
                   <button

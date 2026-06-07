@@ -337,6 +337,11 @@ export const dictionaries = {
       availableVariablesDescription:
         'Use these variables in the prompt template to insert the values filled by the user.',
       noVariablesYet: 'Add field labels to generate variables.',
+
+      duplicate: 'Duplicate',
+      duplicating: 'Duplicating...',
+      copySuffix: 'Copy',
+      couldNotDuplicateCustomApp: 'Could not duplicate custom app.',
 },
     automationsPage: {
       automation: 'Automation',
@@ -1047,6 +1052,11 @@ export const dictionaries = {
       availableVariablesDescription:
         'Utilisez ces variables dans le prompt pour insérer les valeurs remplies par l’utilisateur.',
       noVariablesYet: 'Ajoutez des libellés de champs pour générer des variables.',
+
+      duplicate: 'Dupliquer',
+      duplicating: 'Duplication...',
+      copySuffix: 'Copie',
+      couldNotDuplicateCustomApp: 'Impossible de dupliquer l’app personnalisée.',
 },
     automationsPage: {
       automation: 'Automatisation',
