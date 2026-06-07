@@ -22,8 +22,8 @@ export const dictionaries = {
       cancel: 'Cancel',
     },
     sidebar: {
-      subtitle: 'AI workspace',
-      newSearch: 'New Search',
+      subtitle: 'Local-first workspace',
+      newSearch: 'New search',
       search: 'Search',
       discover: 'Discover',
       library: 'Library',
@@ -43,7 +43,7 @@ export const dictionaries = {
       badge: 'Local guide',
       title: 'Welcome to Etherana SX',
       subtitle:
-        'A local-first AI workspace to search, organize, generate, automate, and save useful outputs.',
+        'A local-first workspace to search, organize, generate, automate, and save useful outputs.',
       startIncludedTitle: 'Start with the built-in local model',
       startIncludedDescription:
         'Etherana SX starts with Gemma 4 4B already included, so you can try the workspace immediately without configuring anything.',
