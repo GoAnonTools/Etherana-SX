@@ -476,7 +476,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const isReconnectingRef = useRef(false);
   const handledMessageEndRef = useRef<Set<string>>(new Set());
 
-  // Refs to coordinate the Labs /?q=xxx reset with the auto-send effect.
+  // Refs to coordinate the /?q=xxx reset with the auto-send effect.
   // resetForQRef tracks the last q param we've processed, preventing
   // infinite loops when the reset causes state changes.
   // resetInProgressRef is a synchronous flag that blocks the auto-send
@@ -622,10 +622,10 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [searchParams, spaceId]);
 
-  // When navigating to /?q=xxx (e.g. from Labs presets), reset the
+  // When navigating to /?q=xxx from a preset or external entry point, reset the
   // chat state so a fresh conversation starts. Without this, the old
   // chatId persists because ChatProvider lives in the root layout and
-  // never unmounts during navigation — so clicking a Labs preset sends
+  // never unmounts during navigation — so clicking the same preset sends
   // the prompt into the existing chat instead of creating a new one.
   //
   // The resetForQRef prevents infinite loops by tracking the last `q`
@@ -659,7 +659,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       }
     } else if (!urlQ || params.chatId) {
       // Clear the ref when navigating away from /?q=xxx so that
-      // clicking the same Labs preset again triggers a fresh reset.
+      // clicking the same preset again triggers a fresh reset.
       resetForQRef.current = null;
     }
   }, [searchParams, params.chatId]);
