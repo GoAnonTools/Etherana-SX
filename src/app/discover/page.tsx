@@ -8,6 +8,7 @@ import SmallNewsCard from '@/components/Discover/SmallNewsCard';
 import MajorNewsCard from '@/components/Discover/MajorNewsCard';
 import { useI18n } from '@/lib/i18n/useI18n';
 import type { TranslationKey } from '@/lib/i18n/dictionaries';
+import AppErrorBoundary from '@/components/ErrorBoundary/AppErrorBoundary';
 
 export interface Discover {
   title: string;
@@ -180,8 +181,12 @@ const Page = () => {
             </div>
           </div>
         ) : (
-          <div className="flex w-full flex-col gap-4 pb-28 pt-5 lg:pb-8">
-            <div className="block lg:hidden">
+          <AppErrorBoundary
+            title="Discover feed could not be displayed"
+            description="The articles were loaded, but one part of the feed could not be rendered. Try another topic or refresh Discover."
+          >
+            <div className="flex w-full flex-col gap-4 pb-28 pt-5 lg:pb-8">
+              <div className="block lg:hidden">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {discover?.map((item, i) => (
                   <SmallNewsCard key={`mobile-${i}`} item={item} />
@@ -315,8 +320,9 @@ const Page = () => {
 
                   return sections;
                 })()}
+              </div>
             </div>
-          </div>
+          </AppErrorBoundary>
         )}
       </div>
     </>
