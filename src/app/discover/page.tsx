@@ -43,10 +43,12 @@ const Page = () => {
   const { t, locale } = useI18n();
   const [discover, setDiscover] = useState<Discover[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [activeTopic, setActiveTopic] = useState<string>(topics[0].key);
 
   const fetchArticles = async (topic: string) => {
     setLoading(true);
+    setError(false);
 
     try {
       const params = new URLSearchParams({
@@ -70,6 +72,8 @@ const Page = () => {
       setDiscover(Array.isArray(data.blogs) ? data.blogs : []);
     } catch (err: any) {
       console.error('Error fetching data:', err.message);
+      setError(true);
+      setDiscover([]);
       toast.error(t('discoverPage.errorFetching'));
     } finally {
       setLoading(false);
@@ -132,6 +136,26 @@ const Page = () => {
                 fill="currentFill"
               />
             </svg>
+          </div>
+        ) : error ? (
+          <div className="flex min-h-[55vh] flex-col items-center justify-center px-6 text-center">
+            <div className="rounded-3xl border border-light-200 bg-light-secondary p-8 dark:border-dark-200 dark:bg-dark-secondary">
+              <h2 className="text-2xl font-semibold text-black dark:text-white">
+                {t('discoverPage.errorFetching')}
+              </h2>
+
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-black/55 dark:text-white/55">
+                {t('discoverPage.noArticlesDescription')}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => fetchArticles(activeTopic)}
+                className="mt-6 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
+              >
+                {t('discoverPage.tryAgain')}
+              </button>
+            </div>
           </div>
         ) : discover && discover.length === 0 ? (
           <div className="flex min-h-[55vh] flex-col items-center justify-center px-6 text-center">
