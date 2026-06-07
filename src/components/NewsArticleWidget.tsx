@@ -52,7 +52,7 @@ const getSourceLabel = (url?: string | null) => {
 };
 
 const NewsArticleWidget = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -68,7 +68,12 @@ const NewsArticleWidget = () => {
   const initial = article?.title?.trim()?.charAt(0)?.toUpperCase() || 'E';
 
   useEffect(() => {
-    fetch('/api/discover?mode=preview')
+    const params = new URLSearchParams({
+      mode: 'preview',
+      language: locale,
+    });
+
+    fetch(`/api/discover?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
         const articles = Array.isArray(data.blogs) ? data.blogs : [];
@@ -91,7 +96,7 @@ const NewsArticleWidget = () => {
       .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     setImageFailed(false);

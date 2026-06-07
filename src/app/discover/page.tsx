@@ -40,7 +40,7 @@ const topics: { key: string; labelKey: TranslationKey }[] = [
 ];
 
 const Page = () => {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [discover, setDiscover] = useState<Discover[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTopic, setActiveTopic] = useState<string>(topics[0].key);
@@ -49,7 +49,12 @@ const Page = () => {
     setLoading(true);
 
     try {
-      const res = await fetch(`/api/discover?topic=${topic}`, {
+      const params = new URLSearchParams({
+        topic,
+        language: locale,
+      });
+
+      const res = await fetch(`/api/discover?${params.toString()}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -73,7 +78,7 @@ const Page = () => {
 
   useEffect(() => {
     fetchArticles(activeTopic);
-  }, [activeTopic]);
+  }, [activeTopic, locale]);
 
   return (
     <>
