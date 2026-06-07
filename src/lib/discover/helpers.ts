@@ -1,0 +1,622 @@
+export const websitesForTopic = {
+  tech: {
+    queries: [
+      'technology news',
+      'artificial intelligence news',
+      'consumer technology startup news',
+    ],
+    broadQuery:
+      'technology artificial intelligence startups cybersecurity consumer technology news',
+    relevanceKeywords: [
+      'technology',
+      'tech',
+      'artificial intelligence',
+      'ai',
+      'startup',
+      'software',
+      'cybersecurity',
+      'consumer technology',
+      'gadgets',
+      'apps',
+    ],
+    links: ['techcrunch.com', 'wired.com', 'theverge.com', 'arstechnica.com'],
+  },
+  finance: {
+    queries: ['finance news', 'stock market news', 'economy business news'],
+    broadQuery: 'finance markets economy stocks business banking news',
+    relevanceKeywords: [
+      'finance',
+      'market',
+      'markets',
+      'stocks',
+      'economy',
+      'inflation',
+      'bank',
+      'banking',
+      'earnings',
+      'business',
+      'investors',
+    ],
+    links: ['bloomberg.com', 'cnbc.com', 'marketwatch.com', 'reuters.com'],
+  },
+  art: {
+    queries: [
+      'art exhibition museum news',
+      'contemporary art gallery news',
+      'artist museum culture news',
+    ],
+    broadQuery:
+      'art exhibition museum gallery artist contemporary art culture news',
+    relevanceKeywords: [
+      'art',
+      'artist',
+      'artists',
+      'museum',
+      'exhibition',
+      'gallery',
+      'galleries',
+      'painting',
+      'sculpture',
+      'contemporary',
+      'curator',
+      'biennale',
+      'auction',
+      'culture',
+    ],
+    links: [
+      'artnews.com',
+      'hyperallergic.com',
+      'theartnewspaper.com',
+      'artforum.com',
+      'artsy.net',
+    ],
+  },
+  sports: {
+    queries: [
+      'sports news today',
+      'football basketball tennis sports news',
+      'sports match team player news',
+    ],
+    broadQuery:
+      'sports football basketball tennis match team player league news',
+    relevanceKeywords: [
+      'sports',
+      'sport',
+      'football',
+      'soccer',
+      'basketball',
+      'tennis',
+      'match',
+      'game',
+      'team',
+      'player',
+      'league',
+      'season',
+      'coach',
+      'club',
+      'wins',
+      'final',
+    ],
+    links: [
+      'espn.com',
+      'bbc.com/sport',
+      'skysports.com',
+      'theguardian.com/sport',
+      'sports.yahoo.com',
+    ],
+  },
+  entertainment: {
+    queries: ['movie news', 'tv news', 'streaming entertainment news'],
+    broadQuery: 'movie tv streaming entertainment hollywood celebrity news',
+    relevanceKeywords: [
+      'movie',
+      'film',
+      'tv',
+      'series',
+      'streaming',
+      'entertainment',
+      'hollywood',
+      'actor',
+      'actress',
+      'director',
+      'netflix',
+      'trailer',
+      'box office',
+    ],
+    links: [
+      'hollywoodreporter.com',
+      'variety.com',
+      'deadline.com',
+      'thewrap.com',
+    ],
+  },
+};
+
+export const frenchWebsitesForTopic: typeof websitesForTopic = {
+  tech: {
+    queries: [
+      'actualité technologie France',
+      'actualité intelligence artificielle France',
+      'actualité numérique cybersécurité startups France',
+    ],
+    broadQuery:
+      'actualité technologie intelligence artificielle numérique cybersécurité startups France',
+    relevanceKeywords: [
+      'technologie',
+      'tech',
+      'numérique',
+      'intelligence artificielle',
+      'ia',
+      'startup',
+      'logiciel',
+      'cybersécurité',
+      'application',
+      'applications',
+      'innovation',
+    ],
+    links: [
+      '01net.com',
+      'numerama.com',
+      'clubic.com',
+      'next.ink',
+      'usine-digitale.fr',
+    ],
+  },
+  finance: {
+    queries: [
+      'actualité finance France',
+      'actualité marchés bourse économie France',
+      'actualité entreprises banques économie France',
+    ],
+    broadQuery:
+      'actualité finance marchés bourse économie entreprises banques France',
+    relevanceKeywords: [
+      'finance',
+      'marché',
+      'marchés',
+      'bourse',
+      'économie',
+      'inflation',
+      'banque',
+      'entreprise',
+      'entreprises',
+      'investisseurs',
+      'croissance',
+    ],
+    links: [
+      'lesechos.fr',
+      'latribune.fr',
+      'boursorama.com',
+      'zonebourse.com',
+      'capital.fr',
+    ],
+  },
+  art: {
+    queries: [
+      'actualité art exposition musée France',
+      'actualité art contemporain galerie culture France',
+      'actualité artiste musée culture France',
+    ],
+    broadQuery:
+      'actualité art exposition musée galerie artiste art contemporain culture France',
+    relevanceKeywords: [
+      'art',
+      'artiste',
+      'artistes',
+      'musée',
+      'exposition',
+      'galerie',
+      'peinture',
+      'sculpture',
+      'contemporain',
+      'culture',
+      'patrimoine',
+      'festival',
+    ],
+    links: [
+      'lemonde.fr',
+      'telerama.fr',
+      'franceculture.fr',
+      'beauxarts.com',
+      'connaissancedesarts.com',
+    ],
+  },
+  sports: {
+    queries: [
+      'actualité sport France aujourd’hui',
+      'actualité football basket tennis sport France',
+      'actualité match équipe joueur sport France',
+    ],
+    broadQuery:
+      'actualité sport football basket tennis match équipe joueur championnat France',
+    relevanceKeywords: [
+      'sport',
+      'sports',
+      'football',
+      'basket',
+      'basketball',
+      'tennis',
+      'match',
+      'équipe',
+      'joueur',
+      'joueuse',
+      'club',
+      'championnat',
+      'saison',
+      'entraîneur',
+      'finale',
+    ],
+    links: [
+      'lequipe.fr',
+      'eurosport.fr',
+      'rmcsport.bfmtv.com',
+      'francetvinfo.fr',
+      'sports.orange.fr',
+    ],
+  },
+  entertainment: {
+    queries: [
+      'actualité cinéma séries streaming France',
+      'actualité télévision divertissement France',
+      'actualité films acteurs streaming France',
+    ],
+    broadQuery:
+      'actualité cinéma séries télévision streaming divertissement acteurs France',
+    relevanceKeywords: [
+      'cinéma',
+      'film',
+      'films',
+      'série',
+      'séries',
+      'streaming',
+      'divertissement',
+      'acteur',
+      'actrice',
+      'réalisateur',
+      'netflix',
+      'bande-annonce',
+      'box-office',
+    ],
+    links: [
+      'allocine.fr',
+      'premiere.fr',
+      'ecranlarge.com',
+      'puremedias.com',
+      'konbini.com',
+    ],
+  },
+};
+
+export type Topic = keyof typeof websitesForTopic;
+export type DiscoverLanguage = 'en' | 'fr' | 'auto';
+
+export type DiscoverApiItem = {
+  title: string;
+  content: string;
+  url: string;
+  thumbnail: string;
+};
+
+export const getSearchLanguage = (language: DiscoverLanguage) =>
+  language === 'fr' ? 'fr' : 'en';
+
+export const getTopicConfig = (topic: Topic, language: DiscoverLanguage) =>
+  language === 'fr' ? frenchWebsitesForTopic[topic] : websitesForTopic[topic];
+
+export const isBadDiscoverResult = (item: DiscoverApiItem, topic?: Topic) => {
+  const title = item.title.toLowerCase();
+  const content = item.content.toLowerCase();
+
+  const badTitlePatterns = [
+    'rss feeds',
+    'archives',
+    'archive',
+    'latest news, photos',
+    'latest news -',
+    'photos & videos',
+    'startup and technology news',
+    'latest gadget news',
+    'latest in technology',
+    'page ',
+    'author:',
+    'tag:',
+    'sign in',
+    'subscribe',
+    'newsletter',
+    'privacy policy',
+    'terms of service',
+    'home page',
+    'front pages',
+    'push notifications faq',
+    'latest news, results',
+    'results, stats & transfers',
+  ];
+
+  const sportsUtilityPatterns = [
+    'quiz',
+    'scores',
+    'scoreboard',
+    'standings',
+    'table and standings',
+    'fixtures',
+    'kick-off times',
+    'tv channel',
+    'fantasy premier league',
+    'practice session',
+    'live football today',
+    'push notifications',
+    'latest news, results',
+    'results, stats',
+    'order of play',
+    'draw and results',
+    'final score',
+    'premier league live',
+    'build-up, commentary',
+    'latest news & gossip',
+    'sports live',
+    'indian sports live',
+    'fpl stats',
+  ];
+
+  if (
+    topic === 'sports' &&
+    (sportsUtilityPatterns.some((pattern) => title.includes(pattern)) ||
+      title.startsWith('live '))
+  ) {
+    return true;
+  }
+
+  if (badTitlePatterns.some((pattern) => title.includes(pattern))) {
+    return true;
+  }
+
+  if (
+    title.includes('coronavirus') ||
+    title.includes('covid-19') ||
+    content.includes('coronavirus') ||
+    content.includes('covid-19')
+  ) {
+    return true;
+  }
+
+  try {
+    const parsedUrl = new URL(item.url);
+    const pathParts = parsedUrl.pathname.split('/').filter(Boolean);
+    const lowerPath = parsedUrl.pathname.toLowerCase();
+
+    const badPathPatterns = [
+      '/rss',
+      '/feed',
+      '/feeds',
+      '/archive',
+      '/archives',
+      '/category/',
+      '/categories/',
+      '/tag/',
+      '/tags/',
+      '/topic/',
+      '/topics/',
+      '/author/',
+      '/page/',
+      '/latest',
+      '/newsletters',
+      '/search',
+      '/privacy',
+      '/terms',
+      '/about',
+      '/contact',
+      '/video/',
+      '/videos/',
+      '/live-blog/',
+      '/faq',
+    ];
+
+    if (badPathPatterns.some((pattern) => lowerPath.includes(pattern))) {
+      return true;
+    }
+
+    if (
+      topic === 'sports' &&
+      (pathParts.length <= 2 ||
+        lowerPath.endsWith('/all') ||
+        lowerPath.includes('/live/') ||
+        lowerPath.includes('/match/_/') ||
+        lowerPath.includes('/scoreboard') ||
+        lowerPath.includes('/scores'))
+    ) {
+      return true;
+    }
+
+    if (pathParts.length === 0) {
+      return true;
+    }
+
+    if (
+      pathParts.length <= 1 &&
+      !title.includes(':') &&
+      !title.includes("'") &&
+      !title.includes('says') &&
+      !title.includes('announces') &&
+      !title.includes('launches')
+    ) {
+      return true;
+    }
+
+    return false;
+  } catch {
+    return true;
+  }
+};
+
+export const normalizeTitleKey = (title: string) =>
+  title
+    .toLowerCase()
+    .replace(/\s+-\s+[^-]+$/g, '')
+    .replace(/\s+\|\s+[^|]+$/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+export const mergeUniqueItems = (items: DiscoverApiItem[]) => {
+  const seenUrls = new Set<string>();
+  const seenTitles = new Set<string>();
+
+  return items.filter((item) => {
+    const url = item.url.toLowerCase();
+    const titleKey = normalizeTitleKey(item.title);
+
+    if (seenUrls.has(url)) {
+      return false;
+    }
+
+    if (titleKey.length > 24 && seenTitles.has(titleKey)) {
+      return false;
+    }
+
+    seenUrls.add(url);
+
+    if (titleKey.length > 24) {
+      seenTitles.add(titleKey);
+    }
+
+    return true;
+  });
+};
+
+export const getHostname = (url: string) => {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+  } catch {
+    return '';
+  }
+};
+
+export const getPathDepth = (url: string) => {
+  try {
+    return new URL(url).pathname.split('/').filter(Boolean).length;
+  } catch {
+    return 0;
+  }
+};
+
+export const getSourceScore = (
+  item: DiscoverApiItem,
+  topic: Topic,
+  language: DiscoverLanguage,
+) => {
+  const hostname = getHostname(item.url);
+
+  if (!hostname) {
+    return 0;
+  }
+
+  const topicConfig = getTopicConfig(topic, language);
+
+  const isKnownSource = topicConfig.links.some((link) => {
+    const sourceHost = link.split('/')[0].replace(/^www\./, '').toLowerCase();
+
+    return hostname === sourceHost || hostname.endsWith(`.${sourceHost}`);
+  });
+
+  return isKnownSource ? 8 : 0;
+};
+
+export const countKeywordHits = (value: string, keywords: readonly string[]) =>
+  keywords.reduce((score, keyword) => {
+    const normalizedKeyword = keyword.toLowerCase();
+
+    if (!normalizedKeyword) {
+      return score;
+    }
+
+    return value.includes(normalizedKeyword) ? score + 1 : score;
+  }, 0);
+
+export const getDiscoverItemScore = (
+  item: DiscoverApiItem,
+  topic: Topic,
+  language: DiscoverLanguage,
+) => {
+  const title = item.title.toLowerCase();
+  const content = item.content.toLowerCase();
+  const url = item.url.toLowerCase();
+  const topicConfig = getTopicConfig(topic, language);
+  const keywords = topicConfig.relevanceKeywords;
+  const pathDepth = getPathDepth(item.url);
+
+  let score = 0;
+
+  score += countKeywordHits(title, keywords) * 10;
+  score += countKeywordHits(content, keywords) * 3;
+  score += countKeywordHits(url, keywords) * 2;
+  score += getSourceScore(item, topic, language);
+
+  if (item.thumbnail) {
+    score += 4;
+  }
+
+  if (item.title.length >= 24) {
+    score += 2;
+  }
+
+  if (item.content.length >= 80) {
+    score += 2;
+  }
+
+  if (pathDepth >= 2) {
+    score += 2;
+  }
+
+  if (pathDepth <= 1) {
+    score -= 10;
+  }
+
+  if (
+    title.includes('latest') ||
+    title.includes('news, photos') ||
+    title.includes('videos') ||
+    title.includes('archive')
+  ) {
+    score -= 12;
+  }
+
+  if (
+    url.includes('/search') ||
+    url.includes('/tag/') ||
+    url.includes('/author/')
+  ) {
+    score -= 15;
+  }
+
+  return score;
+};
+
+export const keepRelevantItems = (
+  items: DiscoverApiItem[],
+  topic: Topic,
+  language: DiscoverLanguage,
+) => {
+  const filtered = items.filter(
+    (item) => getDiscoverItemScore(item, topic, language) >= 6,
+  );
+
+  return filtered.length >= 8 ? filtered : items;
+};
+
+export const sortBestFirst = (
+  items: DiscoverApiItem[],
+  topic: Topic,
+  language: DiscoverLanguage,
+) =>
+  [...items].sort((a, b) => {
+    const scoreDelta =
+      getDiscoverItemScore(b, topic, language) -
+      getDiscoverItemScore(a, topic, language);
+
+    if (scoreDelta !== 0) {
+      return scoreDelta;
+    }
+
+    if (a.thumbnail && !b.thumbnail) return -1;
+    if (!a.thumbnail && b.thumbnail) return 1;
+    return 0;
+  });
