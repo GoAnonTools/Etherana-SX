@@ -87,10 +87,10 @@ const SetupConfig = ({
             <div className="flex flex-row justify-between items-center mb-4 md:mb-6 pb-3 md:pb-4 border-b border-light-200 dark:border-dark-200">
               <div>
                 <p className="text-xs sm:text-sm font-medium text-black dark:text-white">
-                  Manage Connections
+                  {t('common.manageConnections')}
                 </p>
                 <p className="text-[10px] sm:text-xs text-black/50 dark:text-white/50 mt-0.5">
-                  Add connections to access AI models
+                  {t('common.connectionsDescription')}
                 </p>
               </div>
               <AddProvider
@@ -109,10 +109,10 @@ const SetupConfig = ({
               ) : visibleProviders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 md:py-12 text-center">
                   <p className="text-xs sm:text-sm font-medium text-black/70 dark:text-white/70">
-                    No connections configured
+                    {t('common.noConnectionsConfigured')}
                   </p>
                   <p className="text-[10px] sm:text-xs text-black/50 dark:text-white/50 mt-1">
-                    Click &quot;Add Connection&quot; above to get started
+                    {t('common.addConnectionHint')}
                   </p>
                 </div>
               ) : (

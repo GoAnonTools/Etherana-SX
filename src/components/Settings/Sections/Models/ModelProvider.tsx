@@ -112,7 +112,7 @@ const ModelProvider = ({
         <div className="flex flex-col gap-y-2">
           <div className="flex flex-row w-full justify-between items-center">
             <p className="text-[11px] lg:text-[11px] font-medium text-black/70 dark:text-white/70 uppercase tracking-wide">
-              Chat Models
+              {t('common.chatModels')}
             </p>
             {!modelProvider.chatModels.some((m) => m.key === 'error') && (
               <AddModel
@@ -167,7 +167,7 @@ const ModelProvider = ({
         <div className="flex flex-col gap-y-2">
           <div className="flex flex-row w-full justify-between items-center">
             <p className="text-[11px] lg:text-[11px] font-medium text-black/70 dark:text-white/70 uppercase tracking-wide">
-              Embedding Models
+              {t('common.embeddingModels')}
             </p>
             {!modelProvider.embeddingModels.some((m) => m.key === 'error') && (
               <AddModel
@@ -192,7 +192,7 @@ const ModelProvider = ({
                 .length === 0 && !hasError ? (
               <div className="flex flex-col items-center justify-center py-4 px-4 rounded-lg border-2 border-dashed border-light-200 dark:border-dark-200 bg-light-secondary/20 dark:bg-dark-secondary/20">
                 <p className="text-xs text-black/50 dark:text-white/50 text-center">
-                  No embedding models configured
+                  {t('common.noEmbeddingModelsConfigured')}
                 </p>
               </div>
             ) : modelProvider.embeddingModels.filter((m) => m.key !== 'error')
