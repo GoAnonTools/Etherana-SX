@@ -31,178 +31,27 @@ import {
   writeAutomationOutputs,
 } from '@/lib/vault/localVault';
 import { useI18n } from '@/lib/i18n/useI18n';
-
-type AppInputValues = Record<string, string>;
-
-type AppSpace = {
-  id: string;
-  name: string;
-  description?: string;
-};
-
-type CustomAppRecord = {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  outputType: string;
-  promptTemplate: string;
-  inputs: SmallAppInput[];
-  goodFor: string[];
-  createdAt: string;
-  updatedAt: string;
-};
-
-type AppCatalogItem = SmallAppTemplate & {
-  isCustom?: boolean;
-  updatedAt?: string;
-};
-
-const SMALL_APP_CATEGORIES: SmallAppCategory[] = [
-  'Business',
-  'Content',
-  'Client Work',
-  'Study',
-  'Personal',
-];
-
-const normalizeSmallAppCategory = (category: string): SmallAppCategory => {
-  return SMALL_APP_CATEGORIES.includes(category as SmallAppCategory)
-    ? (category as SmallAppCategory)
-    : 'Business';
-};
-
-const mapCustomAppToTemplate = (app: CustomAppRecord): AppCatalogItem => ({
-  id: app.id,
-  name: app.name,
-  icon: LayoutTemplate,
-  category: normalizeSmallAppCategory(app.category),
-  description: app.description,
-  inputs: Array.isArray(app.inputs) ? app.inputs : [],
-  outputType: app.outputType || 'Document',
-  promptTemplate: app.promptTemplate,
-  goodFor: Array.isArray(app.goodFor) ? app.goodFor : [],
-  isCustom: true,
-  updatedAt: app.updatedAt,
-});
-
-const getExportFilename = (name: string) => {
-  const slug =
-    name
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 60) || 'custom-app';
-
-  return `${slug}.etherana-app.json`;
-};
-
-const unwrapImportedCustomApp = (value: unknown) => {
-  if (!value || typeof value !== 'object') {
-    throw new Error('Invalid custom app JSON.');
-  }
-
-  const raw = value as Record<string, any>;
-  const app = raw.app || raw.customApp || raw;
-
-  if (!app || typeof app !== 'object') {
-    throw new Error('Invalid custom app JSON.');
-  }
-
-  if (
-    typeof app.name !== 'string' ||
-    typeof app.description !== 'string' ||
-    typeof app.promptTemplate !== 'string' ||
-    !Array.isArray(app.inputs)
-  ) {
-    throw new Error('Invalid custom app JSON.');
-  }
-
-  return {
-    name: app.name,
-    category: app.category || 'Business',
-    description: app.description,
-    outputType: app.outputType || 'Document',
-    promptTemplate: app.promptTemplate,
-    inputs: app.inputs,
-    goodFor: Array.isArray(app.goodFor) ? app.goodFor : [],
-  };
-};
-
-type BuilderFieldDraft = SmallAppInput & {
-  optionsText?: string;
-};
-
-type CustomAppBuilderForm = {
-  name: string;
-  category: SmallAppCategory;
-  description: string;
-  outputType: string;
-  promptTemplate: string;
-  inputs: BuilderFieldDraft[];
-  goodForText: string;
-};
-
-const slugifyFieldId = (value: string) =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 48);
-
-const createBlankBuilderField = (): BuilderFieldDraft => ({
-  id: `field-${Date.now()}`,
-  label: '',
-  type: 'text',
-  placeholder: '',
-  required: false,
-  options: [],
-  optionsText: '',
-});
-
-const createBlankCustomAppForm = (): CustomAppBuilderForm => ({
-  name: '',
-  category: 'Business',
-  description: '',
-  outputType: 'Document',
-  promptTemplate: '',
-  inputs: [createBlankBuilderField()],
-  goodForText: '',
-});
-
-const customAppRecordToBuilderForm = (
-  app: CustomAppRecord,
-): CustomAppBuilderForm => ({
-  name: app.name,
-  category: normalizeSmallAppCategory(app.category),
-  description: app.description,
-  outputType: app.outputType,
-  promptTemplate: app.promptTemplate,
-  inputs:
-    app.inputs.length > 0
-      ? app.inputs.map((input) => ({
-          ...input,
-          optionsText: input.options?.join('\n') || '',
-        }))
-      : [createBlankBuilderField()],
-  goodForText: app.goodFor.join(', '),
-});
-
-const splitListText = (value: string) =>
-  value
-    .split(/[\n,]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-const getFieldVariableName = (field: BuilderFieldDraft, index: number) => {
-  return (
-    slugifyFieldId(field.id) ||
-    slugifyFieldId(field.label) ||
-    `field-${index + 1}`
-  );
-};
+import {
+  SMALL_APP_CATEGORIES,
+  createBlankBuilderField,
+  createBlankCustomAppForm,
+  customAppRecordToBuilderForm,
+  getExportFilename,
+  getFieldVariableName,
+  mapCustomAppToTemplate,
+  normalizeSmallAppCategory,
+  slugifyFieldId,
+  splitListText,
+  unwrapImportedCustomApp,
+} from './helpers';
+import type {
+  AppCatalogItem,
+  AppInputValues,
+  AppSpace,
+  BuilderFieldDraft,
+  CustomAppBuilderForm,
+  CustomAppRecord,
+} from './types';
 
 const CustomAppBuilder = ({
   initialApp,
