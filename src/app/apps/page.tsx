@@ -15,6 +15,8 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import {
   SMALL_APP_TEMPLATES,
+  type SmallAppCategory,
+  type SmallAppInput,
   type SmallAppTemplate,
 } from '@/lib/apps/catalog';
 import {
@@ -32,6 +34,52 @@ type AppSpace = {
   name: string;
   description?: string;
 };
+
+type CustomAppRecord = {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  outputType: string;
+  promptTemplate: string;
+  inputs: SmallAppInput[];
+  goodFor: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+type AppCatalogItem = SmallAppTemplate & {
+  isCustom?: boolean;
+  updatedAt?: string;
+};
+
+const SMALL_APP_CATEGORIES: SmallAppCategory[] = [
+  'Business',
+  'Content',
+  'Client Work',
+  'Study',
+  'Personal',
+];
+
+const normalizeSmallAppCategory = (category: string): SmallAppCategory => {
+  return SMALL_APP_CATEGORIES.includes(category as SmallAppCategory)
+    ? (category as SmallAppCategory)
+    : 'Business';
+};
+
+const mapCustomAppToTemplate = (app: CustomAppRecord): AppCatalogItem => ({
+  id: app.id,
+  name: app.name,
+  icon: LayoutTemplate,
+  category: normalizeSmallAppCategory(app.category),
+  description: app.description,
+  inputs: Array.isArray(app.inputs) ? app.inputs : [],
+  outputType: app.outputType || 'Document',
+  promptTemplate: app.promptTemplate,
+  goodFor: Array.isArray(app.goodFor) ? app.goodFor : [],
+  isCustom: true,
+  updatedAt: app.updatedAt,
+});
 
 const buildPromptFromTemplate = (
   app: SmallAppTemplate,
@@ -225,8 +273,8 @@ const AppCard = ({
   app,
   onSelect,
 }: {
-  app: SmallAppTemplate;
-  onSelect: (app: SmallAppTemplate) => void;
+  app: AppCatalogItem;
+  onSelect: (app: AppCatalogItem) => void;
 }) => {
   const { t } = useI18n();
   const Icon = app.icon;
@@ -240,7 +288,7 @@ const AppCard = ({
           </div>
 
           <span className="rounded-full border border-light-200 px-3 py-1 text-xs font-medium text-black/55 dark:border-dark-200 dark:text-white/55">
-            {app.category}
+            {app.isCustom ? 'Custom' : app.category}
           </span>
         </div>
 
@@ -890,9 +938,41 @@ const AppRunner = ({
 
 export default function AppsPage() {
   const { t } = useI18n();
-  const [selectedApp, setSelectedApp] = useState<SmallAppTemplate | null>(null);
+  const [selectedApp, setSelectedApp] = useState<AppCatalogItem | null>(null);
+  const [customApps, setCustomApps] = useState<CustomAppRecord[]>([]);
+  const [customAppsError, setCustomAppsError] = useState('');
 
   const [appOutputs, setAppOutputs] = useState<AutomationOutputItem[]>([]);
+
+  useEffect(() => {
+    const fetchCustomApps = async () => {
+      try {
+        const res = await fetch('/api/apps/custom');
+
+        if (!res.ok) {
+          throw new Error('Failed to load custom apps.');
+        }
+
+        const data = await res.json();
+
+        setCustomApps(Array.isArray(data) ? data : []);
+        setCustomAppsError('');
+      } catch (err) {
+        console.error('Failed to fetch custom apps:', err);
+        setCustomAppsError('Custom apps could not be loaded.');
+      }
+    };
+
+    fetchCustomApps();
+  }, []);
+
+  const catalogApps = useMemo(
+    () => [
+      ...customApps.map(mapCustomAppToTemplate),
+      ...SMALL_APP_TEMPLATES,
+    ],
+    [customApps],
+  );
 
   useEffect(() => {
     const refreshAppOutputs = () => {
@@ -976,12 +1056,18 @@ export default function AppsPage() {
       <section className="mb-8 flex flex-wrap items-center gap-3 text-sm text-black/45 dark:text-white/45">
         <span className="inline-flex items-center gap-2">
           <LayoutTemplate size={16} />
-          {SMALL_APP_TEMPLATES.length} app templates
+          {catalogApps.length} app templates
         </span>
       </section>
 
+      {customAppsError && (
+        <section className="mb-6 rounded-3xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-500">
+          {customAppsError}
+        </section>
+      )}
+
       <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {SMALL_APP_TEMPLATES.map((app) => (
+        {catalogApps.map((app) => (
           <AppCard key={app.id} app={app} onSelect={setSelectedApp} />
         ))}
       </section>
