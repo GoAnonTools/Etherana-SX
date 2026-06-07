@@ -7,12 +7,15 @@ import {
   LayoutTemplate,
   PencilLine,
   Loader2,
+  Plus,
   Play,
   Save,
   Sparkles,
+  Trash2,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   SMALL_APP_TEMPLATES,
   type SmallAppCategory,
@@ -80,6 +83,517 @@ const mapCustomAppToTemplate = (app: CustomAppRecord): AppCatalogItem => ({
   isCustom: true,
   updatedAt: app.updatedAt,
 });
+
+type BuilderFieldDraft = SmallAppInput & {
+  optionsText?: string;
+};
+
+type CustomAppBuilderForm = {
+  name: string;
+  category: SmallAppCategory;
+  description: string;
+  outputType: string;
+  promptTemplate: string;
+  inputs: BuilderFieldDraft[];
+  goodForText: string;
+};
+
+const slugifyFieldId = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+
+const createBlankBuilderField = (): BuilderFieldDraft => ({
+  id: `field-${Date.now()}`,
+  label: '',
+  type: 'text',
+  placeholder: '',
+  required: false,
+  options: [],
+  optionsText: '',
+});
+
+const createBlankCustomAppForm = (): CustomAppBuilderForm => ({
+  name: '',
+  category: 'Business',
+  description: '',
+  outputType: 'Document',
+  promptTemplate: '',
+  inputs: [createBlankBuilderField()],
+  goodForText: '',
+});
+
+const customAppRecordToBuilderForm = (
+  app: CustomAppRecord,
+): CustomAppBuilderForm => ({
+  name: app.name,
+  category: normalizeSmallAppCategory(app.category),
+  description: app.description,
+  outputType: app.outputType,
+  promptTemplate: app.promptTemplate,
+  inputs:
+    app.inputs.length > 0
+      ? app.inputs.map((input) => ({
+          ...input,
+          optionsText: input.options?.join('\n') || '',
+        }))
+      : [createBlankBuilderField()],
+  goodForText: app.goodFor.join(', '),
+});
+
+const splitListText = (value: string) =>
+  value
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const CustomAppBuilder = ({
+  initialApp,
+  onCancel,
+  onSaved,
+}: {
+  initialApp: CustomAppRecord | null;
+  onCancel: () => void;
+  onSaved: () => Promise<void>;
+}) => {
+  const [form, setForm] = useState<CustomAppBuilderForm>(() =>
+    initialApp ? customAppRecordToBuilderForm(initialApp) : createBlankCustomAppForm(),
+  );
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setForm(
+      initialApp ? customAppRecordToBuilderForm(initialApp) : createBlankCustomAppForm(),
+    );
+    setError('');
+  }, [initialApp]);
+
+  const updateField = (
+    index: number,
+    updates: Partial<BuilderFieldDraft>,
+  ) => {
+    setForm((current) => ({
+      ...current,
+      inputs: current.inputs.map((input, inputIndex) =>
+        inputIndex === index ? { ...input, ...updates } : input,
+      ),
+    }));
+  };
+
+  const addField = () => {
+    setForm((current) => ({
+      ...current,
+      inputs: [...current.inputs, createBlankBuilderField()],
+    }));
+  };
+
+  const removeField = (index: number) => {
+    setForm((current) => ({
+      ...current,
+      inputs:
+        current.inputs.length <= 1
+          ? current.inputs
+          : current.inputs.filter((_, inputIndex) => inputIndex !== index),
+    }));
+  };
+
+  const buildPayload = () => {
+    const inputs = form.inputs
+      .map((input, index) => {
+        const label = input.label.trim();
+        const id =
+          slugifyFieldId(input.id || label) ||
+          slugifyFieldId(label) ||
+          `field-${index + 1}`;
+
+        return {
+          id,
+          label,
+          type: input.type,
+          placeholder: input.placeholder?.trim() || '',
+          required: Boolean(input.required),
+          options:
+            input.type === 'select'
+              ? splitListText(input.optionsText || '')
+              : [],
+        };
+      })
+      .filter((input) => input.label);
+
+    return {
+      id: initialApp?.id,
+      name: form.name.trim(),
+      category: form.category,
+      description: form.description.trim(),
+      outputType: form.outputType.trim() || 'Document',
+      promptTemplate: form.promptTemplate.trim(),
+      inputs,
+      goodFor: splitListText(form.goodForText),
+    };
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const payload = buildPayload();
+
+    if (!payload.name) {
+      setError('Custom app name is required.');
+      return;
+    }
+
+    if (!payload.description) {
+      setError('Custom app description is required.');
+      return;
+    }
+
+    if (!payload.promptTemplate) {
+      setError('Prompt template is required.');
+      return;
+    }
+
+    if (payload.inputs.length === 0) {
+      setError('Add at least one input field.');
+      return;
+    }
+
+    setIsSaving(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/apps/custom', {
+        method: initialApp ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.message || 'Could not save custom app.');
+      }
+
+      await onSaved();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Could not save custom app.',
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <section className="mb-10 rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="inline-flex rounded-full border border-light-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-black/45 dark:border-dark-200 dark:text-white/45">
+            Custom App
+          </p>
+
+          <h2 className="mt-3 text-2xl font-semibold text-black dark:text-white">
+            {initialApp ? 'Edit custom app' : 'Create custom app'}
+          </h2>
+
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-black/55 dark:text-white/55">
+            Define the fields users fill in, then write a prompt template using placeholders like {'{{topic}}'} or {'{{clientName}}'}.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={onCancel}
+          className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+        >
+          <X size={16} />
+          Close
+        </button>
+      </div>
+
+      <form className="space-y-6" onSubmit={handleSubmit}>
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-black dark:text-white">
+              App name *
+            </span>
+            <input
+              value={form.name}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, name: event.target.value }))
+              }
+              placeholder="Client Follow-up Writer"
+              className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
+            />
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-black dark:text-white">
+              Category
+            </span>
+            <select
+              value={form.category}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  category: event.target.value as SmallAppCategory,
+                }))
+              }
+              className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
+            >
+              {SMALL_APP_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-black dark:text-white">
+              Output type
+            </span>
+            <input
+              value={form.outputType}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  outputType: event.target.value,
+                }))
+              }
+              placeholder="Email draft, Study note, Proposal..."
+              className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
+            />
+          </label>
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-black dark:text-white">
+              Good for
+            </span>
+            <input
+              value={form.goodForText}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  goodForText: event.target.value,
+                }))
+              }
+              placeholder="Study, Revision, Client work"
+              className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
+            />
+          </label>
+        </div>
+
+        <label className="block space-y-2">
+          <span className="text-sm font-medium text-black dark:text-white">
+            Description *
+          </span>
+          <textarea
+            value={form.description}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                description: event.target.value,
+              }))
+            }
+            rows={3}
+            placeholder="What does this app help the user do?"
+            className="w-full resize-none rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
+          />
+        </label>
+
+        <div className="rounded-3xl border border-light-200 bg-light-primary p-5 dark:border-dark-200 dark:bg-dark-primary">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-black dark:text-white">
+                Fields
+              </h3>
+              <p className="mt-1 text-sm text-black/55 dark:text-white/55">
+                These become the inputs shown before running the app.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={addField}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
+            >
+              <Plus size={16} />
+              Add field
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {form.inputs.map((input, index) => (
+              <div
+                key={`${input.id}-${index}`}
+                className="rounded-2xl border border-light-200 bg-light-secondary p-4 dark:border-dark-200 dark:bg-dark-secondary"
+              >
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-black dark:text-white">
+                    Field {index + 1}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => removeField(index)}
+                    disabled={form.inputs.length <= 1}
+                    className="inline-flex items-center gap-2 rounded-full border border-red-500/20 px-3 py-1.5 text-xs font-semibold text-red-500 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Trash2 size={14} />
+                    Remove
+                  </button>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="block space-y-2">
+                    <span className="text-xs font-medium text-black/65 dark:text-white/65">
+                      Label *
+                    </span>
+                    <input
+                      value={input.label}
+                      onChange={(event) =>
+                        updateField(index, {
+                          label: event.target.value,
+                          id:
+                            input.id.startsWith('field-') || !input.id
+                              ? slugifyFieldId(event.target.value)
+                              : input.id,
+                        })
+                      }
+                      placeholder="Topic"
+                      className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
+                    />
+                  </label>
+
+                  <label className="block space-y-2">
+                    <span className="text-xs font-medium text-black/65 dark:text-white/65">
+                      Type
+                    </span>
+                    <select
+                      value={input.type}
+                      onChange={(event) =>
+                        updateField(index, {
+                          type: event.target.value as SmallAppInput['type'],
+                        })
+                      }
+                      className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
+                    >
+                      <option value="text">Text</option>
+                      <option value="textarea">Textarea</option>
+                      <option value="select">Select</option>
+                      <option value="number">Number</option>
+                      <option value="date">Date</option>
+                    </select>
+                  </label>
+
+                  <label className="block space-y-2">
+                    <span className="text-xs font-medium text-black/65 dark:text-white/65">
+                      Placeholder
+                    </span>
+                    <input
+                      value={input.placeholder || ''}
+                      onChange={(event) =>
+                        updateField(index, {
+                          placeholder: event.target.value,
+                        })
+                      }
+                      placeholder="Paste the topic here..."
+                      className="w-full rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
+                    />
+                  </label>
+
+                  <label className="flex items-center gap-3 rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black/70 dark:border-dark-200 dark:bg-dark-primary dark:text-white/70">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(input.required)}
+                      onChange={(event) =>
+                        updateField(index, {
+                          required: event.target.checked,
+                        })
+                      }
+                    />
+                    Required field
+                  </label>
+                </div>
+
+                {input.type === 'select' && (
+                  <label className="mt-3 block space-y-2">
+                    <span className="text-xs font-medium text-black/65 dark:text-white/65">
+                      Select options
+                    </span>
+                    <textarea
+                      value={input.optionsText || ''}
+                      onChange={(event) =>
+                        updateField(index, {
+                          optionsText: event.target.value,
+                        })
+                      }
+                      rows={3}
+                      placeholder={'Beginner\nIntermediate\nAdvanced'}
+                      className="w-full resize-none rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
+                    />
+                  </label>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <label className="block space-y-2">
+          <span className="text-sm font-medium text-black dark:text-white">
+            Prompt template *
+          </span>
+          <textarea
+            value={form.promptTemplate}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                promptTemplate: event.target.value,
+              }))
+            }
+            rows={7}
+            placeholder="Write a clear output using this information: {{topic}}. Level: {{level}}."
+            className="w-full resize-y rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
+          />
+          <p className="text-xs leading-relaxed text-black/45 dark:text-white/45">
+            Use placeholders matching field labels or ids, for example {'{{topic}}'}.
+          </p>
+        </label>
+
+        {error && (
+          <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+            {error}
+          </p>
+        )}
+
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black"
+          >
+            {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+            {isSaving ? 'Saving...' : initialApp ? 'Save custom app' : 'Create custom app'}
+          </button>
+
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex items-center justify-center rounded-full border border-light-200 px-5 py-3 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+};
 
 const buildPromptFromTemplate = (
   app: SmallAppTemplate,
@@ -941,30 +1455,90 @@ export default function AppsPage() {
   const [selectedApp, setSelectedApp] = useState<AppCatalogItem | null>(null);
   const [customApps, setCustomApps] = useState<CustomAppRecord[]>([]);
   const [customAppsError, setCustomAppsError] = useState('');
+  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+  const [editingCustomApp, setEditingCustomApp] =
+    useState<CustomAppRecord | null>(null);
+  const [deletingCustomAppId, setDeletingCustomAppId] = useState('');
 
   const [appOutputs, setAppOutputs] = useState<AutomationOutputItem[]>([]);
 
-  useEffect(() => {
-    const fetchCustomApps = async () => {
-      try {
-        const res = await fetch('/api/apps/custom');
+  const refreshCustomApps = useCallback(async () => {
+    try {
+      const res = await fetch('/api/apps/custom');
 
-        if (!res.ok) {
-          throw new Error('Failed to load custom apps.');
-        }
-
-        const data = await res.json();
-
-        setCustomApps(Array.isArray(data) ? data : []);
-        setCustomAppsError('');
-      } catch (err) {
-        console.error('Failed to fetch custom apps:', err);
-        setCustomAppsError('Custom apps could not be loaded.');
+      if (!res.ok) {
+        throw new Error('Failed to load custom apps.');
       }
-    };
 
-    fetchCustomApps();
+      const data = await res.json();
+
+      setCustomApps(Array.isArray(data) ? data : []);
+      setCustomAppsError('');
+    } catch (err) {
+      console.error('Failed to fetch custom apps:', err);
+      setCustomAppsError('Custom apps could not be loaded.');
+    }
   }, []);
+
+  useEffect(() => {
+    refreshCustomApps();
+  }, [refreshCustomApps]);
+
+  const openCreateCustomApp = () => {
+    setEditingCustomApp(null);
+    setIsBuilderOpen(true);
+  };
+
+  const openEditCustomApp = (app: CustomAppRecord) => {
+    setEditingCustomApp(app);
+    setIsBuilderOpen(true);
+  };
+
+  const closeCustomAppBuilder = () => {
+    setEditingCustomApp(null);
+    setIsBuilderOpen(false);
+  };
+
+  const handleCustomAppSaved = async () => {
+    await refreshCustomApps();
+    closeCustomAppBuilder();
+  };
+
+  const handleDeleteCustomApp = async (app: CustomAppRecord) => {
+    if (!window.confirm(`Delete "${app.name}"? This cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingCustomAppId(app.id);
+    setCustomAppsError('');
+
+    try {
+      const res = await fetch(
+        `/api/apps/custom?id=${encodeURIComponent(app.id)}`,
+        {
+          method: 'DELETE',
+        },
+      );
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message || 'Could not delete custom app.');
+      }
+
+      if (editingCustomApp?.id === app.id) {
+        closeCustomAppBuilder();
+      }
+
+      await refreshCustomApps();
+    } catch (err) {
+      console.error('Failed to delete custom app:', err);
+      setCustomAppsError(
+        err instanceof Error ? err.message : 'Could not delete custom app.',
+      );
+    } finally {
+      setDeletingCustomAppId('');
+    }
+  };
 
   const catalogApps = useMemo(
     () => [
@@ -1022,7 +1596,24 @@ export default function AppsPage() {
 
           </p>
         </div>
+
+        <button
+          type="button"
+          onClick={openCreateCustomApp}
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
+        >
+          <Plus size={16} />
+          Create Custom App
+        </button>
       </header>
+
+      {isBuilderOpen && (
+        <CustomAppBuilder
+          initialApp={editingCustomApp}
+          onCancel={closeCustomAppBuilder}
+          onSaved={handleCustomAppSaved}
+        />
+      )}
 
       <section className="mb-10 grid gap-4 md:grid-cols-3">
         <div className="rounded-3xl border border-light-200 bg-light-secondary p-5 dark:border-dark-200 dark:bg-dark-secondary">
@@ -1059,6 +1650,74 @@ export default function AppsPage() {
           {catalogApps.length} app templates
         </span>
       </section>
+
+      {customApps.length > 0 && (
+        <section className="mb-8 rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-black dark:text-white">
+                Your custom apps
+              </h2>
+              <p className="mt-1 text-sm text-black/55 dark:text-white/55">
+                Edit or delete the apps you created locally.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {customApps.map((app) => (
+              <article
+                key={app.id}
+                className="rounded-2xl border border-light-200 bg-light-primary p-4 dark:border-dark-200 dark:bg-dark-primary"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-black dark:text-white">
+                      {app.name}
+                    </p>
+                    <p className="mt-1 text-xs text-black/45 dark:text-white/45">
+                      {app.category} · {app.outputType}
+                    </p>
+                  </div>
+
+                  <span className="rounded-full bg-black/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-black/45 dark:bg-white/10 dark:text-white/45">
+                    Custom
+                  </span>
+                </div>
+
+                <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-black/55 dark:text-white/55">
+                  {app.description}
+                </p>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openEditCustomApp(app)}
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-3 py-2 text-xs font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
+                  >
+                    <PencilLine size={14} />
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteCustomApp(app)}
+                    disabled={deletingCustomAppId === app.id}
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-red-500/20 px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {deletingCustomAppId === app.id ? (
+                      <Loader2 className="animate-spin" size={14} />
+                    ) : (
+                      <Trash2 size={14} />
+                    )}
+                    Delete
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       {customAppsError && (
         <section className="mb-6 rounded-3xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-500">
