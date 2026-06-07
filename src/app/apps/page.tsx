@@ -847,7 +847,7 @@ const AppRunner = ({
   app,
   onBack,
 }: {
-  app: SmallAppTemplate;
+  app: AppCatalogItem;
   onBack: () => void;
 }) => {
   const { t } = useI18n();
@@ -1212,7 +1212,8 @@ const AppRunner = ({
                   {input.required ? ' *' : ''}
                 </span>
 
-                {input.type === 'textarea' ? (
+                {input.type === 'textarea' ||
+                (app.isCustom && input.type === 'text') ? (
                   <textarea
                     value={values[input.id] || ''}
                     onChange={(event) =>
@@ -1222,8 +1223,8 @@ const AppRunner = ({
                       }))
                     }
                     placeholder={input.placeholder}
-                    rows={6}
-                    className="w-full resize-none rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
+                    rows={input.type === 'textarea' ? 8 : 4}
+                    className="min-h-[120px] w-full resize-y rounded-2xl border border-light-200 bg-light-primary px-4 py-3 text-sm leading-relaxed text-black outline-none transition focus:border-black dark:border-dark-200 dark:bg-dark-primary dark:text-white dark:focus:border-white"
                   />
                 ) : input.type === 'select' ? (
                   <select
@@ -1551,13 +1552,17 @@ export default function AppsPage() {
     }
   };
 
-  const catalogApps = useMemo(
-    () => [
-      ...customApps.map(mapCustomAppToTemplate),
-      ...SMALL_APP_TEMPLATES,
-    ],
+  const customCatalogApps = useMemo(
+    () => customApps.map(mapCustomAppToTemplate),
     [customApps],
   );
+
+  const builtInCatalogApps = useMemo(
+    () => SMALL_APP_TEMPLATES as AppCatalogItem[],
+    [],
+  );
+
+  const totalAppCount = customCatalogApps.length + builtInCatalogApps.length;
 
   useEffect(() => {
     const refreshAppOutputs = () => {
@@ -1658,23 +1663,60 @@ export default function AppsPage() {
       <section className="mb-8 flex flex-wrap items-center gap-3 text-sm text-black/45 dark:text-white/45">
         <span className="inline-flex items-center gap-2">
           <LayoutTemplate size={16} />
-          {catalogApps.length} {t('appsPage.appTemplates')}
+          {totalAppCount} {t('appsPage.appTemplates')}
         </span>
       </section>
 
-      {customApps.length > 0 && (
-        <section className="mb-8 rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-black dark:text-white">
-                {t('appsPage.yourCustomApps')}
-              </h2>
-              <p className="mt-1 text-sm text-black/55 dark:text-white/55">
-                {t('appsPage.yourCustomAppsDescription')}
-              </p>
-            </div>
+      <section className="mb-8 rounded-3xl border border-light-200 bg-light-secondary p-6 dark:border-dark-200 dark:bg-dark-secondary">
+        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-xl font-semibold text-black dark:text-white">
+              {t('appsPage.yourCustomApps')}
+            </h2>
+            <p className="mt-1 text-sm text-black/55 dark:text-white/55">
+              {customApps.length > 0
+                ? t('appsPage.yourCustomAppsDescription')
+                : t('appsPage.noCustomAppsDescription')}
+            </p>
           </div>
 
+          <button
+            type="button"
+            onClick={openCreateCustomApp}
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-4 py-2 text-sm font-semibold text-black/65 transition hover:bg-light-primary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-primary dark:hover:text-white"
+          >
+            <Plus size={16} />
+            {customApps.length > 0
+              ? t('appsPage.createCustomApp')
+              : t('appsPage.createFirstCustomApp')}
+          </button>
+        </div>
+
+        {customApps.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-light-200 bg-light-primary p-6 text-center dark:border-dark-200 dark:bg-dark-primary">
+            <LayoutTemplate
+              size={28}
+              className="mx-auto text-black/35 dark:text-white/35"
+            />
+
+            <h3 className="mt-3 text-lg font-semibold text-black dark:text-white">
+              {t('appsPage.noCustomAppsTitle')}
+            </h3>
+
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-black/55 dark:text-white/55">
+              {t('appsPage.noCustomAppsDescription')}
+            </p>
+
+            <button
+              type="button"
+              onClick={openCreateCustomApp}
+              className="mt-5 inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
+            >
+              <Plus size={16} />
+              {t('appsPage.createFirstCustomApp')}
+            </button>
+          </div>
+        ) : (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {customApps.map((app) => (
               <article
@@ -1703,6 +1745,15 @@ export default function AppsPage() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     type="button"
+                    onClick={() => setSelectedApp(mapCustomAppToTemplate(app))}
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-3 py-2 text-xs font-semibold text-white transition hover:scale-[1.01] dark:bg-white dark:text-black"
+                  >
+                    <Play size={14} />
+                    {t('appsPage.open')}
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => openEditCustomApp(app)}
                     className="inline-flex items-center justify-center gap-2 rounded-full border border-light-200 px-3 py-2 text-xs font-semibold text-black/65 transition hover:bg-light-secondary hover:text-black dark:border-dark-200 dark:text-white/65 dark:hover:bg-dark-secondary dark:hover:text-white"
                   >
@@ -1727,8 +1778,8 @@ export default function AppsPage() {
               </article>
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       {customAppsError && (
         <section className="mb-6 rounded-3xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-500">
@@ -1736,8 +1787,17 @@ export default function AppsPage() {
         </section>
       )}
 
+      <section className="mb-5">
+        <h2 className="text-xl font-semibold text-black dark:text-white">
+          {t('appsPage.builtInTemplates')}
+        </h2>
+        <p className="mt-1 text-sm text-black/55 dark:text-white/55">
+          {t('appsPage.builtInTemplatesDescription')}
+        </p>
+      </section>
+
       <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {catalogApps.map((app) => (
+        {builtInCatalogApps.map((app) => (
           <AppCard key={app.id} app={app} onSelect={setSelectedApp} />
         ))}
       </section>
