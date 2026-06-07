@@ -150,6 +150,14 @@ const splitListText = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const getFieldVariableName = (field: BuilderFieldDraft, index: number) => {
+  return (
+    slugifyFieldId(field.id) ||
+    slugifyFieldId(field.label) ||
+    `field-${index + 1}`
+  );
+};
+
 const CustomAppBuilder = ({
   initialApp,
   onCancel,
@@ -543,6 +551,38 @@ const CustomAppBuilder = ({
                 )}
               </div>
             ))}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-light-200 bg-light-primary p-5 dark:border-dark-200 dark:bg-dark-primary">
+          <h3 className="text-lg font-semibold text-black dark:text-white">
+            {t('appsPage.availableVariables')}
+          </h3>
+
+          <p className="mt-1 text-sm text-black/55 dark:text-white/55">
+            {t('appsPage.availableVariablesDescription')}
+          </p>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {form.inputs
+              .map((field, index) => getFieldVariableName(field, index))
+              .filter(Boolean).length > 0 ? (
+              form.inputs
+                .map((field, index) => getFieldVariableName(field, index))
+                .filter(Boolean)
+                .map((variableName) => (
+                  <code
+                    key={variableName}
+                    className="rounded-full border border-light-200 bg-light-secondary px-3 py-1.5 text-xs font-semibold text-black/65 dark:border-dark-200 dark:bg-dark-secondary dark:text-white/65"
+                  >
+                    {`{{${variableName}}}`}
+                  </code>
+                ))
+            ) : (
+              <p className="text-sm text-black/45 dark:text-white/45">
+                {t('appsPage.noVariablesYet')}
+              </p>
+            )}
           </div>
         </div>
 

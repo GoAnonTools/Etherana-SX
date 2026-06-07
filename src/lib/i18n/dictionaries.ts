@@ -291,8 +291,8 @@ export const dictionaries = {
       label: 'Label',
       fieldLabelPlaceholder: 'Topic',
       type: 'Type',
-      fieldTypeText: 'Text',
-      fieldTypeTextarea: 'Textarea',
+      fieldTypeText: 'Short text',
+      fieldTypeTextarea: 'Long text',
       fieldTypeSelect: 'Select',
       fieldTypeNumber: 'Number',
       fieldTypeDate: 'Date',
@@ -323,6 +323,20 @@ export const dictionaries = {
       edit: 'Edit',
       delete: 'Delete',
       appTemplates: 'app templates',
+
+      noCustomAppsTitle: 'No custom apps yet',
+      noCustomAppsDescription:
+        'Create your first custom app to turn your own repeatable prompts into reusable tools.',
+      createFirstCustomApp: 'Create your first custom app',
+      builtInTemplates: 'Built-in templates',
+      builtInTemplatesDescription:
+        'Start from ready-made apps for business, content, study, client work, and personal tasks.',
+      open: 'Open',
+
+      availableVariables: 'Available variables',
+      availableVariablesDescription:
+        'Use these variables in the prompt template to insert the values filled by the user.',
+      noVariablesYet: 'Add field labels to generate variables.',
 },
     automationsPage: {
       automation: 'Automation',
@@ -986,8 +1000,8 @@ export const dictionaries = {
       label: 'Libellé',
       fieldLabelPlaceholder: 'Sujet',
       type: 'Type',
-      fieldTypeText: 'Texte',
-      fieldTypeTextarea: 'Zone de texte',
+      fieldTypeText: 'Texte court',
+      fieldTypeTextarea: 'Texte long',
       fieldTypeSelect: 'Sélection',
       fieldTypeNumber: 'Nombre',
       fieldTypeDate: 'Date',
@@ -1019,6 +1033,20 @@ export const dictionaries = {
       edit: 'Modifier',
       delete: 'Supprimer',
       appTemplates: 'modèles d’apps',
+
+      noCustomAppsTitle: 'Aucune app personnalisée',
+      noCustomAppsDescription:
+        'Créez votre première app personnalisée pour transformer vos prompts réutilisables en outils simples.',
+      createFirstCustomApp: 'Créer votre première app',
+      builtInTemplates: 'Modèles intégrés',
+      builtInTemplatesDescription:
+        'Démarrez avec des apps prêtes à l’emploi pour le business, le contenu, les études, le travail client et les tâches personnelles.',
+      open: 'Ouvrir',
+
+      availableVariables: 'Variables disponibles',
+      availableVariablesDescription:
+        'Utilisez ces variables dans le prompt pour insérer les valeurs remplies par l’utilisateur.',
+      noVariablesYet: 'Ajoutez des libellés de champs pour générer des variables.',
 },
     automationsPage: {
       automation: 'Automatisation',
