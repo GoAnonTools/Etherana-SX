@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from 'next-themes';
+import { useEtheranaTheme } from './ThemeContext';
 import { useCallback, useEffect, useState } from 'react';
 import Select from '../ui/Select';
 
@@ -9,7 +9,7 @@ type Theme = 'dark' | 'light' | 'system';
 const ThemeSwitcher = ({ className }: { className?: string }) => {
   const [mounted, setMounted] = useState(false);
 
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme } = useEtheranaTheme();
 
   const isTheme = useCallback((t: Theme) => t === theme, [theme]);
 

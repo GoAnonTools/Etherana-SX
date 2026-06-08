@@ -2,7 +2,7 @@
 
 import { CheckIcon, CopyIcon } from '@phosphor-icons/react';
 import React, { useEffect, useMemo, useState } from 'react';
-import { useTheme } from 'next-themes';
+import { useEtheranaTheme } from '@/components/theme/ThemeContext';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import darkTheme from './CodeBlockDarkTheme';
 import lightTheme from './CodeBlockLightTheme';
@@ -17,7 +17,7 @@ const CodeBlock = ({
   language: string;
   children: React.ReactNode;
 }) => {
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme } = useEtheranaTheme();
   const [mounted, setMounted] = useState(false);
 
   const [copied, setCopied] = useState(false);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTheme } from 'next-themes';
+import { useEtheranaTheme } from '@/components/theme/ThemeContext';
 import { UIConfigField } from '@/lib/config/types';
 import { locales, type Locale } from '@/lib/i18n/dictionaries';
 import { useI18n } from '@/lib/i18n/useI18n';
@@ -22,7 +22,7 @@ const applyThemeStyle = (style: AppThemeStyle) => {
 
 const ThemeStyleSetting = () => {
   const [style, setStyle] = useState<AppThemeStyle>('dark');
-  const { setTheme } = useTheme();
+  const { setTheme } = useEtheranaTheme();
   const { t } = useI18n();
 
   useEffect(() => {

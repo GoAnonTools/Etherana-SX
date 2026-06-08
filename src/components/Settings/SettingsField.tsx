@@ -8,7 +8,7 @@ import {
 import { useState } from 'react';
 import Select from '../ui/Select';
 import { toast } from 'sonner';
-import { useTheme } from 'next-themes';
+import { useEtheranaTheme } from '@/components/theme/ThemeContext';
 import { Loader2 } from 'lucide-react';
 import { Switch } from '@headlessui/react';
 
@@ -30,7 +30,7 @@ const SettingsSelect = ({
   dataAdd: string;
 }) => {
   const [loading, setLoading] = useState(false);
-  const { setTheme } = useTheme();
+  const { setTheme } = useEtheranaTheme();
 
   const handleSave = async (newValue: any) => {
     setLoading(true);
