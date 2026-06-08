@@ -55,14 +55,16 @@ COPY searxng/limiter.toml /etc/searxng/limiter.toml
 COPY searxng/uwsgi.ini /etc/searxng/uwsgi.ini
 RUN chown -R searxng:searxng /etc/searxng
 
+# Pin SearXNG by full commit SHA for reproducible builds.
+# Use a tag/branch only if SearXNG publishes one you explicitly want.
 ARG SEARXNG_REF=86903a2c666da974462264060fdd80d1f09dd2ee
 
 USER searxng
 
-RUN git clone --filter=blob:none "https://github.com/searxng/searxng" \
+RUN git clone --filter=blob:none --no-checkout "https://github.com/searxng/searxng" \
                    "/usr/local/searxng/searxng-src" && \
     cd "/usr/local/searxng/searxng-src" && \
-    git checkout "$SEARXNG_REF"
+    git -c advice.detachedHead=false checkout --detach "$SEARXNG_REF"
 
 RUN python3 -m venv "/usr/local/searxng/searx-pyenv"
 RUN "/usr/local/searxng/searx-pyenv/bin/pip" install --upgrade pip setuptools wheel pyyaml msgspec typing_extensions
