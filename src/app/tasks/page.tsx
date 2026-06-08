@@ -71,6 +71,7 @@ import {
   writeCustomAutomations,
   writeHiddenTemplateIds,
 } from './helpers';
+import { AutomationModeStatusPills } from './AutomationModeStatusPills';
 import type {
   AutomationMode,
   AutomationOutputItem,
@@ -518,26 +519,6 @@ const AutomationBuilder = ({
         </div>
       </form>
     </section>
-  );
-};
-
-const AutomationModeStatusPills = ({ automation }: { automation: AutomationTemplate }) => {
-  const { t } = useI18n();
-  const modeLabel = getAutomationModeLabel(automation, t);
-  const statusLabel = getAutomationStatusLabel(automation, t);
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-medium text-black/45 dark:bg-dark-primary dark:text-white/45">
-        {modeLabel}
-      </span>
-      <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-medium text-black/45 dark:bg-dark-primary dark:text-white/45">
-        {statusLabel}
-      </span>
-      <span className="rounded-full bg-light-primary px-3 py-1 text-xs font-medium text-black/45 dark:bg-dark-primary dark:text-white/45">
-        {getAutomationScheduleLabel(automation, t)}
-      </span>
-    </div>
   );
 };
 
