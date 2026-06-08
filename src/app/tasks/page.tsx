@@ -29,511 +29,59 @@ import {
   Workflow,
   X,
   Zap,
-  type LucideIcon,
 } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   getAutomationStorageChangedEventName,
   pullAutomationStorageFromDatabase,
-  readAutomationOutputs as readVaultAutomationOutputs,
-  readAutomationRunHistory as readVaultAutomationRunHistory,
-  readCustomAutomations as readVaultCustomAutomations,
-  readHiddenTemplateIds as readVaultHiddenTemplateIds,
-  writeAutomationOutputs as writeVaultAutomationOutputs,
-  writeAutomationRunHistory as writeVaultAutomationRunHistory,
-  writeCustomAutomations as writeVaultCustomAutomations,
-  writeHiddenTemplateIds as writeVaultHiddenTemplateIds,
 } from '@/lib/vault/localVault';
-import { AUTOMATION_TEMPLATES } from '@/lib/automations/catalog';
-import { computeNextRunAt } from '@/lib/automations/schedule';
 import { useI18n } from '@/lib/i18n/useI18n';
+import {
+  AUTOMATIONS,
+  DEFAULT_OUTPUT_DESTINATION,
+  DEFAULT_OUTPUT_DESTINATION_LABEL,
+  DEFAULT_OUTPUT_TYPE,
+  NEW_SPACE_DESTINATION,
+  OUTPUT_TYPES,
+  WEEKDAY_OPTIONS,
+  buildAutomationRunPrompt,
+  getAutomationDisplayKey,
+  getAutomationFromUrl,
+  getDefaultScheduleType,
+  getAutomationMode,
+  getAutomationModeLabel,
+  getAutomationOutputDestination,
+  getAutomationOutputDestinationLabel,
+  getAutomationOutputType,
+  getAutomationScheduleLabel,
+  getAutomationScheduleType,
+  getAutomationStatus,
+  getAutomationStatusLabel,
+  getNextRunLabel,
+  isAutomationPaused,
+  normalizeScheduleType,
+  normalizeStoredAutomationForRuntime,
+  readAutomationOutputs,
+  readAutomationRunHistory,
+  readCustomAutomations,
+  readHiddenTemplateIds,
+  toAutomationTemplate,
+  writeAutomationOutputs,
+  writeAutomationRunHistory,
+  writeCustomAutomations,
+  writeHiddenTemplateIds,
+} from './helpers';
+import type {
+  AutomationMode,
+  AutomationOutputItem,
+  AutomationRunHistoryItem,
+  AutomationScheduleType,
+  AutomationSpace,
+  AutomationStatus,
+  AutomationTemplate,
+  StoredAutomation,
+} from './types';
 
-
-type AutomationMode = 'manual' | 'auto';
-type AutomationStatus = 'active' | 'paused';
-type AutomationScheduleType = 'manual' | 'daily' | 'weekly' | 'monthly';
-
-interface AutomationTemplate {
-  id: string;
-  name: string;
-  icon: LucideIcon;
-  category: string;
-  purpose: string;
-  frequency: string;
-  prompt: string;
-  output: string;
-  outputType?: string;
-  outputDestination?: string;
-  outputDestinationLabel?: string;
-  goodFor: string[];
-  mode?: AutomationMode;
-  status?: AutomationStatus;
-  scheduleType?: AutomationScheduleType;
-  scheduleTime?: string;
-  scheduleDays?: string[];
-  scheduleDayOfMonth?: number;
-  nextRunAt?: string;
-  lastRunAt?: string;
-  isCustom?: boolean;
-}
-
-interface StoredAutomation {
-  id: string;
-  name: string;
-  category: string;
-  purpose: string;
-  frequency: string;
-  prompt: string;
-  output: string;
-  outputType?: string;
-  outputDestination?: string;
-  outputDestinationLabel?: string;
-  goodFor: string[];
-  mode?: AutomationMode;
-  status?: AutomationStatus;
-  scheduleType?: AutomationScheduleType;
-  scheduleTime?: string;
-  scheduleDays?: string[];
-  scheduleDayOfMonth?: number;
-  nextRunAt?: string;
-  lastRunAt?: string;
-  createdAt: string;
-}
-
-interface AutomationRunHistoryItem {
-  id: string;
-  automationId: string;
-  automationName: string;
-  startedAt: string;
-  mode: AutomationMode;
-  status: 'started';
-  prompt: string;
-  expectedOutput: string;
-  outputType?: string;
-  outputDestination?: string;
-  outputDestinationLabel?: string;
-  outputId?: string;
-}
-
-interface AutomationSpace {
-  id: string;
-  name: string;
-  description?: string;
-}
-
-interface AutomationOutputItem {
-  id: string;
-  automationId: string;
-  automationName: string;
-  title: string;
-  outputType: string;
-  outputDestination: string;
-  outputDestinationLabel: string;
-  status: 'drafting' | 'ready';
-  createdAt: string;
-  runId: string;
-  prompt: string;
-  expectedOutput: string;
-  content?: string;
-}
-
-const CUSTOM_AUTOMATIONS_STORAGE_KEY = 'etherana.customAutomations.v1';
-const HIDDEN_TEMPLATE_AUTOMATION_IDS_STORAGE_KEY =
-  'etherana.hiddenTemplateAutomationIds.v1';
-const AUTOMATION_RUN_HISTORY_STORAGE_KEY =
-  'etherana.automationRunHistory.v1';
-const AUTOMATION_OUTPUTS_STORAGE_KEY = 'etherana.automationOutputs.v1';
-const DEFAULT_OUTPUT_TYPE = 'Document';
-const DEFAULT_OUTPUT_DESTINATION = 'automation';
-const NEW_SPACE_DESTINATION = '__new_space__';
-const DEFAULT_OUTPUT_DESTINATION_LABEL = 'Automation outputs';
-
-const OUTPUT_TYPES = [
-  'Article',
-  'Report',
-  'Summary',
-  'Dashboard',
-  'Spreadsheet',
-  'Presentation',
-  'Task list',
-  'Research brief',
-  'Newsletter',
-  'Content calendar',
-  'Action plan',
-  'Review',
-  'Document',
-];
-
-const getAutomationOutputType = (automation: AutomationTemplate) => {
-  return automation.outputType || DEFAULT_OUTPUT_TYPE;
-};
-
-const getAutomationOutputDestination = (automation: AutomationTemplate) => {
-  return automation.outputDestination || DEFAULT_OUTPUT_DESTINATION;
-};
-
-const getAutomationOutputDestinationLabel = (
-  automation: AutomationTemplate,
-) => {
-  return automation.outputDestinationLabel || DEFAULT_OUTPUT_DESTINATION_LABEL;
-};
-
-
-const WEEKDAY_OPTIONS = [
-  { value: 'MO', labelKey: 'automationsPage.mon' },
-  { value: 'TU', labelKey: 'automationsPage.tue' },
-  { value: 'WE', labelKey: 'automationsPage.wed' },
-  { value: 'TH', labelKey: 'automationsPage.thu' },
-  { value: 'FR', labelKey: 'automationsPage.fri' },
-  { value: 'SA', labelKey: 'automationsPage.sat' },
-  { value: 'SU', labelKey: 'automationsPage.sun' },
-] as const;
-
-const getDefaultScheduleType = (frequency: string): AutomationScheduleType => {
-  const normalized = frequency.toLowerCase();
-
-  if (normalized.includes('daily')) return 'daily';
-
-  if (
-    normalized.includes('weekly') ||
-    normalized.includes('week') ||
-    normalized.includes('monday') ||
-    normalized.includes('tuesday') ||
-    normalized.includes('wednesday') ||
-    normalized.includes('thursday') ||
-    normalized.includes('friday') ||
-    normalized.includes('saturday') ||
-    normalized.includes('sunday')
-  ) {
-    return 'weekly';
-  }
-
-  if (normalized.includes('monthly') || normalized.includes('month')) return 'monthly';
-
-  return 'manual';
-};
-
-const normalizeScheduleType = (
-  value?: string,
-  fallbackFrequency = 'Manual',
-): AutomationScheduleType => {
-  const normalized = (value || '').toLowerCase();
-
-  if (normalized === 'daily') return 'daily';
-  if (normalized === 'weekly') return 'weekly';
-  if (normalized === 'monthly') return 'monthly';
-  if (normalized === 'manual') return 'manual';
-
-  return getDefaultScheduleType(fallbackFrequency);
-};
-
-const getDefaultScheduleDays = (frequency: string) => {
-  const normalized = frequency.toLowerCase();
-
-  if (normalized.includes('monday')) return ['MO'];
-  if (normalized.includes('tuesday')) return ['TU'];
-  if (normalized.includes('wednesday')) return ['WE'];
-  if (normalized.includes('thursday')) return ['TH'];
-  if (normalized.includes('friday')) return ['FR'];
-  if (normalized.includes('saturday')) return ['SA'];
-  if (normalized.includes('sunday')) return ['SU'];
-
-  return ['MO'];
-};
-
-const getAutomationScheduleType = (automation: AutomationTemplate): AutomationScheduleType => {
-  return normalizeScheduleType(automation.scheduleType, automation.frequency);
-};
-
-const getAutomationScheduleLabel = (
-  automation: AutomationTemplate,
-  t?: (key: any) => string,
-) => {
-  const translate = t ?? ((key: string) => key);
-  const scheduleType = getAutomationScheduleType(automation);
-  const time = automation.scheduleTime || '09:00';
-
-  if (scheduleType === 'daily') {
-    return `${translate('automationsPage.dailyAt')} ${time}`;
-  }
-
-  if (scheduleType === 'weekly') {
-    const days =
-      automation.scheduleDays && automation.scheduleDays.length > 0
-        ? automation.scheduleDays
-        : getDefaultScheduleDays(automation.frequency);
-    const labels = days
-      .map((day) => {
-        const option = WEEKDAY_OPTIONS.find((item) => item.value === day);
-        return option ? translate(option.labelKey) : day;
-      })
-      .join(', ');
-    return `${translate('automationsPage.weeklyOn')} ${labels} ${translate(
-      'automationsPage.at',
-    )} ${time}`;
-  }
-
-  if (scheduleType === 'monthly') {
-    return `${translate('automationsPage.monthlyOnDay')} ${
-      automation.scheduleDayOfMonth || 1
-    } ${translate('automationsPage.at')} ${time}`;
-  }
-
-  return automation.frequency || translate('automationsPage.manual');
-};
-
-const getNextRunLabel = (
-  automation: AutomationTemplate,
-  t?: (key: any) => string,
-) => {
-  const translate = t ?? ((key: string) => key);
-
-  if (getAutomationMode(automation) !== 'auto') {
-    return translate('automationsPage.onlyWhenRun');
-  }
-
-  if (getAutomationStatus(automation) === 'paused') {
-    return translate('automationsPage.paused');
-  }
-
-  return automation.nextRunAt
-    ? new Date(automation.nextRunAt).toLocaleString()
-    : translate('automationsPage.notCalculatedYet');
-};
-
-const getAutomationMode = (automation: AutomationTemplate): AutomationMode => {
-  return automation.mode || 'manual';
-};
-
-const getAutomationStatus = (automation: AutomationTemplate): AutomationStatus => {
-  return automation.status || 'active';
-};
-
-const getAutomationModeLabel = (
-  automation: AutomationTemplate,
-  t?: (key: any) => string,
-) => {
-  if (getAutomationMode(automation) === 'auto') {
-    return t ? t('automationsPage.autoRun') : 'Auto-run';
-  }
-
-  return t ? t('automationsPage.manual') : 'Manual';
-};
-
-const getAutomationStatusLabel = (
-  automation: AutomationTemplate,
-  t?: (key: any) => string,
-) => {
-  if (getAutomationStatus(automation) === 'paused') {
-    return t ? t('automationsPage.paused') : 'Paused';
-  }
-
-  return t ? t('automationsPage.active') : 'Active';
-};
-
-const isAutomationPaused = (automation: AutomationTemplate) => {
-  return getAutomationStatus(automation) === 'paused';
-};
-
-const AUTOMATIONS: AutomationTemplate[] = AUTOMATION_TEMPLATES.map(
-  (automation) => ({
-    id: automation.id,
-    name: automation.name,
-    icon: automation.icon,
-    category: automation.category,
-    purpose: automation.description,
-    frequency: automation.defaultFrequency,
-    prompt: automation.prompt,
-    output: automation.outputDescription,
-    outputType: automation.outputType,
-    outputDestination: DEFAULT_OUTPUT_DESTINATION,
-    outputDestinationLabel:
-      automation.saveDestination === 'library-and-space'
-        ? 'Library + Space'
-        : automation.saveDestination === 'space'
-          ? 'Selected Space'
-          : 'Library',
-    goodFor: automation.goodFor,
-    mode: automation.defaultMode,
-    status: 'active',
-    scheduleType: getDefaultScheduleType(automation.defaultFrequency),
-    scheduleTime: '09:00',
-    scheduleDays: ['MO'],
-    scheduleDayOfMonth: 1,
-  }),
-);
-
-const getAutomationFromUrl = () => {
-  if (typeof window === 'undefined') return undefined;
-
-  const params = new URLSearchParams(window.location.search);
-  return params.get('automation') ?? undefined;
-};
-
-const normalizeStoredAutomationForRuntime = (
-  automation: StoredAutomation,
-): StoredAutomation => {
-  const scheduleType = normalizeScheduleType(
-    automation.scheduleType,
-    automation.frequency,
-  );
-
-  const mode = automation.mode === 'auto' ? 'auto' : 'manual';
-  const status = automation.status === 'paused' ? 'paused' : 'active';
-  const scheduleTime =
-    scheduleType === 'manual' ? undefined : automation.scheduleTime ?? '09:00';
-  const scheduleDays =
-    scheduleType === 'weekly'
-      ? automation.scheduleDays && automation.scheduleDays.length > 0
-        ? automation.scheduleDays
-        : getDefaultScheduleDays(automation.frequency)
-      : [];
-  const scheduleDayOfMonth =
-    scheduleType === 'monthly' ? automation.scheduleDayOfMonth ?? 1 : undefined;
-
-  return {
-    ...automation,
-    mode,
-    status,
-    scheduleType,
-    scheduleTime,
-    scheduleDays,
-    scheduleDayOfMonth,
-    nextRunAt: computeNextRunAt({
-      mode,
-      status,
-      scheduleType,
-      scheduleTime,
-      scheduleDays,
-      scheduleDayOfMonth,
-    }),
-  };
-};
-
-const getAutomationDisplayKey = (name: string) => {
-  return name
-    .replace(/\s+Copy$/i, '')
-    .replace(/\s+Custom$/i, '')
-    .trim()
-    .toLowerCase();
-};
-
-const readCustomAutomations = (): StoredAutomation[] => {
-  return readVaultCustomAutomations();
-};
-
-const writeCustomAutomations = (automations: StoredAutomation[]) => {
-  writeVaultCustomAutomations(automations);
-};
-
-const readHiddenTemplateIds = (): string[] => {
-  return readVaultHiddenTemplateIds();
-};
-
-const writeHiddenTemplateIds = (ids: string[]) => {
-  writeVaultHiddenTemplateIds(ids);
-};
-
-const readAutomationRunHistory = (): AutomationRunHistoryItem[] => {
-  return readVaultAutomationRunHistory();
-};
-
-const writeAutomationRunHistory = (runs: AutomationRunHistoryItem[]) => {
-  writeVaultAutomationRunHistory(runs);
-};
-
-const readAutomationOutputs = (): AutomationOutputItem[] => {
-  return readVaultAutomationOutputs();
-};
-
-const writeAutomationOutputs = (outputs: AutomationOutputItem[]) => {
-  writeVaultAutomationOutputs(outputs);
-};
-
-const toAutomationTemplate = (
-  automation: StoredAutomation,
-): AutomationTemplate => {
-  return {
-    ...automation,
-    icon: Workflow,
-    isCustom: true,
-    category: automation.category || 'Custom',
-    purpose:
-      automation.purpose ||
-      `Run a custom workflow for ${automation.name}.`,
-    frequency: automation.frequency || 'Manual',
-    output:
-      automation.output ||
-      'A reusable deliverable generated by the agent.',
-    outputType: automation.outputType || DEFAULT_OUTPUT_TYPE,
-    outputDestination:
-      automation.outputDestination || DEFAULT_OUTPUT_DESTINATION,
-    outputDestinationLabel:
-      automation.outputDestinationLabel || DEFAULT_OUTPUT_DESTINATION_LABEL,
-    goodFor:
-      automation.goodFor.length > 0
-        ? automation.goodFor
-        : ['Custom workflow', 'Recurring work', 'Agent execution'],
-  };
-};
-
-const buildAutomationRunPrompt = (automation: AutomationTemplate) => {
-  return `You are Etherana SX running an automation workflow.
-
-Automation name:
-${automation.name}
-
-Category:
-${automation.category}
-
-Objective:
-${automation.purpose}
-
-Expected output:
-${automation.output}
-
-Output type:
-${getAutomationOutputType(automation)}
-
-Save destination:
-${getAutomationOutputDestinationLabel(automation)}
-
-Schedule:
-${automation.frequency}
-
-User request:
-${automation.prompt}
-
-Execution rules:
-1. Do the work as an agent, not as a passive chatbot.
-2. If useful context is available from the current chat, files, spaces, sources, or search tools, use it.
-3. If no personal workspace context is available, do not stop and do not answer “I could not find relevant information.”
-4. When context is missing, make reasonable assumptions, clearly label them, and still produce a useful starter output.
-5. If the workflow requires fresh information, perform research before writing the final answer.
-6. Structure the final answer as a deliverable the user can reuse.
-7. Treat the final deliverable as an Output, not just a chat answer.
-8. At the end, mention where the output should be saved.
-9. End with a short “Next improvement” section explaining what data would make the automation smarter next time.
-
-Return the result in this format:
-
-# ${automation.name}
-
-## Summary
-Give the short result.
-
-## Main Output
-Produce the actual useful deliverable.
-
-## Assumptions Used
-List assumptions only if context was missing.
-
-## Recommended Next Actions
-Give 3 to 5 concrete next actions.
-
-## Next Improvement
-Explain what Etherana should remember, connect, or collect to make this automation better.`;
-};
 
 const AutomationBuilder = ({
   editingAutomation,
