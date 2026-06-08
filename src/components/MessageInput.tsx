@@ -13,7 +13,7 @@ import { useI18n } from '@/lib/i18n/useI18n';
 
 const MessageInput = () => {
   const { t } = useI18n();
-  const { loading, sendMessage } = useChat();
+  const { loading, sendMessage, searchMode } = useChat();
 
   const [message, setMessage] = useState('');
   const [textareaRows, setTextareaRows] = useState(1);
@@ -110,7 +110,7 @@ const MessageInput = () => {
       <div className="flex flex-row items-center justify-between w-full pt-2 mt-2 border-t border-light-200/60 dark:border-dark-200/60">
         <div className="flex flex-row items-center gap-2">
           <SearchModeToggle />
-          <Optimization />
+          {searchMode === 'agent' && <Optimization />}
         </div>
 
         <div className="flex flex-row items-center space-x-1">

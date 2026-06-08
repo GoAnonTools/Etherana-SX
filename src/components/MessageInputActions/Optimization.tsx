@@ -1,4 +1,4 @@
-import { ChevronDown, Sliders, Star, Zap } from 'lucide-react';
+import { ChevronDown, Sliders, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Popover,
@@ -12,21 +12,15 @@ import { AnimatePresence, motion } from 'motion/react';
 
 const OptimizationModes = [
   {
-    key: 'speed',
-    title: 'Speed',
-    description: 'Prioritize speed and get the quickest possible answer.',
-    icon: <Zap size={16} className="text-[#FF9800]" />,
-  },
-  {
     key: 'balanced',
-    title: 'Balanced',
-    description: 'Find the right balance between speed and accuracy',
+    title: 'Standard',
+    description: 'Use a clear agent answer with a good balance of speed and depth.',
     icon: <Sliders size={16} className="text-[#4CAF50]" />,
   },
   {
     key: 'quality',
-    title: 'Quality',
-    description: 'Get the most thorough and accurate answer',
+    title: 'Deep',
+    description: 'Use a deeper agent answer with more thorough reasoning and source use.',
     icon: (
       <Star
         size={16}
@@ -50,7 +44,7 @@ const Optimization = () => {
             <div className="flex flex-row items-center space-x-1">
               {
                 OptimizationModes.find((mode) => mode.key === optimizationMode)
-                  ?.icon
+                  ?.icon ?? OptimizationModes[0].icon
               }
               <ChevronDown
                 size={16}
