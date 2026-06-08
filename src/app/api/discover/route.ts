@@ -450,6 +450,10 @@ const normalizeFilterAndDedupe = (results: any[], topic?: Topic) =>
     (item) => !isBadDiscoverResult(item, topic),
   );
 
+// Soft fallback intentionally skips the stricter bad-result filter used by
+// normalizeFilterAndDedupe. Broad/rescue searches are already fallback paths;
+// keeping them softer helps avoid empty Discover topics when fresh SearXNG
+// results are sparse or noisy.
 const normalizeAndDedupeSoft = (results: any[]) => normalizeAndDedupe(results);
 
 export const GET = async (req: Request) => {
