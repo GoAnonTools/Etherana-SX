@@ -1629,11 +1629,10 @@ type WidenDictionaryStrings<T> = {
 
 type EnglishDictionaryShape = WidenDictionaryStrings<typeof dictionaries.en>;
 
-const assertDictionaryShape = <T extends EnglishDictionaryShape>(
-  dictionary: T,
-) => dictionary;
-
-assertDictionaryShape(dictionaries.fr);
+// Compile-time guard: French must contain the same nested keys as English.
+// Values are widened to string so translations do not need to match English text.
+const _frTypeCheck: EnglishDictionaryShape = dictionaries.fr;
+void _frTypeCheck;
 
 export type TranslationKey =
   | `common.${keyof typeof dictionaries.en.common}`
