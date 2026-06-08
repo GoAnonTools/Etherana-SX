@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import type { Discover } from '@/app/discover/page';
 import { useI18n } from '@/lib/i18n/useI18n';
@@ -28,7 +29,7 @@ const getSafeThumbnailUrl = (thumbnail?: string | null) => {
       return null;
     }
 
-    return parsedUrl.href;
+    return `/api/discover/image?url=${encodeURIComponent(parsedUrl.href)}`;
   } catch {
     return null;
   }
@@ -71,11 +72,12 @@ const MajorThumbnail = ({ item }: { item: Discover }) => {
   return (
     <div className="relative h-full w-80 flex-shrink-0 overflow-hidden rounded-2xl bg-light-200 dark:bg-dark-200">
       {imageUrl ? (
-        <img
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        <Image
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
           src={imageUrl}
           alt={item.title}
-          loading="lazy"
+          fill
+          sizes="320px"
           onError={() => setImageFailed(true)}
         />
       ) : (

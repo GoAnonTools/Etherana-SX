@@ -5,6 +5,11 @@ import pkg from './package.json' with { type: 'json' };
 const nextConfig = {
   output: 'standalone',
   images: {
+    localPatterns: [
+      {
+        pathname: '/api/discover/image',
+      },
+    ],
     remotePatterns: [
       {
         hostname: 's2.googleusercontent.com',
