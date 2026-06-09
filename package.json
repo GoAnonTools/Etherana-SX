@@ -13,7 +13,11 @@
     "lint": "next lint",
     "format:write": "prettier . --write",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "desktop:prepare": "npm run build && node scripts/prepare-desktop-bundle.cjs",
+    "desktop:dev-prod": "npm run desktop:prepare && electron .",
+    "desktop:pack:linux": "npm run desktop:prepare && electron-builder --linux AppImage --dir",
+    "desktop:dist:linux": "npm run desktop:prepare && electron-builder --linux AppImage"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",
@@ -71,6 +75,8 @@
     "@types/turndown": "^5.0.6",
     "autoprefixer": "^10.0.1",
     "drizzle-kit": "^0.18.1",
+    "electron": "^42.3.3",
+    "electron-builder": "^26.15.2",
     "eslint": "^9",
     "eslint-config-next": "^16.2.2",
     "postcss": "^8.5.10",
@@ -84,5 +90,35 @@
   },
   "optionalDependencies": {
     "@napi-rs/canvas": "^0.1.87"
+  },
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "app.etherana.sx",
+    "productName": "Etherana SX",
+    "asar": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      ".next/standalone/**/*",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ]
+    }
   }
 }
