@@ -110,7 +110,9 @@
       "target": [
         "AppImage"
       ],
-      "category": "Utility"
+      "category": "Utility",
+      "icon": "public/Etherana_SX_logo.png",
+      "syncDesktopName": true
     },
     "win": {
       "target": [
@@ -133,6 +135,9 @@
           "**/*"
         ]
       }
-    ]
-  }
+    ],
+    "icon": "public/Etherana_SX_logo.png"
+  },
+  "description": "Local-first AI workspace with private search, spaces, apps, automations, outputs, and encrypted vault export.",
+  "desktopName": "etherana-sx"
 }
