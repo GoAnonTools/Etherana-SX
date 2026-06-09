@@ -1,5 +1,11 @@
 $ErrorActionPreference = "Stop"
 
+# Git intentionally returns non-zero for missing optional paths during path checks.
+# Keep native command failures controlled by $LASTEXITCODE instead of PowerShell stderr exceptions.
+if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue) {
+  $PSNativeCommandUseErrorActionPreference = $false
+}
+
 function Invoke-Checked {
   param(
     [string]$Command,
@@ -20,8 +26,10 @@ function Test-GitPath {
     [string]$GitPath
   )
 
-  & git -C $RepoDir cat-file -e "$Ref`:$GitPath" 2>$null
-  return $LASTEXITCODE -eq 0
+  & git -C $RepoDir cat-file -e "$Ref`:$GitPath" *> $null
+  $Exists = $LASTEXITCODE -eq 0
+  $global:LASTEXITCODE = 0
+  return $Exists
 }
 
 $RootDir = Resolve-Path (Join-Path $PSScriptRoot "..")
