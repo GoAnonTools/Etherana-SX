@@ -45,3 +45,4 @@ release/
 desktop/searxng/linux/runtime/
 release-upload/
 desktop/node/linux/node
+desktop/node/windows/node.exe

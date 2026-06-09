@@ -26,7 +26,13 @@
     "desktop:verify:linux": "node scripts/verify-linux-desktop-build.cjs",
     "desktop:release:upload:r2": "node scripts/upload-release-r2.cjs",
     "desktop:release:linux:r2": "npm run desktop:release:check-r2 && npm run desktop:release:linux && npm run desktop:release:upload:r2",
-    "desktop:release:check-r2": "node scripts/check-r2-env.cjs"
+    "desktop:release:check-r2": "node scripts/check-r2-env.cjs",
+    "desktop:node:prepare:windows": "node scripts/prepare-node-windows-runtime.cjs",
+    "desktop:check:windows-runtime": "node scripts/check-windows-runtime.cjs",
+    "desktop:pack:windows": "npm run desktop:check:windows-runtime && npm run desktop:prepare && npm run desktop:node:prepare:windows && electron-builder --win nsis --dir",
+    "desktop:dist:windows": "npm run desktop:check:windows-runtime && npm run desktop:prepare && npm run desktop:node:prepare:windows && electron-builder --win nsis",
+    "desktop:verify:windows": "node scripts/verify-windows-desktop-build.cjs",
+    "desktop:release:windows": "npm run desktop:dist:windows && npm run desktop:verify:windows"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",
@@ -126,7 +132,8 @@
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "icon": "public/Etherana_SX_logo.png"
     },
     "mac": {
       "target": [
@@ -152,7 +159,14 @@
         ]
       }
     ],
-    "icon": "public/Etherana_SX_logo.png"
+    "icon": "public/Etherana_SX_logo.png",
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "description": "Local-first AI workspace with private search, spaces, apps, automations, outputs, and encrypted vault export.",
   "desktopName": "etherana-sx"
