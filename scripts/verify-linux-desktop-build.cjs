@@ -80,6 +80,14 @@ function findAppImage() {
     .find((file) => file.endsWith('.AppImage'));
 }
 
+function findDebPackage() {
+  if (!fs.existsSync(releaseDir)) return null;
+
+  return fs
+    .readdirSync(releaseDir)
+    .find((file) => file.endsWith('.deb'));
+}
+
 try {
   for (const file of requiredFiles) {
     assertFile(file);
@@ -102,14 +110,31 @@ try {
 
   const appImagePath = path.join(releaseDir, appImage);
   const appImageStat = fs.statSync(appImagePath);
-  const sha256 = crypto
+  const appImageSha256 = crypto
     .createHash('sha256')
     .update(fs.readFileSync(appImagePath))
     .digest('hex');
 
   console.log(`✓ AppImage: ${path.relative(root, appImagePath)}`);
   console.log(`✓ AppImage size: ${(appImageStat.size / 1024 / 1024).toFixed(1)} MB`);
-  console.log(`✓ AppImage sha256: ${sha256}`);
+  console.log(`✓ AppImage sha256: ${appImageSha256}`);
+
+  const debPackage = findDebPackage();
+
+  if (!debPackage) {
+    throw new Error('No deb package found in release/.');
+  }
+
+  const debPath = path.join(releaseDir, debPackage);
+  const debStat = fs.statSync(debPath);
+  const debSha256 = crypto
+    .createHash('sha256')
+    .update(fs.readFileSync(debPath))
+    .digest('hex');
+
+  console.log(`✓ Deb package: ${path.relative(root, debPath)}`);
+  console.log(`✓ Deb size: ${(debStat.size / 1024 / 1024).toFixed(1)} MB`);
+  console.log(`✓ Deb sha256: ${debSha256}`);
 
   console.log('\nLinux desktop build verification passed.');
 } catch (error) {

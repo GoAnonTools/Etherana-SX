@@ -16,8 +16,8 @@
     "test:watch": "vitest",
     "desktop:prepare": "node scripts/build-desktop.cjs && node scripts/prepare-desktop-bundle.cjs",
     "desktop:dev-prod": "npm run desktop:prepare && electron .",
-    "desktop:pack:linux": "npm run desktop:prepare && npm run desktop:node:prepare:linux && electron-builder --linux AppImage --dir",
-    "desktop:dist:linux": "npm run desktop:prepare && npm run desktop:node:prepare:linux && electron-builder --linux AppImage",
+    "desktop:pack:linux": "npm run desktop:prepare && npm run desktop:node:prepare:linux && electron-builder --linux AppImage deb --dir",
+    "desktop:dist:linux": "npm run desktop:prepare && npm run desktop:node:prepare:linux && electron-builder --linux AppImage deb",
     "desktop:searxng:build:linux": "bash scripts/build-searxng-linux-runtime.sh",
     "desktop:dev-prod:local-searxng": "ETHERANA_SEARXNG_BIN=$PWD/desktop/searxng/linux/searxng npm run desktop:dev-prod",
     "desktop:release:linux": "npm run desktop:pack:linux && npm run desktop:verify:linux && node scripts/prepare-release-artifacts.cjs",
@@ -115,11 +115,13 @@
     ],
     "linux": {
       "target": [
-        "AppImage"
+        "AppImage",
+        "deb"
       ],
       "category": "Utility",
       "icon": "public/Etherana_SX_logo.png",
-      "syncDesktopName": true
+      "syncDesktopName": true,
+      "maintainer": "Etherana SX Team <releases@etherana.app>"
     },
     "win": {
       "target": [
