@@ -3,13 +3,18 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const root = process.cwd();
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 console.log('[desktop-build] Building Next standalone app for desktop...');
 
-const result = spawnSync(npmCommand, ['run', 'build'], {
+const isWindows = process.platform === 'win32';
+
+const command = isWindows ? (process.env.ComSpec || 'cmd.exe') : 'npm';
+const args = isWindows ? ['/d', '/s', '/c', 'npm run build'] : ['run', 'build'];
+
+const result = spawnSync(command, args, {
   cwd: root,
   stdio: 'inherit',
+  windowsHide: true,
   env: {
     ...process.env,
     ETHERANA_DESKTOP_BUILD: '1',
