@@ -1,11 +1,5 @@
 $ErrorActionPreference = "Stop"
 
-# Git intentionally returns non-zero for missing optional paths during path checks.
-# Keep native command failures controlled by $LASTEXITCODE instead of PowerShell stderr exceptions.
-if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue) {
-  $PSNativeCommandUseErrorActionPreference = $false
-}
-
 function Invoke-Checked {
   param(
     [string]$Command,
@@ -19,17 +13,34 @@ function Invoke-Checked {
   }
 }
 
-function Test-GitPath {
+function Get-GitTreePaths {
   param(
     [string]$RepoDir,
-    [string]$Ref,
+    [string]$Ref
+  )
+
+  $Output = & git -C $RepoDir ls-tree -r --name-only $Ref
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "git ls-tree failed with exit code $LASTEXITCODE"
+  }
+
+  return @($Output)
+}
+
+function Test-TreePath {
+  param(
+    [string[]]$TreePaths,
     [string]$GitPath
   )
 
-  & git -C $RepoDir cat-file -e "$Ref`:$GitPath" *> $null
-  $Exists = $LASTEXITCODE -eq 0
-  $global:LASTEXITCODE = 0
-  return $Exists
+  foreach ($TreePath in $TreePaths) {
+    if ($TreePath -eq $GitPath -or $TreePath.StartsWith("$GitPath/")) {
+      return $true
+    }
+  }
+
+  return $false
 }
 
 $RootDir = Resolve-Path (Join-Path $PSScriptRoot "..")
@@ -54,6 +65,9 @@ Invoke-Checked "git" @("-C", $SrcDir, "init")
 Invoke-Checked "git" @("-C", $SrcDir, "remote", "add", "origin", $SearxngRepo)
 Invoke-Checked "git" @("-C", $SrcDir, "fetch", "--depth", "1", "origin", $SearxngRef)
 
+Write-Host "[searxng-build-windows] Reading package tree..."
+$TreePaths = Get-GitTreePaths -RepoDir $SrcDir -Ref "FETCH_HEAD"
+
 Write-Host "[searxng-build-windows] Checking out Windows-safe package paths..."
 
 $CandidatePaths = @(
@@ -68,7 +82,7 @@ $CandidatePaths = @(
 $PathsToCheckout = @()
 
 foreach ($CandidatePath in $CandidatePaths) {
-  if (Test-GitPath -RepoDir $SrcDir -Ref "FETCH_HEAD" -GitPath $CandidatePath) {
+  if (Test-TreePath -TreePaths $TreePaths -GitPath $CandidatePath) {
     $PathsToCheckout += $CandidatePath
   } else {
     Write-Host "[searxng-build-windows] Skipping missing path: $CandidatePath"
