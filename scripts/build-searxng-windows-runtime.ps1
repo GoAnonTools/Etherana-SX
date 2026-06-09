@@ -79,6 +79,7 @@ $CandidatePaths = @(
   "setup.cfg",
   "pyproject.toml",
   "requirements.txt",
+  "requirements-dev.txt",
   "README.rst",
   "README.md",
   "AUTHORS.rst",
