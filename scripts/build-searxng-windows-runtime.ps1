@@ -13,6 +13,17 @@ function Invoke-Checked {
   }
 }
 
+function Test-GitPath {
+  param(
+    [string]$RepoDir,
+    [string]$Ref,
+    [string]$GitPath
+  )
+
+  & git -C $RepoDir cat-file -e "$Ref`:$GitPath" 2>$null
+  return $LASTEXITCODE -eq 0
+}
+
 $RootDir = Resolve-Path (Join-Path $PSScriptRoot "..")
 $RuntimeDir = Join-Path $RootDir "desktop\searxng\windows\runtime"
 $SrcDir = Join-Path $RuntimeDir "src"
@@ -36,7 +47,36 @@ Invoke-Checked "git" @("-C", $SrcDir, "remote", "add", "origin", $SearxngRepo)
 Invoke-Checked "git" @("-C", $SrcDir, "fetch", "--depth", "1", "origin", $SearxngRef)
 
 Write-Host "[searxng-build-windows] Checking out Windows-safe package paths..."
-Invoke-Checked "git" @("-C", $SrcDir, "checkout", "FETCH_HEAD", "--", "pyproject.toml", "requirements.txt", "searx", "searxng_extra")
+
+$CandidatePaths = @(
+  "setup.py",
+  "setup.cfg",
+  "pyproject.toml",
+  "requirements.txt",
+  "searx",
+  "searxng_extra"
+)
+
+$PathsToCheckout = @()
+
+foreach ($CandidatePath in $CandidatePaths) {
+  if (Test-GitPath -RepoDir $SrcDir -Ref "FETCH_HEAD" -GitPath $CandidatePath) {
+    $PathsToCheckout += $CandidatePath
+  } else {
+    Write-Host "[searxng-build-windows] Skipping missing path: $CandidatePath"
+  }
+}
+
+if ($PathsToCheckout.Count -eq 0) {
+  throw "No SearXNG package paths were found."
+}
+
+Invoke-Checked "git" (@("-C", $SrcDir, "checkout", "FETCH_HEAD", "--") + $PathsToCheckout)
+
+Write-Host "[searxng-build-windows] Checked out paths:"
+foreach ($CheckedOutPath in $PathsToCheckout) {
+  Write-Host "  - $CheckedOutPath"
+}
 
 Write-Host "[searxng-build-windows] Creating Python venv..."
 if (Test-Path $VenvDir) {
