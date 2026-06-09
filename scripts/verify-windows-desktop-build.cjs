@@ -31,7 +31,9 @@ const requiredFiles = [
   },
   {
     label: 'Bundled Windows SearXNG runtime',
-    path: path.join(unpackedDir, 'resources', 'searxng', 'windows', 'searxng.exe'),
+    path: fs.existsSync(path.join(unpackedDir, 'resources', 'searxng', 'windows', 'searxng.exe'))
+      ? path.join(unpackedDir, 'resources', 'searxng', 'windows', 'searxng.exe')
+      : path.join(unpackedDir, 'resources', 'searxng', 'windows', 'searxng.cmd'),
   },
 ];
 

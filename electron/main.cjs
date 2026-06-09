@@ -22,19 +22,21 @@ function getSearxngPlatformFolder() {
   return 'linux';
 }
 
-function getSearxngExecutableName() {
-  return process.platform === 'win32' ? 'searxng.exe' : 'searxng';
+function getSearxngExecutableNames() {
+  return process.platform === 'win32' ? ['searxng.exe', 'searxng.cmd'] : ['searxng'];
 }
 
 function findSearxngBinary() {
   const platformFolder = getSearxngPlatformFolder();
-  const executableName = getSearxngExecutableName();
+  const executableNames = getSearxngExecutableNames();
 
   const candidates = [
     process.env.ETHERANA_SEARXNG_BIN,
-    path.join(process.resourcesPath || '', 'searxng', platformFolder, executableName),
-    path.join(app.getAppPath(), 'desktop', 'searxng', platformFolder, executableName),
-    path.join(process.cwd(), 'desktop', 'searxng', platformFolder, executableName),
+    ...executableNames.flatMap((executableName) => [
+      path.join(process.resourcesPath || '', 'searxng', platformFolder, executableName),
+      path.join(app.getAppPath(), 'desktop', 'searxng', platformFolder, executableName),
+      path.join(process.cwd(), 'desktop', 'searxng', platformFolder, executableName),
+    ]),
   ].filter(Boolean);
 
   return candidates.find((candidate) => fs.existsSync(candidate)) || null;
@@ -73,6 +75,7 @@ function startSearxng() {
 
   searxngProcess = spawn(searxngBinary, [], {
     cwd: path.dirname(searxngBinary),
+    shell: process.platform === 'win32' && searxngBinary.endsWith('.cmd'),
     env: {
       ...process.env,
       SEARXNG_URL,

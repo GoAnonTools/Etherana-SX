@@ -3,28 +3,20 @@ const path = require('path');
 
 const root = process.cwd();
 
-const required = [
-  {
-    label: 'Windows SearXNG runtime',
-    path: path.join(root, 'desktop', 'searxng', 'windows', 'searxng.exe'),
-  },
+const candidates = [
+  path.join(root, 'desktop', 'searxng', 'windows', 'searxng.exe'),
+  path.join(root, 'desktop', 'searxng', 'windows', 'searxng.cmd'),
 ];
 
-const missing = required.filter((item) => !fs.existsSync(item.path));
-
-if (missing.length === 0) {
-  console.log('Windows runtime prerequisites found.');
+if (candidates.some((candidate) => fs.existsSync(candidate))) {
+  console.log('Windows SearXNG launcher found.');
   process.exit(0);
 }
 
 console.error('Missing Windows runtime prerequisites:');
-
-for (const item of missing) {
-  console.error(`  - ${item.label}: ${path.relative(root, item.path)}`);
-}
+console.error('  - Windows SearXNG launcher: desktop/searxng/windows/searxng.exe or searxng.cmd');
 
 console.error('\nWindows standalone release requires a Windows SearXNG runtime.');
-console.error('Build it later on Windows/GitHub Actions, then place it at:');
-console.error('  desktop/searxng/windows/searxng.exe');
+console.error('Build it later on Windows/GitHub Actions.');
 
 process.exit(1);
