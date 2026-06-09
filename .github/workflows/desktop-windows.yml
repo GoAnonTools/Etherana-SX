@@ -1,0 +1,39 @@
+name: Desktop Windows Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Windows desktop release
+        run: npm run desktop:release:windows:ci
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: etherana-sx-windows
+          path: |
+            release/*.exe
+            release/latest.yml
+            release/win-unpacked/resources/node/windows/node.exe
+            release/win-unpacked/resources/searxng/windows/searxng.cmd
