@@ -14,7 +14,7 @@
     "format:write": "prettier . --write",
     "test": "vitest run",
     "test:watch": "vitest",
-    "desktop:prepare": "npm run build && node scripts/prepare-desktop-bundle.cjs",
+    "desktop:prepare": "node scripts/build-desktop.cjs && node scripts/prepare-desktop-bundle.cjs",
     "desktop:dev-prod": "npm run desktop:prepare && electron .",
     "desktop:pack:linux": "npm run desktop:prepare && electron-builder --linux AppImage --dir",
     "desktop:dist:linux": "npm run desktop:prepare && electron-builder --linux AppImage",

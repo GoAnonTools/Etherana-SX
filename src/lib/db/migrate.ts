@@ -36,6 +36,21 @@ function sanitizeSql(content: string) {
   return statements;
 }
 
+function ensureColumn(tableName: string, columnName: string, definition: string) {
+  const columns = db
+    .prepare(`PRAGMA table_info(${tableName})`)
+    .all() as Array<{ name: string }>;
+
+  const hasColumn = columns.some((column) => column.name === columnName);
+
+  if (hasColumn) {
+    return;
+  }
+
+  console.log(`Repairing missing SQLite column: ${tableName}.${columnName}`);
+  db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
+}
+
 fs.readdirSync(migrationsFolder)
   .filter((f) => f.endsWith('.sql'))
   .sort()
