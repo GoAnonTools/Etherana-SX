@@ -24,5 +24,9 @@ export SEARXNG_SETTINGS_PATH="${SETTINGS_FILE}"
 export SEARXNG_HOST="${HOST}"
 export SEARXNG_PORT="${PORT}"
 
+# AppImage/resources can be read-only. Avoid Python trying to write __pycache__ files.
+export PYTHONDONTWRITEBYTECODE=1
+export PYTHONNOUSERSITE=1
+
 echo "[searxng-linux] Starting SearXNG on http://${HOST}:${PORT}"
 exec "${VENV_DIR}/bin/python" -m searx.webapp

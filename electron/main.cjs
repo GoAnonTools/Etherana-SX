@@ -40,6 +40,25 @@ function findSearxngBinary() {
   return candidates.find((candidate) => fs.existsSync(candidate)) || null;
 }
 
+function shouldIgnoreSearxngLog(message) {
+  const ignoredPatterns = [
+    'loading engine ahmia failed',
+    'loading engine torch failed',
+    'missing config file:',
+    'X-Forwarded-For nor X-Real-IP header is set',
+    'Too many request',
+    'SearxEngineTooManyRequestsException',
+    'CAPTCHA',
+    'SearxEngineCaptchaException',
+    'engine timeout',
+    'HTTP requests timeout',
+    'call to ResultContainer.add_unresponsive_engine',
+    'list index out of range',
+  ];
+
+  return ignoredPatterns.some((pattern) => message.includes(pattern));
+}
+
 function startSearxng() {
   const searxngBinary = findSearxngBinary();
 
@@ -67,8 +86,24 @@ function startSearxng() {
     console.log(`[searxng] ${data.toString().trim()}`);
   });
 
+  let didMentionSuppressedSearxngLogs = false;
+
   searxngProcess.stderr.on('data', (data) => {
-    console.error(`[searxng:error] ${data.toString().trim()}`);
+    const message = data.toString().trim();
+
+    if (!message) return;
+
+    if (process.env.ETHERANA_DEBUG_SEARXNG === '1') {
+      console.error(`[searxng:error] ${message}`);
+      return;
+    }
+
+    if (!didMentionSuppressedSearxngLogs) {
+      console.log(
+        '[searxng] Runtime warnings are hidden. Set ETHERANA_DEBUG_SEARXNG=1 to show them.'
+      );
+      didMentionSuppressedSearxngLogs = true;
+    }
   });
 
   searxngProcess.on('exit', (code) => {

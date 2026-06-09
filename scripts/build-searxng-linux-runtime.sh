@@ -35,7 +35,7 @@ fi
 # SearXNG's build metadata can import searx during installation.
 # --no-build-isolation lets setup reuse the dependencies already installed above.
 echo "[searxng-build] Installing SearXNG into runtime venv..."
-"${VENV_DIR}/bin/python" -m pip install --no-build-isolation -e "${SRC_DIR}"
+"${VENV_DIR}/bin/python" -m pip install --no-build-isolation "${SRC_DIR}"
 
 cat > "${SETTINGS_FILE}" <<'YAML'
 use_default_settings: true
