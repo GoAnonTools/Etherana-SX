@@ -102,7 +102,8 @@
     "files": [
       "electron/**/*",
       ".next/standalone/**/*",
-      "package.json"
+      "package.json",
+      "desktop/searxng/**/*"
     ],
     "linux": {
       "target": [
@@ -122,6 +123,15 @@
     },
     "npmRebuild": false,
     "nodeGypRebuild": false,
-    "buildDependenciesFromSource": false
+    "buildDependenciesFromSource": false,
+    "extraResources": [
+      {
+        "from": "desktop/searxng",
+        "to": "searxng",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
   }
 }

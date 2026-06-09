@@ -8,8 +8,87 @@ const PORT = process.env.ETHERANA_PORT || '3217';
 const HOST = '127.0.0.1';
 const LOCAL_URL = `http://${HOST}:${PORT}`;
 
+const SEARXNG_PORT = process.env.ETHERANA_SEARXNG_PORT || '8080';
+const SEARXNG_URL =
+  process.env.SEARXNG_URL || `http://${HOST}:${SEARXNG_PORT}`;
+
 let mainWindow = null;
 let nextProcess = null;
+let searxngProcess = null;
+
+function getSearxngPlatformFolder() {
+  if (process.platform === 'win32') return 'windows';
+  if (process.platform === 'darwin') return 'macos';
+  return 'linux';
+}
+
+function getSearxngExecutableName() {
+  return process.platform === 'win32' ? 'searxng.exe' : 'searxng';
+}
+
+function findSearxngBinary() {
+  const platformFolder = getSearxngPlatformFolder();
+  const executableName = getSearxngExecutableName();
+
+  const candidates = [
+    process.env.ETHERANA_SEARXNG_BIN,
+    path.join(process.resourcesPath || '', 'searxng', platformFolder, executableName),
+    path.join(app.getAppPath(), 'desktop', 'searxng', platformFolder, executableName),
+    path.join(process.cwd(), 'desktop', 'searxng', platformFolder, executableName),
+  ].filter(Boolean);
+
+  return candidates.find((candidate) => fs.existsSync(candidate)) || null;
+}
+
+function startSearxng() {
+  const searxngBinary = findSearxngBinary();
+
+  if (!searxngBinary) {
+    console.log(
+      `[searxng] No bundled runtime found. Using configured URL: ${SEARXNG_URL}`
+    );
+    return false;
+  }
+
+  console.log(`[searxng] Starting bundled runtime: ${searxngBinary}`);
+
+  searxngProcess = spawn(searxngBinary, [], {
+    cwd: path.dirname(searxngBinary),
+    env: {
+      ...process.env,
+      SEARXNG_URL,
+      SEARXNG_PORT,
+      ETHERANA_DESKTOP: '1',
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  searxngProcess.stdout.on('data', (data) => {
+    console.log(`[searxng] ${data.toString().trim()}`);
+  });
+
+  searxngProcess.stderr.on('data', (data) => {
+    console.error(`[searxng:error] ${data.toString().trim()}`);
+  });
+
+  searxngProcess.on('exit', (code) => {
+    console.log(`[searxng] exited with code ${code}`);
+  });
+
+  return true;
+}
+
+function stopSearxng() {
+  if (!searxngProcess || searxngProcess.killed) return;
+
+  if (process.platform === 'win32') {
+    spawn('taskkill', ['/pid', String(searxngProcess.pid), '/f', '/t']);
+  } else {
+    searxngProcess.kill('SIGTERM');
+  }
+
+  searxngProcess = null;
+}
 
 function findNextServer() {
   const candidates = [
@@ -118,6 +197,12 @@ function stopNextServer() {
 }
 
 async function createWindow() {
+  const startedBundledSearxng = startSearxng();
+
+  if (startedBundledSearxng) {
+    await waitForPort(SEARXNG_PORT, HOST);
+  }
+
   startNextServer();
   await waitForPort(PORT, HOST);
 
@@ -157,10 +242,12 @@ app.whenReady().then(async () => {
 
 app.on('before-quit', () => {
   stopNextServer();
+  stopSearxng();
 });
 
 app.on('window-all-closed', () => {
   stopNextServer();
+  stopSearxng();
 
   if (process.platform !== 'darwin') {
     app.quit();
