@@ -65,6 +65,10 @@ Invoke-Checked "git" @("-C", $SrcDir, "init")
 Invoke-Checked "git" @("-C", $SrcDir, "remote", "add", "origin", $SearxngRepo)
 Invoke-Checked "git" @("-C", $SrcDir, "fetch", "--depth", "1", "origin", $SearxngRef)
 
+Write-Host "[searxng-build-windows] Pointing HEAD at fetched SearXNG commit..."
+Invoke-Checked "git" @("-C", $SrcDir, "update-ref", "refs/heads/etherana-build", "FETCH_HEAD")
+Invoke-Checked "git" @("-C", $SrcDir, "symbolic-ref", "HEAD", "refs/heads/etherana-build")
+
 Write-Host "[searxng-build-windows] Reading package tree..."
 $TreePaths = Get-GitTreePaths -RepoDir $SrcDir -Ref "FETCH_HEAD"
 
@@ -75,6 +79,12 @@ $CandidatePaths = @(
   "setup.cfg",
   "pyproject.toml",
   "requirements.txt",
+  "README.rst",
+  "README.md",
+  "AUTHORS.rst",
+  "LICENSE",
+  "LICENSE.txt",
+  "LICENSE.md",
   "searx",
   "searxng_extra"
 )
