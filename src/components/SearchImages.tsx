@@ -4,7 +4,6 @@ import { ImagesIcon, PlusIcon } from 'lucide-react';
 import { useState } from 'react';
 import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
-import { Message } from './ChatWindow';
 
 type Image = {
   url: string;
@@ -23,6 +22,7 @@ const SearchImages = ({
 }) => {
   const { t } = useI18n();
   const [images, setImages] = useState<Image[] | null>(null);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [slides, setSlides] = useState<any[]>([]);
@@ -34,39 +34,44 @@ const SearchImages = ({
           id={`search-images-${messageId}`}
           onClick={async () => {
             setLoading(true);
+            setError('');
 
-            const chatModelProvider = localStorage.getItem(
-              'chatModelProviderId',
-            );
-            const chatModel = localStorage.getItem('chatModelKey');
-
-            const res = await fetch(`/api/images`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                query: query,
-                chatHistory: chatHistory,
-                chatModel: {
-                  providerId: chatModelProvider,
-                  key: chatModel,
+            try {
+              const res = await fetch(`/api/images`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
                 },
-              }),
-            });
+                body: JSON.stringify({
+                  query: query,
+                  chatHistory: chatHistory,
+                }),
+              });
 
-            const data = await res.json();
+              const data = await res.json().catch(() => ({}));
 
-            const images = data.images ?? [];
-            setImages(images);
-            setSlides(
-              images.map((image: Image) => {
-                return {
-                  src: image.img_src,
-                };
-              }),
-            );
-            setLoading(false);
+              if (!res.ok) {
+                throw new Error(data.message || 'Could not search images.');
+              }
+
+              const nextImages = data.images ?? [];
+              setImages(nextImages);
+              setSlides(
+                nextImages.map((image: Image) => {
+                  return {
+                    src: image.img_src,
+                  };
+                }),
+              );
+            } catch (err) {
+              setError(
+                err instanceof Error ? err.message : 'Could not search images.',
+              );
+              setImages([]);
+              setSlides([]);
+            } finally {
+              setLoading(false);
+            }
           }}
           className="border border-dashed border-light-200 dark:border-dark-200 hover:bg-light-200 dark:hover:bg-dark-200 active:scale-95 duration-200 transition px-4 py-2 flex flex-row items-center justify-between rounded-lg dark:text-white text-sm w-full"
         >
@@ -86,6 +91,18 @@ const SearchImages = ({
             />
           ))}
         </div>
+      )}
+      {images !== null && images.length === 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            setImages(null);
+            setError('');
+          }}
+          className="w-full rounded-lg border border-dashed border-light-200 px-4 py-3 text-left text-sm text-black/60 transition hover:bg-light-200 dark:border-dark-200 dark:text-white/60 dark:hover:bg-dark-200"
+        >
+          {error || 'No images found. Try again.'}
+        </button>
       )}
       {images !== null && images.length > 0 && (
         <>

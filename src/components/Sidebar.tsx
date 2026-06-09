@@ -189,13 +189,16 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             </div>
           </Link>
 
-          <Link
-            href="/search"
+          <button
+            type="button"
+            onClick={() => {
+              window.location.assign(`/search?new=${Date.now()}`);
+            }}
             className="mb-6 flex items-center justify-center gap-2 rounded-full bg-black px-4 py-2.5 text-sm font-semibold text-white transition duration-200 hover:scale-[1.01] active:scale-[0.99] dark:bg-white dark:text-black"
           >
             <Plus size={16} />
             {t('sidebar.newSearch')}
-          </Link>
+          </button>
 
           <nav className="flex flex-1 flex-col gap-7 overflow-y-auto">
             <div className="space-y-1">

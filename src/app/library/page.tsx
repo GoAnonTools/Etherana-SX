@@ -243,7 +243,7 @@ const Page = () => {
             {t('libraryPage.noChatsFound')}
           </p>
           <p className="mt-1 text-sm text-black/70 dark:text-white/70">
-            <Link href="/" className="text-sky-400">
+            <Link href="/search" className="text-sky-400">
               {t('libraryPage.startNewChat')}
             </Link>{' '}
             {t('libraryPage.emptySuffix')}

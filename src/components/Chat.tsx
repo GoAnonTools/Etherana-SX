@@ -108,7 +108,7 @@ const Chat = () => {
                 aria-label={t('sharedUi.newChat')}
                 title={t('sharedUi.newChat')}
                 onClick={() => {
-                  window.location.assign('/');
+                  window.location.assign('/search');
                 }}
                 className="inline-flex items-center gap-2 rounded-full border border-light-200 dark:border-dark-200 bg-light-secondary/95 dark:bg-dark-secondary/95 px-3 py-1.5 text-xs font-semibold text-black/70 dark:text-white/70 shadow-sm shadow-light-200/10 dark:shadow-black/20 backdrop-blur transition hover:text-black dark:hover:text-white hover:border-sky-400/60 active:scale-95"
               >

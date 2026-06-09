@@ -1,34 +1,47 @@
-import searchImages from '@/lib/agents/media/image';
-import ModelRegistry from '@/lib/models/registry';
-import { ModelWithProvider } from '@/lib/models/types';
+import { searchSearxng } from '@/lib/searxng';
 
-interface ImageSearchBody {
-  query: string;
-  chatHistory: any[];
-  chatModel: ModelWithProvider;
-}
+type ImageSearchBody = {
+  query?: string;
+  limit?: number;
+};
+
+type ImageResult = {
+  img_src: string;
+  url: string;
+  title: string;
+};
 
 export const POST = async (req: Request) => {
   try {
     const body: ImageSearchBody = await req.json();
+    const query = body.query?.trim();
 
-    const registry = new ModelRegistry();
+    if (!query) {
+      return Response.json({ message: 'Query is required.' }, { status: 400 });
+    }
 
-    const llm = await registry.loadChatModel(
-      body.chatModel.providerId,
-      body.chatModel.key,
-    );
+    const limit = Math.min(Math.max(body.limit ?? 10, 1), 20);
 
-    const images = await searchImages(
-      {
-        chatHistory: body.chatHistory.map(([role, content]) => ({
-          role: role === 'human' ? 'user' : 'assistant',
-          content,
-        })),
-        query: body.query,
-      },
-      llm,
-    );
+    const searchRes = await searchSearxng(query, {
+      engines: ['bing images', 'google images'],
+    });
+
+    const seen = new Set<string>();
+
+    const images: ImageResult[] = (searchRes.results ?? [])
+      .map((result) => ({
+        img_src: result.img_src || result.thumbnail_src || result.thumbnail || '',
+        url: result.url,
+        title: result.title,
+      }))
+      .filter((image) => image.img_src && image.url && image.title)
+      .filter((image) => {
+        const key = image.img_src || image.url;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, limit);
 
     return Response.json({ images }, { status: 200 });
   } catch (err) {

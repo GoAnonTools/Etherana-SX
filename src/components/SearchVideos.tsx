@@ -1,10 +1,9 @@
 import { useI18n } from '@/lib/i18n/useI18n';
 /* eslint-disable @next/next/no-img-element */
-import { PlayCircle, PlayIcon, PlusIcon, VideoIcon } from 'lucide-react';
+import { PlayCircle, PlusIcon, VideoIcon } from 'lucide-react';
 import { useRef, useState } from 'react';
 import Lightbox, { GenericSlide, VideoSlide } from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
-import { Message } from './ChatWindow';
 
 type Video = {
   url: string;
@@ -36,6 +35,7 @@ const Searchvideos = ({
 }) => {
   const { t } = useI18n();
   const [videos, setVideos] = useState<Video[] | null>(null);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [slides, setSlides] = useState<VideoSlide[]>([]);
@@ -49,41 +49,46 @@ const Searchvideos = ({
           id={`search-videos-${messageId}`}
           onClick={async () => {
             setLoading(true);
+            setError('');
 
-            const chatModelProvider = localStorage.getItem(
-              'chatModelProviderId',
-            );
-            const chatModel = localStorage.getItem('chatModelKey');
-
-            const res = await fetch(`/api/videos`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                query: query,
-                chatHistory: chatHistory,
-                chatModel: {
-                  providerId: chatModelProvider,
-                  key: chatModel,
+            try {
+              const res = await fetch(`/api/videos`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
                 },
-              }),
-            });
+                body: JSON.stringify({
+                  query: query,
+                  chatHistory: chatHistory,
+                }),
+              });
 
-            const data = await res.json();
+              const data = await res.json().catch(() => ({}));
 
-            const videos = data.videos ?? [];
-            setVideos(videos);
-            setSlides(
-              videos.map((video: Video) => {
-                return {
-                  type: 'video-slide',
-                  iframe_src: video.iframe_src,
-                  src: video.img_src,
-                };
-              }),
-            );
-            setLoading(false);
+              if (!res.ok) {
+                throw new Error(data.message || 'Could not search videos.');
+              }
+
+              const nextVideos = data.videos ?? [];
+              setVideos(nextVideos);
+              setSlides(
+                nextVideos.map((video: Video) => {
+                  return {
+                    type: 'video-slide',
+                    iframe_src: video.iframe_src,
+                    src: video.img_src,
+                  };
+                }),
+              );
+            } catch (err) {
+              setError(
+                err instanceof Error ? err.message : 'Could not search videos.',
+              );
+              setVideos([]);
+              setSlides([]);
+            } finally {
+              setLoading(false);
+            }
           }}
           className="border border-dashed border-light-200 dark:border-dark-200 hover:bg-light-200 dark:hover:bg-dark-200 active:scale-95 duration-200 transition px-4 py-2 flex flex-row items-center justify-between rounded-lg dark:text-white text-sm w-full"
         >
@@ -103,6 +108,18 @@ const Searchvideos = ({
             />
           ))}
         </div>
+      )}
+      {videos !== null && videos.length === 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            setVideos(null);
+            setError('');
+          }}
+          className="w-full rounded-lg border border-dashed border-light-200 px-4 py-3 text-left text-sm text-black/60 transition hover:bg-light-200 dark:border-dark-200 dark:text-white/60 dark:hover:bg-dark-200"
+        >
+          {error || 'No videos found. Try again.'}
+        </button>
       )}
       {videos !== null && videos.length > 0 && (
         <>
