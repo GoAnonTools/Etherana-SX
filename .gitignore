@@ -42,3 +42,4 @@ certificates
 # TypeScript incremental cache
 tsconfig.tsbuildinfo
 release/
+desktop/searxng/linux/runtime/
