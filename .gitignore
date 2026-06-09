@@ -44,3 +44,4 @@ tsconfig.tsbuildinfo
 release/
 desktop/searxng/linux/runtime/
 release-upload/
+desktop/node/linux/node

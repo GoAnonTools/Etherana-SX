@@ -216,9 +216,25 @@ function waitForPort(port, host, timeoutMs = 60000) {
   });
 }
 
+function getNodePlatformFolder() {
+  if (process.platform === 'win32') return 'windows';
+  if (process.platform === 'darwin') return 'macos';
+  return 'linux';
+}
+
+function getNodeExecutableName() {
+  return process.platform === 'win32' ? 'node.exe' : 'node';
+}
+
 function findNodeBinary() {
+  const platformFolder = getNodePlatformFolder();
+  const executableName = getNodeExecutableName();
+
   const candidates = [
     process.env.ETHERANA_NODE,
+    path.join(process.resourcesPath || '', 'node', platformFolder, executableName),
+    path.join(app.getAppPath(), 'desktop', 'node', platformFolder, executableName),
+    path.join(process.cwd(), 'desktop', 'node', platformFolder, executableName),
     '/usr/bin/node',
     '/usr/local/bin/node',
     '/bin/node',
@@ -226,10 +242,12 @@ function findNodeBinary() {
 
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {
+      console.log(`[node] Using Node runtime: ${candidate}`);
       return candidate;
     }
   }
 
+  console.log('[node] Falling back to node from PATH.');
   return 'node';
 }
 
