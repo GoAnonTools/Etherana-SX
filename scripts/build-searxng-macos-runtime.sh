@@ -22,7 +22,10 @@ git -C "${SRC_DIR}" update-ref refs/heads/etherana-build FETCH_HEAD
 git -C "${SRC_DIR}" symbolic-ref HEAD refs/heads/etherana-build
 
 echo "[searxng-build-macos] Reading package tree..."
-mapfile -t TREE_PATHS < <(git -C "${SRC_DIR}" ls-tree -r --name-only FETCH_HEAD)
+TREE_PATHS=()
+while IFS= read -r tree_path; do
+  TREE_PATHS+=("${tree_path}")
+done < <(git -C "${SRC_DIR}" ls-tree -r --name-only FETCH_HEAD)
 
 has_tree_path() {
   local candidate="$1"
