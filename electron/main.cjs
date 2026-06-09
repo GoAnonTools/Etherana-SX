@@ -1,5 +1,5 @@
 const { app, BrowserWindow, dialog } = require('electron');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
 const net = require('net');
 const path = require('path');
@@ -78,14 +78,62 @@ function startSearxng() {
   return true;
 }
 
-function stopSearxng() {
-  if (!searxngProcess || searxngProcess.killed) return;
+function isDevSearxngLauncher() {
+  return (
+    process.env.ETHERANA_SEARXNG_BIN &&
+    process.env.ETHERANA_SEARXNG_BIN.includes('searxng-dev-launcher')
+  );
+}
 
-  if (process.platform === 'win32') {
-    spawn('taskkill', ['/pid', String(searxngProcess.pid), '/f', '/t']);
-  } else {
-    searxngProcess.kill('SIGTERM');
+function stopDevDockerSearxng() {
+  if (!isDevSearxngLauncher()) return;
+
+  if (process.env.ETHERANA_KEEP_SEARXNG === '1') {
+    console.log('[searxng] ETHERANA_KEEP_SEARXNG=1, leaving dev SearXNG running.');
+    return;
   }
+
+  const composeFile = path.join(process.cwd(), 'docker-compose.searxng-local.yaml');
+
+  console.log('[searxng] Stopping dev Docker SearXNG from Electron...');
+
+  let result = spawnSync(
+    'docker',
+    ['compose', '-f', composeFile, 'down', '--remove-orphans'],
+    {
+      cwd: process.cwd(),
+      stdio: 'inherit',
+    },
+  );
+
+  if (result.status !== 0) {
+    result = spawnSync(
+      'docker-compose',
+      ['-f', composeFile, 'down', '--remove-orphans'],
+      {
+        cwd: process.cwd(),
+        stdio: 'inherit',
+      },
+    );
+  }
+
+  if (result.status === 0) {
+    console.log('[searxng] Dev Docker SearXNG stopped.');
+  } else {
+    console.error('[searxng] Failed to stop dev Docker SearXNG.');
+  }
+}
+
+function stopSearxng() {
+  if (searxngProcess && !searxngProcess.killed) {
+    if (process.platform === 'win32') {
+      spawn('taskkill', ['/pid', String(searxngProcess.pid), '/f', '/t']);
+    } else {
+      searxngProcess.kill('SIGTERM');
+    }
+  }
+
+  stopDevDockerSearxng();
 
   searxngProcess = null;
 }
