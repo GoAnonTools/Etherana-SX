@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RUNTIME_DIR="${ROOT_DIR}/runtime"
+VENV_PY="${RUNTIME_DIR}/venv/bin/python"
+SETTINGS_FILE="${RUNTIME_DIR}/settings.yml"
+
+export SEARXNG_HOST="${SEARXNG_HOST:-127.0.0.1}"
+export SEARXNG_PORT="${SEARXNG_PORT:-8080}"
+export SEARXNG_SETTINGS_PATH="${SETTINGS_FILE}"
+export PYTHONDONTWRITEBYTECODE=1
+export PYTHONNOUSERSITE=1
+
+if [[ ! -x "${VENV_PY}" ]]; then
+  echo "[searxng-macos] Missing runtime venv at ${RUNTIME_DIR}/venv" >&2
+  echo "[searxng-macos] Build it with: npm run desktop:searxng:build:macos" >&2
+  exit 1
+fi
+
+if [[ ! -f "${SETTINGS_FILE}" ]]; then
+  echo "[searxng-macos] Missing settings file at ${SETTINGS_FILE}" >&2
+  exit 1
+fi
+
+echo "[searxng-macos] Starting SearXNG on http://${SEARXNG_HOST}:${SEARXNG_PORT}"
+exec "${VENV_PY}" -m searx.webapp

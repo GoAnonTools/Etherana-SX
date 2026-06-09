@@ -35,7 +35,15 @@
     "desktop:release:windows": "npm run desktop:dist:windows && npm run desktop:verify:windows",
     "desktop:searxng:build:windows": "powershell -ExecutionPolicy Bypass -File scripts/build-searxng-windows-runtime.ps1",
     "desktop:check:windows-platform": "node scripts/check-windows-build-platform.cjs",
-    "desktop:release:windows:ci": "npm run desktop:searxng:build:windows && npm run desktop:release:windows"
+    "desktop:release:windows:ci": "npm run desktop:searxng:build:windows && npm run desktop:release:windows",
+    "desktop:searxng:build:macos": "bash scripts/build-searxng-macos-runtime.sh",
+    "desktop:node:prepare:macos": "node scripts/prepare-node-macos-runtime.cjs",
+    "desktop:check:macos-platform": "node scripts/check-macos-build-platform.cjs",
+    "desktop:check:macos-runtime": "node scripts/check-macos-runtime.cjs",
+    "desktop:dist:macos": "npm run desktop:check:macos-platform && npm run desktop:check:macos-runtime && npm run desktop:prepare && npm run desktop:node:prepare:macos && electron-builder --mac dmg zip --publish never",
+    "desktop:verify:macos": "node scripts/verify-macos-desktop-build.cjs",
+    "desktop:release:macos": "npm run desktop:dist:macos && npm run desktop:verify:macos",
+    "desktop:release:macos:ci": "npm run desktop:searxng:build:macos && npm run desktop:release:macos"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",
@@ -140,8 +148,13 @@
     },
     "mac": {
       "target": [
-        "dmg"
-      ]
+        "dmg",
+        "zip"
+      ],
+      "icon": "public/Etherana_SX_logo.png",
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
     },
     "npmRebuild": false,
     "nodeGypRebuild": false,
@@ -169,7 +182,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
-    }
+    },
+    "dmg": {}
   },
   "description": "Local-first AI workspace with private search, spaces, apps, automations, outputs, and encrypted vault export.",
   "desktopName": "etherana-sx"
