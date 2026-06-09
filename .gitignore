@@ -41,3 +41,4 @@ certificates
 
 # TypeScript incremental cache
 tsconfig.tsbuildinfo
+release/
