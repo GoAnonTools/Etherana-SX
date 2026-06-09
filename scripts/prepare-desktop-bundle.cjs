@@ -22,3 +22,9 @@ copyIfExists(
 );
 
 console.log('Desktop bundle prepared.');
+
+
+copyIfExists(
+  path.join(root, 'drizzle'),
+  path.join(root, '.next', 'standalone', 'drizzle')
+);

@@ -119,6 +119,9 @@
       "target": [
         "dmg"
       ]
-    }
+    },
+    "npmRebuild": false,
+    "nodeGypRebuild": false,
+    "buildDependenciesFromSource": false
   }
 }

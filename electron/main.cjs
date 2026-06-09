@@ -54,14 +54,32 @@ function waitForPort(port, host, timeoutMs = 60000) {
   });
 }
 
+function findNodeBinary() {
+  const candidates = [
+    process.env.ETHERANA_NODE,
+    '/usr/bin/node',
+    '/usr/local/bin/node',
+    '/bin/node',
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return 'node';
+}
+
 function startNextServer() {
   const serverPath = findNextServer();
+  const nodeBinary = findNodeBinary();
   const userDataPath = app.getPath('userData');
   const dataDir = path.join(userDataPath, 'data');
 
   fs.mkdirSync(dataDir, { recursive: true });
 
-  nextProcess = spawn(process.env.ETHERANA_NODE || 'node', [serverPath], {
+  nextProcess = spawn(nodeBinary, [serverPath], {
     cwd: path.dirname(serverPath),
     env: {
       ...process.env,
