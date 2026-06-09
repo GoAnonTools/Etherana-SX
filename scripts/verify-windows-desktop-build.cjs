@@ -14,32 +14,41 @@ function findWindowsExecutable() {
     .find((file) => file.endsWith('.exe') && !file.toLowerCase().includes('elevate'));
 }
 
-const appExe = findWindowsExecutable();
+function findFirstFile(startDir, matcher, maxDepth = 8) {
+  if (!fs.existsSync(startDir) || maxDepth < 0) return null;
 
-const requiredFiles = [
-  {
-    label: 'Windows unpacked app executable',
-    path: appExe ? path.join(unpackedDir, appExe) : path.join(unpackedDir, 'Etherana SX.exe'),
-  },
-  {
-    label: 'Next standalone server',
-    path: path.join(unpackedDir, 'resources', 'app', '.next', 'standalone', 'server.js'),
-  },
-  {
-    label: 'Bundled Windows Node runtime',
-    path: path.join(unpackedDir, 'resources', 'node', 'windows', 'node.exe'),
-  },
-  {
-    label: 'Bundled Windows SearXNG runtime',
-    path: fs.existsSync(path.join(unpackedDir, 'resources', 'searxng', 'windows', 'searxng.exe'))
-      ? path.join(unpackedDir, 'resources', 'searxng', 'windows', 'searxng.exe')
-      : path.join(unpackedDir, 'resources', 'searxng', 'windows', 'searxng.cmd'),
-  },
-];
+  for (const entry of fs.readdirSync(startDir, { withFileTypes: true })) {
+    const fullPath = path.join(startDir, entry.name);
 
-function assertFile({ label, path: filePath }) {
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`${label} missing: ${path.relative(root, filePath)}`);
+    if (entry.isFile() && matcher(fullPath)) {
+      return fullPath;
+    }
+
+    if (entry.isDirectory()) {
+      const found = findFirstFile(fullPath, matcher, maxDepth - 1);
+      if (found) return found;
+    }
+  }
+
+  return null;
+}
+
+function printDirectoryPreview(startDir, depth = 2, indent = '') {
+  if (!fs.existsSync(startDir) || depth < 0) return;
+
+  for (const entry of fs.readdirSync(startDir, { withFileTypes: true }).slice(0, 80)) {
+    const fullPath = path.join(startDir, entry.name);
+    console.log(`${indent}${entry.isDirectory() ? '📁' : '📄'} ${path.relative(root, fullPath)}`);
+
+    if (entry.isDirectory()) {
+      printDirectoryPreview(fullPath, depth - 1, `${indent}  `);
+    }
+  }
+}
+
+function assertFile(label, filePath) {
+  if (!filePath || !fs.existsSync(filePath)) {
+    throw new Error(`${label} missing: ${filePath ? path.relative(root, filePath) : '(not found)'}`);
   }
 
   const stat = fs.statSync(filePath);
@@ -52,11 +61,38 @@ function assertFile({ label, path: filePath }) {
 }
 
 try {
-  for (const file of requiredFiles) {
-    assertFile(file);
+  const appExe = findWindowsExecutable();
+  assertFile(
+    'Windows unpacked app executable',
+    appExe ? path.join(unpackedDir, appExe) : path.join(unpackedDir, 'Etherana SX.exe'),
+  );
+
+  const resourcesDir = path.join(unpackedDir, 'resources');
+
+  const nextStandaloneServer =
+    findFirstFile(resourcesDir, (filePath) =>
+      filePath.endsWith(path.join('.next', 'standalone', 'server.js')),
+    ) ||
+    findFirstFile(resourcesDir, (filePath) =>
+      filePath.endsWith(path.join('standalone', 'server.js')),
+    );
+
+  if (!nextStandaloneServer) {
+    console.log('\nWindows resources preview:');
+    printDirectoryPreview(resourcesDir, 3);
   }
 
-  const nodePath = path.join(unpackedDir, 'resources', 'node', 'windows', 'node.exe');
+  assertFile('Next standalone server', nextStandaloneServer);
+
+  const nodePath = path.join(resourcesDir, 'node', 'windows', 'node.exe');
+  assertFile('Bundled Windows Node runtime', nodePath);
+
+  const searxngPath = fs.existsSync(path.join(resourcesDir, 'searxng', 'windows', 'searxng.exe'))
+    ? path.join(resourcesDir, 'searxng', 'windows', 'searxng.exe')
+    : path.join(resourcesDir, 'searxng', 'windows', 'searxng.cmd');
+
+  assertFile('Bundled Windows SearXNG runtime', searxngPath);
+
   const nodeVersion = spawnSync(nodePath, ['-v'], { encoding: 'utf8' });
 
   if (nodeVersion.status !== 0) {
