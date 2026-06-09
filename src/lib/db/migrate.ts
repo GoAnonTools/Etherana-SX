@@ -2,12 +2,16 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
-const DATA_DIR = process.env.DATA_DIR || process.cwd();
-const dbPath = path.join(DATA_DIR, './data/db.sqlite');
+const APP_DIR = process.cwd();
+const DB_DIR = process.env.ETHERANA_DATA_DIR || path.join(APP_DIR, 'data');
+
+fs.mkdirSync(DB_DIR, { recursive: true });
+
+const dbPath = path.join(DB_DIR, 'db.sqlite');
 
 const db = new Database(dbPath);
 
-const migrationsFolder = path.join(DATA_DIR, 'drizzle');
+const migrationsFolder = path.join(APP_DIR, 'drizzle');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS ran_migrations (
