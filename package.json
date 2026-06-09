@@ -20,9 +20,10 @@
     "desktop:dist:linux": "npm run desktop:prepare && npm run desktop:node:prepare:linux && electron-builder --linux AppImage",
     "desktop:searxng:build:linux": "bash scripts/build-searxng-linux-runtime.sh",
     "desktop:dev-prod:local-searxng": "ETHERANA_SEARXNG_BIN=$PWD/desktop/searxng/linux/searxng npm run desktop:dev-prod",
-    "desktop:release:linux": "npm run desktop:pack:linux && node scripts/prepare-release-artifacts.cjs",
+    "desktop:release:linux": "npm run desktop:pack:linux && npm run desktop:verify:linux && node scripts/prepare-release-artifacts.cjs",
     "desktop:release:prepare": "node scripts/prepare-release-artifacts.cjs",
-    "desktop:node:prepare:linux": "node scripts/prepare-node-linux-runtime.cjs"
+    "desktop:node:prepare:linux": "node scripts/prepare-node-linux-runtime.cjs",
+    "desktop:verify:linux": "node scripts/verify-linux-desktop-build.cjs"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",
