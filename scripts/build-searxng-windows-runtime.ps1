@@ -24,27 +24,19 @@ $SearxngRef = if ($env:SEARXNG_REF) { $env:SEARXNG_REF } else { "master" }
 
 New-Item -ItemType Directory -Force -Path $RuntimeDir | Out-Null
 
-if (!(Test-Path (Join-Path $SrcDir ".git"))) {
-  Write-Host "[searxng-build-windows] Cloning SearXNG without checkout..."
-  Invoke-Checked "git" @("clone", "--no-checkout", $SearxngRepo, $SrcDir)
+if (Test-Path $SrcDir) {
+  Remove-Item -Recurse -Force $SrcDir
 }
 
-Write-Host "[searxng-build-windows] Configuring sparse checkout for Windows-safe paths..."
-Invoke-Checked "git" @("-C", $SrcDir, "sparse-checkout", "init", "--no-cone")
+New-Item -ItemType Directory -Force -Path $SrcDir | Out-Null
 
-$SparseCheckoutFile = Join-Path $SrcDir ".git\info\sparse-checkout"
+Write-Host "[searxng-build-windows] Fetching SearXNG without full checkout..."
+Invoke-Checked "git" @("-C", $SrcDir, "init")
+Invoke-Checked "git" @("-C", $SrcDir, "remote", "add", "origin", $SearxngRepo)
+Invoke-Checked "git" @("-C", $SrcDir, "fetch", "--depth", "1", "origin", $SearxngRef)
 
-@"
-/*
-!utils/templates/etc/httpd/sites-available/searxng.conf:socket
-!utils/templates/etc/nginx/default.apps-available/searxng.conf:socket
-!utils/templates/etc/uwsgi/apps-archlinux/searxng.ini:socket
-!utils/templates/etc/uwsgi/apps-available/searxng.ini:socket
-"@ | Set-Content -Encoding UTF8 $SparseCheckoutFile
-
-Write-Host "[searxng-build-windows] Checking out $SearxngRef..."
-Invoke-Checked "git" @("-C", $SrcDir, "fetch", "--tags", "--depth", "1", "origin", $SearxngRef)
-Invoke-Checked "git" @("-C", $SrcDir, "checkout", "FETCH_HEAD")
+Write-Host "[searxng-build-windows] Checking out Windows-safe package paths..."
+Invoke-Checked "git" @("-C", $SrcDir, "checkout", "FETCH_HEAD", "--", "pyproject.toml", "requirements.txt", "searx", "searxng_extra")
 
 Write-Host "[searxng-build-windows] Creating Python venv..."
 if (Test-Path $VenvDir) {
