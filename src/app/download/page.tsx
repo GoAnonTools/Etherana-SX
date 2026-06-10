@@ -82,7 +82,7 @@ const releases: PlatformRelease[] = [
         description:
           'Recommended installer for Windows 10 and Windows 11 on x64 machines.',
         checksum:
-          '068bc7a85ecd1b755072b418db58a8c7ee0166355d5c3cafabd69bc4313f8a33',
+          '9c82b42f7520d3c5d2abe775f0aa028a68901d6700947f66383053f75d414e17',
       },
     ],
   },
@@ -104,7 +104,7 @@ const releases: PlatformRelease[] = [
         description:
           'Recommended installer-style package for Apple Silicon Macs.',
         checksum:
-          'e75ab4767c109f648b9af3d4215f9288bfb48a8229a06892212d181c0693150c',
+          'e898edcc1314a8abb2ecf30431677b4a3e3a92996301d1916fa6f574c6c5011d',
       },
       {
         label: 'Download ZIP',
@@ -114,7 +114,7 @@ const releases: PlatformRelease[] = [
         description:
           'Alternative archive package for Apple Silicon Macs.',
         checksum:
-          'a4052102fc34809e7536988cfd11a42e5dd4418dacbb9fe36c654aeda59695fd',
+          'b096c43dc4a74ab0f688d6a73d0d845d2d9150856d762c7e7cd04dfeb21a981e',
       },
     ],
   },
