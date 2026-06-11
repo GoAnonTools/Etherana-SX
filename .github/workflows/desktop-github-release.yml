@@ -1,0 +1,168 @@
+name: Desktop GitHub Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: GitHub release tag
+        required: true
+        default: v1.12.2-desktop
+      release_name:
+        description: GitHub release title
+        required: true
+        default: Etherana SX Desktop 1.12.2
+      draft:
+        description: Create or keep release as draft
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  setup-release:
+    name: Setup GitHub release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create release if needed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.tag_name }}
+          RELEASE_NAME: ${{ inputs.release_name }}
+          RELEASE_DRAFT: ${{ inputs.draft }}
+        run: |
+          if gh release view "$TAG_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG_NAME already exists."
+            exit 0
+          fi
+
+          args=(
+            "$TAG_NAME"
+            --repo "$GITHUB_REPOSITORY"
+            --target "$GITHUB_REF_NAME"
+            --title "$RELEASE_NAME"
+            --notes "Desktop release candidate for Linux, Windows, and macOS."
+          )
+
+          if [ "$RELEASE_DRAFT" = "true" ]; then
+            args+=(--draft)
+          fi
+
+          gh release create "${args[@]}"
+
+  build-linux:
+    name: Build and upload Linux
+    needs: setup-release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Linux SearXNG runtime
+        run: npm run desktop:searxng:build:linux
+
+      - name: Build Linux desktop release
+        run: npm run desktop:pack:linux
+
+      - name: Verify Linux desktop release
+        run: npm run desktop:verify:linux
+
+      - name: Stage Linux release assets
+        run: node scripts/stage-desktop-release-artifacts.cjs linux
+
+      - name: Upload Linux assets to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.tag_name }}
+        run: gh release upload "$TAG_NAME" release-upload/linux/* --repo "$GITHUB_REPOSITORY" --clobber
+
+  build-windows:
+    name: Build and upload Windows
+    needs: setup-release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Windows desktop release
+        run: npm run desktop:release:windows:ci
+
+      - name: Stage Windows release assets
+        run: node scripts/stage-desktop-release-artifacts.cjs windows
+
+      - name: Upload Windows assets to GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.tag_name }}
+        run: gh release upload "$TAG_NAME" release-upload/windows/* --repo "$GITHUB_REPOSITORY" --clobber
+
+  build-macos:
+    name: Build and upload macOS
+    needs: setup-release
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build macOS desktop release
+        run: npm run desktop:release:macos:ci
+
+      - name: Stage macOS release assets
+        run: node scripts/stage-desktop-release-artifacts.cjs macos
+
+      - name: Upload macOS assets to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ inputs.tag_name }}
+        run: gh release upload "$TAG_NAME" release-upload/macos/* --repo "$GITHUB_REPOSITORY" --clobber
