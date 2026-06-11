@@ -137,7 +137,7 @@ const checkConfig = async (
 
     if (providers.length === 0) {
       throw new Error(
-        'No chat model providers found, please configure them in the settings page.',
+        'Gemma 4 is the default AI path for Etherana SX. Start Ollama locally and install Gemma 4, or add another provider in Settings.',
       );
     }
 
@@ -147,7 +147,7 @@ const checkConfig = async (
 
     if (!chatModelProvider) {
       throw new Error(
-        'No chat models found, pleae configure them in the settings page.',
+        'No chat model is ready yet. Start Ollama and install Gemma 4, or add another chat model in Settings.',
       );
     }
 
@@ -164,7 +164,7 @@ const checkConfig = async (
 
     if (!embeddingModelProvider) {
       throw new Error(
-        'No embedding models found, pleae configure them in the settings page.',
+        'No embedding model is ready yet. Start Ollama and install an embedding model such as nomic-embed-text, or add another embedding model in Settings.',
       );
     }
 

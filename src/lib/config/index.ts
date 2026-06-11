@@ -11,6 +11,48 @@ import type {
 const CONFIG_DIR = process.env.ETHERANA_DATA_DIR || path.join(process.cwd(), 'data');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
+const createDefaultGemmaProvider = (): ConfigModelProvider => {
+  const type = 'ollama';
+  const name = 'Local Gemma 4';
+  const config = {
+    baseURL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+  };
+
+  const provider: ConfigModelProvider = {
+    id: 'local-gemma-4',
+    name,
+    type,
+    chatModels: [
+      {
+        name: 'Gemma 4',
+        key: process.env.ETHERANA_DEFAULT_GEMMA_MODEL || 'gemma4',
+      },
+    ],
+    embeddingModels: [
+      {
+        name: 'Nomic Embed Text',
+        key:
+          process.env.ETHERANA_DEFAULT_EMBEDDING_MODEL || 'nomic-embed-text',
+      },
+    ],
+    config,
+    hash: crypto
+      .createHash('sha256')
+      .update(JSON.stringify({ type, name, config }))
+      .digest('hex'),
+  };
+
+  return provider;
+};
+
+const getDefaultModelProviders = (): ConfigModelProvider[] => {
+  if (process.env.ETHERANA_DISABLE_DEFAULT_GEMMA_PROVIDER === '1') {
+    return [];
+  }
+
+  return [createDefaultGemmaProvider()];
+};
+
 const defaultConfig: Config = {
   version: 1,
   setupComplete: true,
@@ -21,7 +63,7 @@ const defaultConfig: Config = {
   personalization: {
     instructions: '',
   },
-  modelProviders: [],
+  modelProviders: getDefaultModelProviders(),
   search: {
     searxngURL: process.env.SEARXNG_URL || 'http://localhost:8080',
   },
@@ -92,6 +134,10 @@ class ConfigManager {
     try {
       const raw = fs.readFileSync(CONFIG_FILE, 'utf-8');
       const parsed = JSON.parse(raw);
+      const parsedModelProviders =
+        Array.isArray(parsed.modelProviders) && parsed.modelProviders.length > 0
+          ? parsed.modelProviders
+          : getDefaultModelProviders();
 
       return {
         ...structuredClone(defaultConfig),
@@ -108,7 +154,7 @@ class ConfigManager {
           ...defaultConfig.search,
           ...(parsed.search || {}),
         },
-        modelProviders: parsed.modelProviders || [],
+        modelProviders: parsedModelProviders,
       };
     } catch (err) {
       console.error('Failed to load config, using defaults:', err);
