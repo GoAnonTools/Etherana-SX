@@ -23,7 +23,7 @@ git -C "${SRC_DIR}" checkout "${SEARXNG_REF}"
 
 echo "[searxng-build] Creating Python venv..."
 rm -rf "${VENV_DIR}"
-python3 -m venv "${VENV_DIR}"
+python3 -m venv --copies "${VENV_DIR}"
 
 echo "[searxng-build] Installing SearXNG dependencies into runtime venv..."
 "${VENV_DIR}/bin/python" -m pip install --upgrade pip wheel setuptools

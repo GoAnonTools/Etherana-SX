@@ -142,3 +142,37 @@ try {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 }
+
+// Guard against non-portable CI Python venv symlinks.
+// GitHub Actions can create venv/bin/python3 as an absolute symlink to
+// /opt/hostedtoolcache/... unless the venv is created with --copies.
+{
+  const nodeFs = require('node:fs');
+  const nodePath = require('node:path');
+
+  const bundledSearxngPython = nodePath.join(
+    'release',
+    'linux-unpacked',
+    'resources',
+    'searxng',
+    'linux',
+    'runtime',
+    'venv',
+    'bin',
+    'python3',
+  );
+
+  if (nodeFs.existsSync(bundledSearxngPython)) {
+    const pythonStat = nodeFs.lstatSync(bundledSearxngPython);
+
+    if (pythonStat.isSymbolicLink()) {
+      const pythonTarget = nodeFs.readlinkSync(bundledSearxngPython);
+
+      if (nodePath.isAbsolute(pythonTarget)) {
+        throw new Error(
+          `Bundled SearXNG Python must not be an absolute symlink: ${bundledSearxngPython} -> ${pythonTarget}`,
+        );
+      }
+    }
+  }
+}
