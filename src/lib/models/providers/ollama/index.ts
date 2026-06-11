@@ -49,9 +49,21 @@ class OllamaProvider extends BaseModelProvider<OllamaConfig> {
         };
       });
 
+      const isEmbeddingModel = (model: Model) => {
+        const key = model.key.toLowerCase();
+
+        return (
+          key.includes('embed') ||
+          key.includes('embedding') ||
+          key.includes('nomic-embed') ||
+          key.includes('bge-') ||
+          key.includes('mxbai-embed')
+        );
+      };
+
       return {
-        embedding: models,
-        chat: models,
+        embedding: models.filter(isEmbeddingModel),
+        chat: models.filter((model) => !isEmbeddingModel(model)),
       };
     } catch (err) {
       if (err instanceof TypeError) {
