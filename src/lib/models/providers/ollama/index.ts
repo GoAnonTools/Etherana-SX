@@ -70,10 +70,10 @@ class OllamaProvider extends BaseModelProvider<OllamaConfig> {
 
     return {
       embedding: [
-        ...defaultModels.embedding,
         ...configProvider.embeddingModels,
+        ...defaultModels.embedding,
       ],
-      chat: [...defaultModels.chat, ...configProvider.chatModels],
+      chat: [...configProvider.chatModels, ...defaultModels.chat],
     };
   }
 
