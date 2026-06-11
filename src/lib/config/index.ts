@@ -8,7 +8,7 @@ import type {
   UIConfigSections,
 } from './types';
 
-const CONFIG_DIR = path.join(process.cwd(), 'data');
+const CONFIG_DIR = process.env.ETHERANA_DATA_DIR || path.join(process.cwd(), 'data');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 const defaultConfig: Config = {

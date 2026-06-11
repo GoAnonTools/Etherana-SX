@@ -19,7 +19,7 @@ import fs from 'fs';
 import path from 'path';
 import { desc, eq } from 'drizzle-orm';
 
-const uploadsDir = path.join(process.cwd(), 'data', 'uploads');
+const uploadsDir = path.join(process.env.ETHERANA_DATA_DIR || path.join(process.cwd(), 'data'), 'uploads');
 const uploadedFilesRecordPath = path.join(uploadsDir, 'uploaded_files.json');
 
 const isSafeUploadPath = (candidatePath: string) => {
