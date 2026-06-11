@@ -9,7 +9,8 @@ export const metadata: Metadata = {
 const VERSION = '1.12.2';
 
 const RELEASE_BASE_URL = (
-  process.env.NEXT_PUBLIC_RELEASE_BASE_URL || ''
+  process.env.NEXT_PUBLIC_RELEASE_BASE_URL ||
+  'https://github.com/GoAnonTools/Etherana-SX/releases/download/v1.12.2-desktop'
 ).replace(/\/+$/g, '');
 
 type DownloadAsset = {
@@ -31,11 +32,8 @@ type PlatformRelease = {
   assets: DownloadAsset[];
 };
 
-const fileUrl = (platform: PlatformRelease['key'], fileName: string) => {
-  const path = `${platform}/${fileName}`;
-
-  return RELEASE_BASE_URL ? `${RELEASE_BASE_URL}/${path}` : `/${path}`;
-};
+const fileUrl = (_platform: PlatformRelease['key'], fileName: string) =>
+  `${RELEASE_BASE_URL}/${fileName}`;
 
 const releases: PlatformRelease[] = [
   {
@@ -164,15 +162,13 @@ export default function DownloadPage() {
             </p>
           </div>
 
-          {!RELEASE_BASE_URL ? (
-            <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">
-              Download links are using root-relative paths. Set{' '}
-              <code className="rounded bg-black/30 px-1.5 py-0.5">
-                NEXT_PUBLIC_RELEASE_BASE_URL
-              </code>{' '}
-              to your Cloudflare R2 public base URL when deploying this page.
-            </div>
-          ) : null}
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-neutral-300">
+            Download links point to the desktop release assets. Set{' '}
+            <code className="rounded bg-black/30 px-1.5 py-0.5">
+              NEXT_PUBLIC_RELEASE_BASE_URL
+            </code>{' '}
+            only if you later move release files to another host such as Cloudflare R2.
+          </div>
         </header>
 
         <section className="grid gap-6 lg:grid-cols-3">
